@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Payment Report - Bilal Accounting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f4f6f9;
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .page-subtitle {
+            font-size: 0.875rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .filters-section {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .filters-section label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .filters-section .form-control,
+        .filters-section .form-select {
+            font-size: 0.875rem;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 25px;
+            font-weight: 700;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.8rem;
+        }
+
+        .btn-generate:hover {
+            background: linear-gradient(135deg, #138496, #117a8b);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 20px;
+            background: white;
+        }
+
+        .summary-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+        }
+
+        .summary-card.green {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .summary-card.teal {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
+        .summary-card.orange {
+            background: linear-gradient(135deg, #fd7e14, #f8961e);
+        }
+
+        .summary-card.red {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .summary-card .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .report-section {
+            padding: 20px;
+        }
+
+        .category-card {
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .category-header {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            /* Force fixed layout for column alignment */
+        }
+
+        .data-table thead th {
+            background: #000 !important;
+            color: white !important;
+            padding: 12px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            border: 1px solid #333 !important;
+            text-align: center;
+        }
+
+        /* Column widths for equal horizontal distribution */
+        .col-sno {
+            width: 5%;
+        }
+
+        .col-branch {
+            width: 19%;
+        }
+
+        .col-numeric {
+            width: 19%;
+        }
+
+        .data-table thead th:nth-child(2) {
+            text-align: left;
+        }
+
+        .data-table tbody td {
+            padding: 12px 15px;
+            border: 1px solid #dee2e6;
+            font-size: 0.875rem;
+            vertical-align: middle;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .data-table tbody td:nth-child(2) {
+            text-align: left;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .total-row td {
+            background-color: #000 !important;
+            color: #fff !important;
+            border: 1px solid #333 !important;
+            padding: 12px 15px !important;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .total-row td:nth-child(2) {
+            text-align: right;
+        }
+
+        .grand-total-section {
+            background: #2c3e50;
+            color: white;
+            border-radius: 8px;
+            margin-top: 30px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .grand-total-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .grand-total-table td {
+            padding: 15px;
+            vertical-align: middle;
+        }
+
+        .grand-total-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding-left: 20px !important;
+        }
+
+        .grand-total-value {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .grand-total-sublabel {
+            display: block;
+            font-size: 0.65rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .balance-danger {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        .balance-success {
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .loading-overlay {
+            display: none;
+            text-align: center;
+            padding: 100px 0;
+        }
+
+        @media (max-width: 992px) {
+            .summary-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Professional Header Styles */
+        .print-header {
+            display: none;
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-bottom: 2px solid #2c3e50;
+            position: relative;
+        }
+
+        .print-header .logo-box {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+        }
+
+        .print-header .company-logo {
+            max-width: 150px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+
+        .print-header .company-name {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #2c3e50;
+            text-transform: uppercase;
+            margin: 0;
+            line-height: 1.1;
+            letter-spacing: 1px;
+        }
+
+        .print-header .company-info {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .print-header .report-title-print {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff !important;
+            background: #2c3e50 !important;
+            padding: 10px 40px;
+            display: inline-block;
+            margin-top: 20px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .print-header .report-meta {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #333;
+            font-weight: 600;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .print-header {
+                display: block !important;
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .filters-section,
+            .btn-generate,
+            .btn-reset,
+            .page-header,
+            #sidebarToggle,
+            .btn-success,
+            .page-subtitle,
+            .page-title,
+            .input-group,
+            .mb-2 {
+                display: none !important;
+            }
+
+            .main-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+
+            .report-card {
+                box-shadow: none !important;
+                border: none !important;
+            }
+
+            .summary-cards {
+                padding: 15px 0 !important;
+                border-top: 1px solid #ddd !important;
+                border-bottom: 1px solid #ddd !important;
+                margin-bottom: 20px !important;
+            }
+
+            .summary-card {
+                border: 1px solid #ddd !important;
+                color: #333 !important;
+                background: #fdfdfd !important;
+                padding: 10px !important;
+            }
+
+            .summary-card.green,
+            .summary-card.teal,
+            .summary-card.orange,
+            .summary-card.red {
+                background: #fff !important;
+                box-shadow: none !important;
+            }
+
+            .summary-card .label {
+                color: #666 !important;
+                font-weight: 700 !important;
+            }
+
+            .summary-card .value {
+                color: #000 !important;
+                font-size: 1.4rem !important;
+            }
+
+            .category-card {
+                break-inside: avoid;
+                margin-bottom: 40px !important;
+                border: 1px solid #eee !important;
+            }
+
+            .category-header {
+                background: #000 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                border: 1px solid #333 !important;
+            }
+
+            .data-table thead th {
+                background: #000 !important;
+                color: #fff !important;
+                border: 1px solid #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .total-row td {
+                background: #000 !important;
+                color: #fff !important;
+                border: 1px solid #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .grand-total-section {
+                background: #000 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin-top: 40px !important;
+                border-radius: 0 !important;
+            }
+
+            .grand-total-section span {
+                color: #fff !important;
+            }
+
+            .text-info,
+            .text-warning,
+            .text-success,
+            .balance-danger,
+            .balance-success,
+            .grand-total-sublabel {
+                color: #000 !important;
+            }
+
+            .grand-total-sublabel {
+                opacity: 1 !important;
+                font-weight: 700 !important;
+            }
+
+            /* Fix for print table boundaries */
+            .table-responsive {
+                overflow: visible !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Professional Print Header -->
+    <div class="print-header">
+        <div class="logo-box">
+            <img id="printCompanyLogo" src="" alt="" class="company-logo" style="display:none;">
+        </div>
+        <h1 id="printCompanyName" class="company-name">BILAL ACCOUNTING SYSTEM</h1>
+        <div id="printCompanyInfo" class="company-info">
+            Loading company information...
+        </div>
+        <div class="report-title-print">Warehouse Payment Report</div>
+        <div class="report-meta">
+            <span><strong>Branch:</strong> <span id="printBranchMeta">All Branches</span></span>
+            <span><strong>Date Range:</strong> <span id="printDateMeta">-</span></span>
+            <span><strong>Printed On:</strong> <span id="printDateNow">-</span></span>
+        </div>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-content">
+        <!-- Page Header -->
+        <div class="page-header px-3">
+            <div style="flex: 1; display: flex; align-items: center;">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+                <h4 class="mb-0">Payment Report</h4>
+            </div>
+            <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+                <div class="dropdown">
+                    <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown"
+                        style="cursor: pointer;">
+                        <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                        <span id="userName" class="me-2 text-white">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item logout-btn" href="#"><i
+                                    class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h1 class="page-title">Warehouse Payment Report</h1>
+                    <p class="page-subtitle">View payment details against category costs across branches</p>
+                </div>
+                <div class="mb-2">
+                    <button class="btn btn-success btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> Print Report
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-card">
+                <!-- Filters Section -->
+                <div class="filters-section">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label>Start Date</label>
+                            <input type="date" id="startDate" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label>End Date</label>
+                            <input type="date" id="endDate" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label>Branch</label>
+                            <select id="branchFilter" class="form-select">
+                                <option value="all">All Branches</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>Category</label>
+                            <select id="categoryFilter" class="form-select">
+                                <option value="all">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button class="btn-generate w-100" id="generateBtn" onclick="loadReport()">
+                                <span class="spinner-border spinner-border-sm me-1 d-none" id="generateSpinner"></span>
+                                Generate
+                            </button>
+                            <button class="btn-reset" onclick="resetFilters()" title="Reset Filters">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-0"><i
+                                        class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="globalSearch" class="form-control border-0"
+                                    placeholder="Search by branch or category name...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div id="summarySection" class="summary-cards border-bottom d-none">
+                    <div class="summary-card green">
+                        <div class="label">Total Sales</div>
+                        <div id="totalSales" class="value">0.00</div>
+                    </div>
+                    <div class="summary-card teal">
+                        <div class="label">Total Cost</div>
+                        <div id="totalCost" class="value">0.00</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <div class="label">Total Paid</div>
+                        <div id="totalPaid" class="value">0.00</div>
+                    </div>
+                    <div class="summary-card red">
+                        <div class="label">Total Balance</div>
+                        <div id="totalBalance" class="value">0.00</div>
+                    </div>
+                </div>
+
+                <!-- Report Content Area -->
+                <div class="report-section">
+                    <!-- Loading State -->
+                    <div id="loadingState" class="loading-overlay">
+                        <div class="spinner-grow text-info" style="width: 3rem; height: 3rem;" role="status text-info">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-info fw-bold">Gathering data from all branches...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state">
+                        <i class="fas fa-chart-bar"></i>
+                        <h5>No Data Generated</h5>
+                        <p>Select date range and filters above to generate the payment report.</p>
+                    </div>
+
+                    <!-- Results Area -->
+                    <div id="reportResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script>
+        // Report Logic
+        let allData = null;
+        let branches = [];
+        let categories = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set default dates (current month)
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+            document.getElementById('startDate').value = startOfMonth.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endOfMonth.toISOString().split('T')[0];
+
+            // Load filters
+            await loadFilters();
+            await loadCompanyInfo();
+
+            // Set user name
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (document.getElementById('userName')) {
+                document.getElementById('userName').textContent = user.name || 'User';
+            }
+
+            // Global search event
+            document.getElementById('globalSearch').addEventListener('input', () => {
+                if (allData) renderReport(allData);
+            });
+        });
+
+        async function loadFilters() {
+            try {
+                const token = localStorage.getItem('token');
+                const headers = { 'Authorization': `Bearer ${token}` };
+
+                const [branchRes, catRes] = await Promise.all([
+                    fetch('/api/v1/stores', { headers }),
+                    fetch('/api/v1/customer-categories', { headers })
+                ]);
+
+                const branchData = await branchRes.json();
+                const catData = await catRes.json();
+
+                const branchSelect = document.getElementById('branchFilter');
+                branchData.data.forEach(branch => {
+                    const option = document.createElement('option');
+                    option.value = branch.name;
+                    option.textContent = branch.name;
+                    branchSelect.appendChild(option);
+                });
+
+                const catSelect = document.getElementById('categoryFilter');
+                catData.data.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat._id;
+                    option.textContent = cat.name;
+                    catSelect.appendChild(option);
+                    categories.push({ id: cat._id, name: cat.name });
+                });
+
+                branches = branchData.data;
+            } catch (err) {
+                console.error('Error loading filters:', err);
+            }
+        }
+
+        async function loadCompanyInfo() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/v1/settings', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    const settings = result.data;
+                    document.getElementById('printCompanyName').textContent = settings.companyName || 'BILAL ACCOUNTING SYSTEM';
+                    document.getElementById('printCompanyInfo').innerHTML = `
+                        ${settings.address || ''} ${settings.phone ? ' | Phone: ' + settings.phone : ''}
+                        ${settings.email ? ' | Email: ' + settings.email : ''}
+                    `;
+
+                    if (settings.logo) {
+                        const logoImg = document.getElementById('printCompanyLogo');
+                        logoImg.src = settings.logo;
+                        logoImg.style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading company info:', err);
+            }
+        }
+
+        function resetFilters() {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+            document.getElementById('startDate').value = startOfMonth.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endOfMonth.toISOString().split('T')[0];
+            document.getElementById('branchFilter').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('globalSearch').value = '';
+
+            document.getElementById('reportResults').innerHTML = '';
+            document.getElementById('summarySection').classList.add('d-none');
+            document.getElementById('emptyState').classList.remove('d-none');
+        }
+
+        async function loadReport() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const branch = document.getElementById('branchFilter').value;
+            const categoryId = document.getElementById('categoryFilter').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select date range');
+                return;
+            }
+
+            // UI States
+            document.getElementById('generateSpinner').classList.remove('d-none');
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('emptyState').classList.add('d-none');
+            document.getElementById('reportResults').innerHTML = '';
+            document.getElementById('summarySection').classList.add('d-none');
+
+            try {
+                const token = localStorage.getItem('token');
+                const headers = { 'Authorization': `Bearer ${token}` };
+                const limit = 10000;
+
+                // Fetch data in parallel
+                const [sheetsRes, vouchRes] = await Promise.all([
+                    fetch(`/api/v1/closing-sheets/report?startDate=${startDate}&endDate=${endDate}&branch=${branch}`, { headers }),
+                    fetch(`/api/v1/vouchers?startDate=${startDate}&endDate=${endDate}&limit=${limit}`, { headers })
+                ]);
+
+                const sheetsData = await sheetsRes.json();
+                const vouchData = await vouchRes.json();
+
+                // Update Print Meta
+                document.getElementById('printBranchMeta').textContent = branch === 'all' ? 'All Branches' : branch;
+                document.getElementById('printDateMeta').textContent = `${formatDatePrint(startDate)} to ${formatDatePrint(endDate)}`;
+                document.getElementById('printDateNow').textContent = new Date().toLocaleString();
+
+                processData(sheetsData.data, vouchData.data);
+            } catch (err) {
+                console.error('Error loading report:', err);
+                alert('Error loading report data');
+            } finally {
+                document.getElementById('generateSpinner').classList.add('d-none');
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+
+        function formatDatePrint(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function processData(sheets, vouchers) {
+            const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const stats = {}; // Map<CategoryName, Map<BranchName, {sale, cost, payment}>>
+
+            const catMap = {};
+            categories.forEach(c => catMap[c.id] = c.name);
+
+            // 1. Process Closing Sheets (Sale & Cost)
+            sheets.forEach(sheet => {
+                const branchName = sheet.branch;
+                const dataObj = sheet.closing02?.data || sheet.closing02;
+
+                if (dataObj && dataObj.warehouseSale && Array.isArray(dataObj.warehouseSale)) {
+                    dataObj.warehouseSale.forEach(item => {
+                        const catName = catMap[item.category] || 'Unknown Category';
+
+                        // Category Filter
+                        const selectedCatId = document.getElementById('categoryFilter').value;
+                        if (selectedCatId !== 'all' && item.category !== selectedCatId) return;
+
+                        if (!stats[catName]) stats[catName] = {};
+                        if (!stats[catName][branchName]) {
+                            stats[catName][branchName] = { branch: branchName, sale: 0, cost: 0, payment: 0 };
+                        }
+
+                        stats[catName][branchName].sale += parseFloat(item.sale || 0);
+                        stats[catName][branchName].cost += parseFloat(item.cost || 0);
+                    });
+                }
+            });
+
+            // 2. Process Vouchers (Payments)
+            vouchers.forEach(v => {
+                const branchName = v.branch;
+                // Filter by branch if not 'all'
+                const selectedBranch = document.getElementById('branchFilter').value;
+                if (selectedBranch !== 'all' && branchName !== selectedBranch) return;
+
+                const categoryEntry = v.entries.find(e => e.detail === 'Category Wise Payment');
+                if (!categoryEntry) return;
+
+                const categoryNameFromVoucher = categoryEntry.account;
+                const amount = parseFloat(categoryEntry.debit || 0);
+
+                // Try to find matching category in our stats
+                let matchedCatName = categoryNameFromVoucher;
+                const knownCatNames = Object.values(catMap);
+
+                const match = knownCatNames.find(c =>
+                    normalize(c) === normalize(categoryNameFromVoucher) ||
+                    normalize(categoryNameFromVoucher).includes(normalize(c)) ||
+                    normalize(c).includes(normalize(categoryNameFromVoucher))
+                );
+
+                if (match) matchedCatName = match;
+
+                // Category Filter
+                const selectedCatId = document.getElementById('categoryFilter').value;
+                if (selectedCatId !== 'all') {
+                    const selectedCatName = catMap[selectedCatId];
+                    if (normalize(matchedCatName) !== normalize(selectedCatName)) return;
+                }
+
+                if (!stats[matchedCatName]) stats[matchedCatName] = {};
+                if (!stats[matchedCatName][branchName]) {
+                    stats[matchedCatName][branchName] = { branch: branchName, sale: 0, cost: 0, payment: 0 };
+                }
+
+                stats[matchedCatName][branchName].payment += amount;
+            });
+
+            allData = stats;
+            renderReport(stats);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount || 0);
+        }
+
+        function renderReport(stats) {
+            const resultsArea = document.getElementById('reportResults');
+            const searchTerm = normalize(document.getElementById('globalSearch').value);
+            resultsArea.innerHTML = '';
+
+            let grandTotalSales = 0, grandTotalCost = 0, grandTotalPaid = 0;
+            let hasAnyData = false;
+
+            const sortedCatNames = Object.keys(stats).sort();
+
+            sortedCatNames.forEach(catName => {
+                const branchMap = stats[catName];
+                const branchesToShow = Object.values(branchMap).filter(b => {
+                    const matchesSearch = normalize(catName).includes(searchTerm) || normalize(b.branch).includes(searchTerm);
+                    const hasValues = b.sale !== 0 || b.cost !== 0 || b.payment !== 0;
+                    return matchesSearch && hasValues;
+                }).sort((a, b) => a.branch.localeCompare(b.branch));
+
+                if (branchesToShow.length === 0) return;
+                hasAnyData = true;
+
+                let catTotalSale = 0, catTotalCost = 0, catTotalPaid = 0;
+
+                let rowsHtml = '';
+                branchesToShow.forEach((b, idx) => {
+                    const balance = b.cost - b.payment;
+                    catTotalSale += b.sale;
+                    catTotalCost += b.cost;
+                    catTotalPaid += b.payment;
+
+                    rowsHtml += `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td>${b.branch}</td>
+                            <td>${formatCurrency(b.sale)}</td>
+                            <td>${formatCurrency(b.cost)}</td>
+                            <td>${formatCurrency(b.payment)}</td>
+                            <td class="${balance > 0 ? 'balance-danger' : 'balance-success'}">${formatCurrency(balance)}</td>
+                        </tr>
+                    `;
+                });
+
+                const catBalance = catTotalCost - catTotalPaid;
+                grandTotalSales += catTotalSale;
+                grandTotalCost += catTotalCost;
+                grandTotalPaid += catTotalPaid;
+
+                const categorySection = `
+                    <div class="category-card">
+                        <div class="category-header">
+                            <i class="fas fa-box-open"></i> ${catName}
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <colgroup>
+                                    <col class="col-sno">
+                                    <col class="col-branch">
+                                    <col class="col-numeric">
+                                    <col class="col-numeric">
+                                    <col class="col-numeric">
+                                    <col class="col-numeric">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>S#</th>
+                                        <th>Branch</th>
+                                        <th>Sales</th>
+                                        <th>Cost</th>
+                                        <th>Paid</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="total-row">
+                                        <td colspan="2">CATEGORY TOTAL</td>
+                                        <td>${formatCurrency(catTotalSale)}</td>
+                                        <td>${formatCurrency(catTotalCost)}</td>
+                                        <td>${formatCurrency(catTotalPaid)}</td>
+                                        <td>${formatCurrency(catBalance)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                resultsArea.insertAdjacentHTML('beforeend', categorySection);
+            });
+
+            if (!hasAnyData) {
+                resultsArea.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h5>No matches found</h5>
+                        <p>Try adjusting your search or filters.</p>
+                    </div>
+                `;
+                document.getElementById('summarySection').classList.add('d-none');
+            } else {
+                // Update Summary
+                document.getElementById('totalSales').textContent = formatCurrency(grandTotalSales);
+                document.getElementById('totalCost').textContent = formatCurrency(grandTotalCost);
+                document.getElementById('totalPaid').textContent = formatCurrency(grandTotalPaid);
+                document.getElementById('totalBalance').textContent = formatCurrency(grandTotalCost - grandTotalPaid);
+                document.getElementById('summarySection').classList.remove('d-none');
+
+                // Final Grand Total Row aligned with table columns
+                const grandTotalHtml = `
+                    <div class="grand-total-section">
+                        <table class="grand-total-table">
+                            <colgroup>
+                                <col class="col-sno">
+                                <col class="col-branch">
+                                <col class="col-numeric">
+                                <col class="col-numeric">
+                                <col class="col-numeric">
+                                <col class="col-numeric">
+                            </colgroup>
+                            <tr>
+                                <td colspan="2" class="grand-total-label">
+                                    <i class="fas fa-calculator me-2"></i> Grand Total (All Categories)
+                                </td>
+                                <td class="grand-total-value">
+                                    <span class="grand-total-sublabel">Total Sales</span>
+                                    ${formatCurrency(grandTotalSales)}
+                                </td>
+                                <td class="grand-total-value">
+                                    <span class="grand-total-sublabel">Total Cost</span>
+                                    ${formatCurrency(grandTotalCost)}
+                                </td>
+                                <td class="grand-total-value">
+                                    <span class="grand-total-sublabel">Total Paid</span>
+                                    <span class="text-info">${formatCurrency(grandTotalPaid)}</span>
+                                </td>
+                                <td class="grand-total-value">
+                                    <span class="grand-total-sublabel">Total Balance</span>
+                                    <span class="${grandTotalCost - grandTotalPaid > 0 ? 'text-warning' : 'text-success'}">
+                                        ${formatCurrency(grandTotalCost - grandTotalPaid)}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+                resultsArea.insertAdjacentHTML('beforeend', grandTotalHtml);
+            }
+        }
+
+        function normalize(name) {
+            return (name || '').toLowerCase().trim();
+        }
+    </script>
+</body>
+
+</html>

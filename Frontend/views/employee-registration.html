@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <i class="fas fa-user-tie me-2"></i> Employee Registration
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid p-3">
+        <div class="card">
+            <div class="card-body">
+                <input type="hidden" id="employeeId">
+
+                <div class="row">
+                    <!-- Left Column (Column 1) -->
+                    <div class="col-md-4">
+                        <h6 class="bg-success text-white p-2 mb-3">Employee Profile</h6>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Code</label>
+                            <div class="col-8">
+                                <input type="text" id="code" class="form-control form-control-sm" readonly>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Name *</label>
+                            <div class="col-8">
+                                <input type="text" id="name" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Father/Mother</label>
+                            <div class="col-8">
+                                <input type="text" id="fatherName" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">CNIC</label>
+                            <div class="col-8">
+                                <input type="text" id="cnic" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Department</label>
+                            <div class="col-7">
+                                <select id="department" class="form-select form-select-sm">
+                                    <option value="">Select Department</option>
+                                </select>
+                            </div>
+                            <div class="col-1 p-0">
+                                <button class="btn btn-primary btn-sm" onclick="addDepartment()">+</button>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Designation</label>
+                            <div class="col-7">
+                                <select id="designation" class="form-select form-select-sm">
+                                    <option value="">Select Designation</option>
+                                </select>
+                            </div>
+                            <div class="col-1 p-0">
+                                <button class="btn btn-primary btn-sm" onclick="addDesignation()">+</button>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Address</label>
+                            <div class="col-8">
+                                <textarea id="address" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Acc No</label>
+                            <div class="col-8">
+                                <input type="text" id="accNo" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Mobile No</label>
+                            <div class="col-8">
+                                <input type="text" id="mobileNo" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Res Phone</label>
+                            <div class="col-8">
+                                <input type="text" id="resPhone" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">DOB</label>
+                            <div class="col-8">
+                                <input type="date" id="dateOfBirth" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Joining Date</label>
+                            <div class="col-8">
+                                <input type="date" id="joiningDate" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Resign Date</label>
+                            <div class="col-8">
+                                <input type="date" id="resignDate" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Gender</label>
+                            <div class="col-8">
+                                <select id="gender" class="form-select form-select-sm">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Religion</label>
+                            <div class="col-8">
+                                <select id="religion" class="form-select form-select-sm">
+                                    <option value="Islam">Islam</option>
+                                    <option value="Christian">Christian</option>
+                                    <option value="Hindu">Hindu</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">Domicile</label>
+                            <div class="col-8">
+                                <input type="text" id="domicile" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-4"></label>
+                            <div class="col-8">
+                                <button class="btn btn-info btn-sm w-100" onclick="uploadPhoto()">
+                                    <i class="fas fa-camera"></i> My Photo
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button class="btn btn-success" onclick="saveEmployee()" data-action="save"><i
+                                    class="fas fa-save"></i>
+                                Save</button>
+                            <button class="btn btn-danger" onclick="clearForm()"><i class="fas fa-times"></i>
+                                Close</button>
+                            <button class="btn btn-primary" onclick="showList()"><i class="fas fa-list"></i>
+                                List</button>
+                        </div>
+                    </div>
+
+                    <!-- Middle Column (Column 2) -->
+                    <div class="col-md-4">
+                        <h6 class="bg-info text-white p-2 mb-3">Salary</h6>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Salary</label>
+                            <div class="col-7">
+                                <input type="number" id="basicSalary" class="form-control form-control-sm" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">T.C Allowance</label>
+                            <div class="col-7">
+                                <input type="number" id="tcAllowance" class="form-control form-control-sm" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Other Allowance</label>
+                            <div class="col-7">
+                                <input type="number" id="otherAllowance" class="form-control form-control-sm" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Area Allowance</label>
+                            <div class="col-7">
+                                <input type="number" id="areaAllowance" class="form-control form-control-sm" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Other Deduction</label>
+                            <div class="col-7">
+                                <input type="number" id="otherDeduction" class="form-control form-control-sm" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Bank City</label>
+                            <div class="col-7">
+                                <input type="text" id="bankCity" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Security Deposit</label>
+                            <div class="col-7">
+                                <input type="number" id="securityDeposit" class="form-control form-control-sm"
+                                    value="0">
+                            </div>
+                        </div>
+
+                        <h6 class="bg-warning text-dark p-2 mb-3 mt-3">Other Information</h6>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Area City</label>
+                            <div class="col-7">
+                                <input type="text" id="areaCity" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 1 Name</label>
+                            <div class="col-7">
+                                <input type="text" id="ref1Name" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 1 Phone</label>
+                            <div class="col-7">
+                                <input type="text" id="ref1Phone" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 1 Address</label>
+                            <div class="col-7">
+                                <textarea id="ref1Address" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 2 Name</label>
+                            <div class="col-7">
+                                <input type="text" id="ref2Name" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 2 Phone</label>
+                            <div class="col-7">
+                                <input type="text" id="ref2Phone" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-5 fw-bold">Ref 2 Address</label>
+                            <div class="col-7">
+                                <textarea id="ref2Address" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Column 3) -->
+                    <div class="col-md-4">
+                        <h6 class="bg-primary text-white p-2 mb-3">Employee Access Controls</h6>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="allowOvertime">
+                            <label class="form-check-label" for="allowOvertime">Allow Overtime</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="gtst">
+                            <label class="form-check-label" for="gtst">GTST - Token/Voucher/Invitation</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="eobi">
+                            <label class="form-check-label" for="eobi">EOBI</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="payProficiency">
+                            <label class="form-check-label" for="payProficiency">Pay Proficiency Through Bank</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="discountBill">
+                            <label class="form-check-label" for="discountBill">Discount Bill</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="threeWorkingDays">
+                            <label class="form-check-label" for="threeWorkingDays">Three Working Days</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="allowEmployeeAdvance">
+                            <label class="form-check-label" for="allowEmployeeAdvance">Allow Employee Advance</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="allowSalePerks">
+                            <label class="form-check-label" for="allowSalePerks">Allow Sale Perks</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="readOtherSalePerks">
+                            <label class="form-check-label" for="readOtherSalePerks">Read Other Sale Perks</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="readOtherPerks">
+                            <label class="form-check-label" for="readOtherPerks">Read Other Perks</label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+
+                        <h6 class="bg-success text-white p-2 mb-3 mt-3">Employee Bank Details</h6>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">DBL</label>
+                            <div class="col-8">
+                                <input type="text" id="dbl" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">ALF</label>
+                            <div class="col-8">
+                                <input type="text" id="alf" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">HBF</label>
+                            <div class="col-8">
+                                <input type="text" id="hbf" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">STF</label>
+                            <div class="col-8">
+                                <input type="text" id="stf" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-4 fw-bold">BANK</label>
+                            <div class="col-8">
+                                <input type="text" id="bank" class="form-control form-control-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee List Modal -->
+        <div class="modal fade" id="employeeListModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Employee List</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Designation</th>
+                                    <th>Salary</th>
+                                    <th>Mobile</th>
+                                    <th>Active</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeeListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/desktop-ui.js?v=custom"></script>
+    <script src="/js/employee-registration.js"></script>
+</body>
+
+</html>

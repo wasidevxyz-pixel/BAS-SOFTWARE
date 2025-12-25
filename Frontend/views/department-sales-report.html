@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Department Wise Sales Report - Bilal Accounting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        .report-container {
+            padding: 15px;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-panel {
+            background: linear-gradient(135deg, #1a5f7a 0%, #0288d1 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .filter-panel label {
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .filter-panel .form-control,
+        .filter-panel .form-select {
+            border: none;
+            border-radius: 5px;
+        }
+
+        .data-panel {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .data-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-header h5 {
+            margin: 0;
+            color: #1a5f7a;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table th {
+            background: black !important;
+            color: white;
+            border: 1px solid white;
+            padding: 12px 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        /* ... */
+
+        /* Print Styles */
+        @media print {
+            .data-table th {
+                background: black !important;
+                color: white !important;
+                border: 1px solid white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .report-container {
+                padding: 5px;
+                height: auto;
+                display: block;
+            }
+
+            .filter-panel {
+                padding: 15px;
+            }
+
+            .data-panel {
+                box-shadow: none;
+                border: 1px solid #eee;
+            }
+
+            .data-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            #topSummary {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                padding: 10px !important;
+                background-color: #f1f3f4 !important;
+            }
+
+            #topSummary>div {
+                text-align: center;
+                background: white;
+                padding: 8px;
+                border-radius: 6px;
+                border: 1px solid #e0e0e0;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+
+            .data-table {
+                min-width: 800px;
+                /* Force horizontal scroll */
+                table-layout: auto !important;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 6px 8px;
+                font-size: 11px;
+                white-space: normal;
+                /* Allow wrapping if needed */
+            }
+
+            /* Responsive Dept Header */
+            .dept-header-row {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 5px;
+            }
+
+            /* Full width buttons */
+            .filter-panel .d-flex {
+                width: 100%;
+            }
+
+            .filter-panel .btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="print-header" style="display:none; text-align:center; margin-bottom:20px;">
+        <h2 style="margin:0; text-transform:uppercase; letter-spacing:1px;">Department Wise Sale</h2>
+        <h4 id="printBranchName" style="margin:5px 0 0; color:#555;">(PWD-1)</h4>
+        <p id="printDateRange" style="margin:5px 0 0; font-size:12px; color:#666;">-</p>
+    </div>
+
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <i class="fas fa-chart-line me-2"></i> Department Wise Sales Report
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-container">
+        <!-- Filter Panel -->
+        <div class="filter-panel">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label>From Date</label>
+                    <input type="date" id="filterFromDate" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label>To Date</label>
+                    <input type="date" id="filterToDate" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label>Branch</label>
+                    <select id="filterBranch" class="form-select form-select-sm">
+                        <!-- Loaded via JS -->
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Department</label>
+                    <select id="filterDept" class="form-select form-select-sm">
+                        <option value="">All Departments</option>
+                        <!-- Loaded via JS -->
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button class="btn btn-light btn-sm" onclick="loadReport()">
+                        <i class="fas fa-search me-1"></i> Search
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Panel -->
+        <div class="data-panel">
+            <div class="data-header">
+                <h5><i class="fas fa-list me-2"></i>Sales Details</h5>
+                <span id="recordCount" class="badge bg-primary">0 records</span>
+            </div>
+
+            <!-- Total Summary (Top) -->
+            <div id="topSummary" class="p-3 border-bottom d-flex justify-content-around fw-bold"
+                style="display:none !important; background-color: #cfd8dc;">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="table-container" id="reportContainer">
+                <!-- Tables will be generated here -->
+                <div class="no-data p-5 text-center">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Select filters and click "Search"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/desktop-ui.js"></script>
+    <script>
+        let departmentsMap = {};
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-PK', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount || 0);
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Set default dates (current month)
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('filterFromDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('filterToDate').value = today.toISOString().split('T')[0];
+
+            await loadBranches();
+            await loadDepartments();
+
+            document.getElementById('filterBranch').addEventListener('change', loadDepartments);
+        });
+
+        async function loadBranches() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/v1/stores', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('filterBranch');
+                    select.innerHTML = '';
+                    (data.data || []).forEach(store => {
+                        select.innerHTML += `<option value="${store.name}">${store.name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadDepartments() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/v1/departments', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const deptSelect = document.getElementById('filterDept');
+                    const branch = document.getElementById('filterBranch').value;
+
+                    // Clear existing options
+                    deptSelect.innerHTML = '<option value="">All Departments</option>';
+
+                    const sortedDepts = (data.data || []).sort((a, b) => {
+                        const codeA = parseInt(a.code) || 999999;
+                        const codeB = parseInt(b.code) || 999999;
+                        return codeA - codeB || a.name.localeCompare(b.name);
+                    });
+
+                    sortedDepts.forEach(d => {
+                        // Filter by Branch
+                        if (branch && d.branch !== branch) return;
+
+                        // Filter: Hide specialized internal departments
+                        if (d.name === 'PERCENTAGE CASH' || d.name === 'CASH REC FROM COUNTER') return;
+
+                        // Filter: Hide if only 'Closing_2_Comp_Sale' is set (and not explicitly a dropdown dept)
+                        if (d.closing2CompSale && !d.closing2DeptDropDown) return;
+
+                        // Store full object to access target/commission
+                        departmentsMap[d._id] = d;
+                        deptSelect.innerHTML += `<option value="${d._id}">${d.name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadReport() {
+            const token = localStorage.getItem('token');
+            const container = document.getElementById('reportContainer');
+            const startDate = document.getElementById('filterFromDate').value;
+            const endDate = document.getElementById('filterToDate').value;
+            const branch = document.getElementById('filterBranch').value;
+            const selectedDeptId = document.getElementById('filterDept').value;
+
+            // Update details for print
+            document.getElementById('printBranchName').textContent = `(${branch})`;
+            const s = new Date(startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const e = new Date(endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            document.getElementById('printDateRange').textContent = `From :  ${s}      To :  ${e}`;
+
+            container.innerHTML = `<div class="loading"><div class="spinner-border text-primary"></div></div>`;
+
+            try {
+                const response = await fetch(`/api/v1/closing-sheets/report?startDate=${startDate}&endDate=${endDate}&branch=${branch}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch data');
+
+                const result = await response.json();
+                const sheets = result.data || [];
+
+                if (sheets.length === 0) {
+                    container.innerHTML = `<div class="no-data p-5 text-center">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No data found</p>
+                    </div>`;
+                    return;
+                }
+
+                renderReport(sheets, selectedDeptId);
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class="text-danger p-5 text-center">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderReport(sheets, selectedDeptId) {
+            const container = document.getElementById('reportContainer');
+            container.innerHTML = '';
+
+            // 1. Group Data by Department
+            const groupedData = {};
+
+            // Sort sheets by date
+            sheets.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            sheets.forEach(sheet => {
+                const closing02 = sheet.closing02?.data || {};
+                const date = sheet.date;
+
+                Object.keys(closing02).forEach(deptId => {
+                    // Filter if specific department selected
+                    if (selectedDeptId && deptId !== selectedDeptId) return;
+
+                    const dept = departmentsMap[deptId];
+                    if (!dept) return; // Should not happen usually
+
+                    const deptName = dept.name;
+                    const data = closing02[deptId];
+
+                    if ((data.totalSaleComputer || 0) !== 0 || (data.counterClosing || 0) !== 0) {
+                        if (!groupedData[deptId]) groupedData[deptId] = {
+                            name: deptName,
+                            config: dept,
+                            records: []
+                        };
+                        groupedData[deptId].records.push({
+                            date: date,
+                            ...data
+                        });
+                    }
+                });
+            });
+
+            // 2. Render Groups
+            let globalTotalBatch = 0;
+            let globalTotalSale = 0;
+            let globalCommission = 0;
+            let globalDiff = 0;
+            let globalTotalDiscVal = 0;
+            let globalTargetMetCount = 0;
+
+            const sortedDeptIds = Object.keys(groupedData).sort((a, b) => groupedData[a].name.localeCompare(groupedData[b].name));
+
+            if (sortedDeptIds.length === 0) {
+                container.innerHTML = `<div class="no-data p-5 text-center"><p class="text-muted">No relevant data found in closing sheets.</p></div>`;
+                return;
+            }
+
+            // Define Standard Column Widths using Colgroup
+            const colGroupHtml = `
+                <colgroup>
+                    <col style="width: 12%">
+                    <col style="width: 13%">
+                    <col style="width: 13%">
+                    <col style="width: 6%">
+                    <col style="width: 13%">
+                    <col style="width: 13%">
+                    <col style="width: 10%">
+                    <col style="width: 20%">
+                </colgroup>
+            `;
+
+            sortedDeptIds.forEach(deptId => {
+                const group = groupedData[deptId];
+                const deptName = group.name;
+                const deptConfig = group.config;
+                const records = group.records;
+
+                // Create Section
+                const section = document.createElement('div');
+                section.className = 'mb-4';
+
+                const targetSale = deptConfig.targetSale01 || 0;
+                const commissionRate = deptConfig.commission01 || 0;
+
+                // Department Header with Target Info
+                const headerHtml = `
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-3 dept-header-row">
+                         <h5 class="fw-bold m-0" style="color: black; text-transform:uppercase;">${deptName}</h5>
+                         <div class="text-muted small">Target Sale: <span class="fw-bold text-dark">${formatCurrency(targetSale)}</span> | Commission: <span class="fw-bold text-dark">${formatCurrency(commissionRate)}</span></div>
+                    </div>
+                `;
+
+                // Table
+                let tableHtml = `
+                <table class="data-table" style="width: 100%;">
+                    ${colGroupHtml}
+                    <thead>
+                        <tr>
+                            <th>Dated</th>
+                            <th class="text-end">Batch Amount</th>
+                            <th class="text-end">Total_Sale Computer</th>
+                            <th class="text-center">SR</th>
+                            <th class="text-end">Commission Amount</th>
+                            <th class="text-end">Difference</th>
+                            <th class="text-end">Discount %</th>
+                            <th class="text-end">Discount Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                let deptBatch = 0;
+                let deptSale = 0;
+                let deptComm = 0;
+                let deptDiff = 0;
+                let deptDiscVal = 0;
+                let targetMetCount = 0;
+
+                records.forEach((r, idx) => {
+                    const batch = parseFloat(r.bankTotal || 0);
+                    const sale = parseFloat(r.totalSaleComputer || r.grossSale || 0);
+                    const diff = parseFloat(r.difference || 0);
+                    const discVal = parseFloat(r.discountValue || 0);
+
+                    // Commission Logic
+                    let comm = 0;
+                    let srDisplay = '';
+
+                    if (targetSale > 0 && sale >= targetSale) {
+                        comm = commissionRate;
+                        targetMetCount++;
+                        srDisplay = targetMetCount;
+                    }
+
+                    let discPct = 0;
+                    if (sale > 0 && discVal > 0) {
+                        discPct = (discVal / sale) * 100;
+                    }
+
+                    // Update totals
+                    deptBatch += batch;
+                    deptSale += sale;
+                    deptComm += comm;
+                    deptDiff += diff;
+                    deptDiscVal += discVal;
+
+                    tableHtml += `
+                        <tr>
+                            <td>${formatDate(r.date)}</td>
+                            <td class="text-end">${formatCurrency(batch)}</td>
+                            <td class="text-end" style="background-color: #f0f0f0;">${formatCurrency(sale)}</td> 
+                            <td class="text-center">${srDisplay}</td> 
+                            <td class="text-end">${formatCurrency(comm)}</td>
+                            <td class="text-end">(${Math.abs(diff)})</td> 
+                            <td class="text-end">${discPct.toFixed(2)}</td>
+                            <td class="text-end">${formatCurrency(discVal)}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `</tbody></table>`;
+
+                section.innerHTML = headerHtml + tableHtml;
+                container.appendChild(section);
+
+                globalTotalBatch += deptBatch;
+                globalTotalSale += deptSale;
+                globalCommission += deptComm;
+                globalDiff += deptDiff;
+                globalTotalDiscVal += deptDiscVal;
+                globalTargetMetCount += targetMetCount;
+            });
+
+            // Hide record count badge as per request
+            document.getElementById('recordCount').style.display = 'none';
+
+            // Update Top Summary
+            const summaryDiv = document.getElementById('topSummary');
+            summaryDiv.style.display = 'flex';
+            summaryDiv.style.backgroundColor = '#e3f2fd'; // Soft Blue
+            summaryDiv.style.borderBottom = '1px solid #90caf9';
+
+            summaryDiv.innerHTML = `
+                <div class="text-center">
+                    <small class="d-block text-primary fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Batch Amount</small>
+                    <div class="fs-5 text-dark fw-bold">${formatCurrency(globalTotalBatch)}</div>
+                </div>
+                <div class="text-center">
+                    <small class="d-block text-primary fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Sale</small>
+                    <div class="fs-5 text-dark fw-bold">${formatCurrency(globalTotalSale)}</div>
+                </div>
+                <div class="text-center">
+                    <small class="d-block text-primary fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Commission</small>
+                    <div class="fs-5 text-dark fw-bold">${formatCurrency(globalCommission)}</div>
+                </div>
+                <div class="text-center">
+                    <small class="d-block text-primary fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Difference</small>
+                    <div class="fs-5 text-dark fw-bold">(${Math.abs(globalDiff)})</div>
+                </div> 
+            `;
+
+            // Calculate Average Discount %
+            let globalAvgDiscPct = 0;
+            if (globalTotalSale > 0) {
+                globalAvgDiscPct = (globalTotalDiscVal / globalTotalSale) * 100;
+            }
+
+            // Append Grand Total Row
+            const grandTotalTable = document.createElement('table');
+            grandTotalTable.className = 'data-table mt-3';
+            // grandTotalTable.style.tableLayout = 'fixed';
+            grandTotalTable.style.width = '100%';
+            grandTotalTable.innerHTML = `
+                ${colGroupHtml}
+                <tbody>
+                    <tr style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
+                        <td style="font-weight: bold; color: #333;">Grand Total</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalTotalBatch)}</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalTotalSale)}</td>
+                        <td class="text-center" style="font-weight: bold; color: #333;">${globalTargetMetCount > 0 ? globalTargetMetCount : ''}</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalCommission)}</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">(${Math.abs(globalDiff)})</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">${globalAvgDiscPct.toFixed(2)}</td>
+                        <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalTotalDiscVal)}</td>
+                    </tr>
+                </tbody>
+            `;
+            container.appendChild(grandTotalTable);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Bilal Accounting System (BAS)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .profile-header {
+            background: linear-gradient(135deg, #1a5f7a 0%, #0288d1 100%);
+            height: 150px;
+            border-radius: 8px 8px 0 0;
+            position: relative;
+        }
+
+        .profile-avatar-container {
+            position: absolute;
+            bottom: -50px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background-color: #f8f9fa;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .profile-avatar-display {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-avatar-display svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .profile-avatar-placeholder {
+            font-size: 3rem;
+            color: #dee2e6;
+        }
+
+        .profile-change-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 5px 0;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            opacity: 1;
+        }
+
+        .profile-change-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .profile-content {
+            padding-top: 60px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            height: 100%;
+            transition: transform 0.2s;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        /* Avatar Selection Modal Styles */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .avatar-option {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        .avatar-option:hover {
+            transform: scale(1.1);
+            border-color: #0288d1;
+            box-shadow: 0 4px 12px rgba(2, 136, 209, 0.3);
+        }
+
+        .avatar-option.selected {
+            border-color: #0288d1;
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.3);
+        }
+
+        .avatar-option svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .avatar-modal-title {
+            color: #1a5f7a;
+            font-weight: 600;
+        }
+
+        /* Header avatar SVG styling */
+        #headerAvatarDisplay svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Server Health Cards Styles */
+        .health-section {
+            margin-top: 30px;
+        }
+
+        .health-section-title {
+            color: #1a5f7a;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .health-section-title i {
+            font-size: 1.3rem;
+        }
+
+        .health-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .health-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .health-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .health-card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .health-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .health-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1.2;
+        }
+
+        .health-card-subtitle {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* Health Score Card */
+        .health-score-card {
+            background: linear-gradient(135deg, #1a5f7a 0%, #0288d1 100%);
+            color: white;
+        }
+
+        .health-score-card .health-card-title,
+        .health-score-card .health-card-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .health-score-card .health-card-value {
+            color: white;
+        }
+
+        .health-score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        /* Progress Bar */
+        .health-progress {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .health-progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-green {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+
+        .progress-yellow {
+            background: linear-gradient(90deg, #f39c12, #f1c40f);
+        }
+
+        .progress-red {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .progress-blue {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-connected {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .status-disconnected {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .status-healthy {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .status-warning {
+            background: rgba(243, 156, 18, 0.15);
+            color: #f39c12;
+        }
+
+        .status-critical {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        /* Pulse animation for live indicator */
+        .pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(39, 174, 96, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0);
+            }
+        }
+
+        .pulse.connected {
+            background: #27ae60;
+        }
+
+        .pulse.disconnected {
+            background: #e74c3c;
+            animation-name: pulse-red;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+            }
+        }
+
+        /* Server Info List */
+        .server-info-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .server-info-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .server-info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .server-info-label {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+
+        .server-info-value {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.85rem;
+        }
+
+        /* Refresh button */
+        .health-refresh-btn {
+            background: transparent;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .health-refresh-btn:hover {
+            background: #f8f9fa;
+            color: #1a5f7a;
+        }
+
+        .health-refresh-btn.spinning i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Auto-refresh indicator */
+        .auto-refresh-indicator {
+            font-size: 0.75rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Main Content Wrapper -->
+    <div class="main-content">
+        <!-- Standardized Page Header -->
+        <div class="page-header px-3">
+            <div style="flex: 1; display: flex; align-items: center;">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+                <h4 class="mb-0">User Profile</h4>
+            </div>
+            <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+                <div class="dropdown">
+                    <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        <div class="user-avatar text-white bg-primary rounded-circle d-flex align-items-center justify-content-center me-2"
+                            style="width: 35px; height: 35px; overflow: hidden;" id="headerAvatarDisplay">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="headerUserName" class="me-2 d-none d-md-block">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item active" href="/profile.html">Profile</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item logout-btn" href="#"><i
+                                    class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="container-fluid mt-4">
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card border-0 shadow-sm rounded-lg overflow-hidden">
+                        <!-- Header / Banner -->
+                        <div class="profile-header">
+                            <h2 class="text-white pt-4 ps-5 ms-md-5" style="padding-left: 90px !important;">My Profile
+                            </h2>
+
+                            <!-- Avatar Section (Moved Inside Header to position correctly) -->
+                            <div class="profile-avatar-container" id="avatarContainer">
+                                <div id="profileAvatarDisplay" class="profile-avatar-display">
+                                    <i id="profilePlaceholder" class="fas fa-user profile-avatar-placeholder"></i>
+                                </div>
+
+                                <div class="profile-change-btn" data-bs-toggle="modal" data-bs-target="#avatarModal">
+                                    <i class="fas fa-palette"></i> Change
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body profile-content px-4 px-md-5 pb-5">
+                            <div class="row pt-3">
+                                <div class="col-md-6 mb-4">
+                                    <div class="info-card p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="rounded-circle bg-light p-2 me-3 text-primary">
+                                                <i class="fas fa-id-card"></i>
+                                            </div>
+                                            <div class="info-label mb-0">Full Name</div>
+                                        </div>
+                                        <div class="ps-5">
+                                            <div class="info-value" id="profileName">Loading...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <div class="info-card p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="rounded-circle bg-light p-2 me-3 text-success">
+                                                <i class="fas fa-envelope"></i>
+                                            </div>
+                                            <div class="info-label mb-0">Email / Login ID</div>
+                                        </div>
+                                        <div class="ps-5">
+                                            <div class="info-value" id="profileEmail">Loading...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <div class="info-card p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="rounded-circle bg-light p-2 me-3 text-info">
+                                                <i class="fas fa-user-tag"></i>
+                                            </div>
+                                            <div class="info-label mb-0">Role</div>
+                                        </div>
+                                        <div class="ps-5">
+                                            <div class="info-value" id="profileRole">Loading...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <div class="info-card p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="rounded-circle bg-light p-2 me-3 text-warning">
+                                                <i class="fas fa-building"></i>
+                                            </div>
+                                            <div class="info-label mb-0">Branch / Department</div>
+                                        </div>
+                                        <div class="ps-5">
+                                            <div class="info-value" id="profileBranch">Loading...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info border-0 bg-light p-3 mt-2 rounded">
+                                <div class="d-flex">
+                                    <i class="fas fa-info-circle me-3 mt-1 text-info"></i>
+                                    <div>
+                                        <h6 class="alert-heading fw-bold mb-1">Information Update</h6>
+                                        <p class="mb-0 text-muted small">
+                                            Your primary account details (Name, Login ID, Role) are managed by the
+                                            administrator.
+                                            Contact your system admin to update these details. You can select your
+                                            avatar here.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Server Health Monitoring Section -->
+                            <div class="health-section">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="health-section-title mb-0">
+                                        <i class="fas fa-heartbeat text-danger"></i>
+                                        Server Health Monitor
+                                    </h5>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="auto-refresh-indicator">
+                                            <div class="pulse connected" id="liveIndicator"></div>
+                                            <span>Live Updates</span>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" id="clearCacheBtn"
+                                            title="Clear Server Cache">
+                                            <i class="fas fa-broom me-1"></i>
+                                            <span id="clearCacheBtnText">Clear Cache</span>
+                                        </button>
+                                        <button class="health-refresh-btn" id="refreshHealthBtn" title="Refresh Now">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <!-- Health Score Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card health-score-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-shield-alt"></i>
+                                                    Overall Health
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <div class="health-card-value" id="healthScore">--</div>
+                                                    <div class="health-card-subtitle">
+                                                        <span class="status-badge status-healthy" id="healthStatus">
+                                                            <i class="fas fa-check-circle"></i>
+                                                            Loading...
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="health-score-circle" id="healthScoreCircle">--</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Memory Usage Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-memory text-info"></i>
+                                                    Memory Usage
+                                                </div>
+                                                <div class="health-card-icon"
+                                                    style="background: rgba(52, 152, 219, 0.1); color: #3498db;">
+                                                    <i class="fas fa-microchip"></i>
+                                                </div>
+                                            </div>
+                                            <div class="health-card-value" id="memoryPercent">--%</div>
+                                            <div class="health-card-subtitle" id="memoryDetails">-- / --</div>
+                                            <div class="health-progress">
+                                                <div class="health-progress-bar progress-blue" id="memoryBar"
+                                                    style="width: 0%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CPU Usage Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-tachometer-alt text-success"></i>
+                                                    CPU Performance
+                                                </div>
+                                                <div class="health-card-icon"
+                                                    style="background: rgba(39, 174, 96, 0.1); color: #27ae60;">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </div>
+                                            </div>
+                                            <div class="health-card-value" id="cpuPercent">--%</div>
+                                            <div class="health-card-subtitle" id="cpuDetails">-- cores</div>
+                                            <div class="health-progress">
+                                                <div class="health-progress-bar progress-green" id="cpuBar"
+                                                    style="width: 0%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Database Status Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-database text-warning"></i>
+                                                    Database
+                                                </div>
+                                                <div class="pulse connected" id="dbPulse"></div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="status-badge status-connected" id="dbStatus">
+                                                    <i class="fas fa-plug"></i>
+                                                    Loading...
+                                                </span>
+                                            </div>
+                                            <ul class="server-info-list" style="font-size: 0.8rem;">
+                                                <li>
+                                                    <span class="server-info-label">Type</span>
+                                                    <span class="server-info-value" id="dbType">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Database</span>
+                                                    <span class="server-info-value" id="dbName">--</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Server Info Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-server text-primary"></i>
+                                                    Server Info
+                                                </div>
+                                            </div>
+                                            <ul class="server-info-list">
+                                                <li>
+                                                    <span class="server-info-label">Platform</span>
+                                                    <span class="server-info-value" id="serverPlatform">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Node.js</span>
+                                                    <span class="server-info-value" id="serverNode">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Uptime</span>
+                                                    <span class="server-info-value" id="serverUptime">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Environment</span>
+                                                    <span class="server-info-value" id="serverEnv">--</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Process Memory Card -->
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="health-card">
+                                            <div class="health-card-header">
+                                                <div class="health-card-title">
+                                                    <i class="fas fa-layer-group text-danger"></i>
+                                                    Process Memory
+                                                </div>
+                                            </div>
+                                            <ul class="server-info-list">
+                                                <li>
+                                                    <span class="server-info-label">Heap Used</span>
+                                                    <span class="server-info-value" id="heapUsed">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Heap Total</span>
+                                                    <span class="server-info-value" id="heapTotal">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">RSS</span>
+                                                    <span class="server-info-value" id="processRss">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">External</span>
+                                                    <span class="server-info-value" id="processExternal">--</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-center mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sync-alt me-1"></i>
+                                        Auto-refreshes every 5 seconds | Last updated: <span id="lastUpdated">--</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Avatar Selection Modal -->
+    <div class="modal fade" id="avatarModal" tabindex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title avatar-modal-title" id="avatarModalLabel">
+                        <i class="fas fa-user-circle me-2"></i>Choose Your Avatar
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="avatar-grid" id="avatarGrid">
+                        <!-- Avatars will be injected via JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveAvatarBtn">
+                        <i class="fas fa-check me-1"></i>Save Avatar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script>
+        // Built-in Avatar SVGs
+        const AVATARS = [
+            // Avatar 1 - Blue Professional Male
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#3498db"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#2980b9"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 52 55 47" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 30 25 Q 50 5 70 25 Q 70 35 50 30 Q 30 35 30 25" fill="#4a3728"/>
+            </svg>`,
+
+            // Avatar 2 - Pink Professional Female
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#e91e63"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#c2185b"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 52 55 47" stroke="#c0392b" stroke-width="2" fill="none"/>
+                <path d="M 25 35 Q 25 10 50 15 Q 75 10 75 35 Q 70 45 50 55 Q 30 45 25 35" fill="#5d4037"/>
+            </svg>`,
+
+            // Avatar 3 - Green Tech Guy
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#27ae60"/>
+                <circle cx="50" cy="40" r="20" fill="#fce4d6"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#1e8449"/>
+                <rect x="36" y="32" width="10" height="8" rx="2" fill="#333"/>
+                <rect x="54" y="32" width="10" height="8" rx="2" fill="#333"/>
+                <path d="M 45 48 Q 50 51 55 48" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 30 28 Q 50 20 70 28 L 65 35 Q 50 30 35 35 Z" fill="#2c3e50"/>
+            </svg>`,
+
+            // Avatar 4 - Purple Creative Female
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#9b59b6"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#8e44ad"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 43 47 Q 50 53 57 47" stroke="#e74c3c" stroke-width="2" fill="none"/>
+                <path d="M 20 40 Q 25 10 50 15 Q 75 10 80 40 Q 75 50 50 60 Q 25 50 20 40" fill="#6c3483"/>
+            </svg>`,
+
+            // Avatar 5 - Orange Business Male
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#e67e22"/>
+                <circle cx="50" cy="40" r="20" fill="#fce4d6"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#d35400"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 50 55 47" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 32 30 Q 50 22 68 30 L 65 25 Q 50 18 35 25 Z" fill="#1a1a1a"/>
+                <rect x="47" y="60" width="6" height="10" fill="#2c3e50"/>
+            </svg>`,
+
+            // Avatar 6 - Teal Doctor/Medical
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#1abc9c"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#fff"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 51 55 47" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 30 25 Q 50 10 70 25 Q 65 30 50 28 Q 35 30 30 25" fill="#2c3e50"/>
+                <circle cx="35" cy="70" r="5" fill="#e74c3c"/>
+                <rect x="33" y="68" width="4" height="4" fill="#fff"/>
+                <rect x="34" y="67" width="2" height="6" fill="#fff"/>
+            </svg>`,
+
+            // Avatar 7 - Red Bold Male
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#e74c3c"/>
+                <circle cx="50" cy="40" r="20" fill="#fce4d6"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#c0392b"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 44 47 Q 50 52 56 47" stroke="#333" stroke-width="2" fill="none"/>
+                <ellipse cx="50" cy="22" rx="22" ry="12" fill="#2c3e50"/>
+            </svg>`,
+
+            // Avatar 8 - Indigo Professional Female
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#3f51b5"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#303f9f"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 52 55 47" stroke="#e74c3c" stroke-width="2" fill="none"/>
+                <path d="M 22 38 Q 28 8 50 12 Q 72 8 78 38 Q 72 48 50 50 Q 28 48 22 38" fill="#1a1a1a"/>
+                <circle cx="43" cy="33" r="5" fill="none" stroke="#333" stroke-width="1"/>
+                <circle cx="57" cy="33" r="5" fill="none" stroke="#333" stroke-width="1"/>
+            </svg>`,
+
+            // Avatar 9 - Cyan Modern Male
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#00bcd4"/>
+                <circle cx="50" cy="40" r="20" fill="#fce4d6"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#0097a7"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 48 Q 50 52 55 48" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 30 32 Q 35 15 50 18 Q 65 15 70 32 L 65 28 Q 50 22 35 28 Z" fill="#5d4037"/>
+                <rect x="28" y="45" width="6" height="4" rx="1" fill="#ffc107"/>
+            </svg>`,
+
+            // Avatar 10 - Amber Casual Female
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#ffc107"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#ffa000"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 44 47 Q 50 53 56 47" stroke="#e74c3c" stroke-width="2" fill="none"/>
+                <path d="M 25 30 Q 30 5 50 10 Q 70 5 75 30" fill="#ff9800" stroke="none"/>
+                <path d="M 25 30 Q 25 45 35 55 L 30 60 Q 20 50 25 30" fill="#ff9800"/>
+                <path d="M 75 30 Q 75 45 65 55 L 70 60 Q 80 50 75 30" fill="#ff9800"/>
+            </svg>`,
+
+            // Avatar 11 - Navy Executive
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#34495e"/>
+                <circle cx="50" cy="40" r="20" fill="#fce4d6"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#2c3e50"/>
+                <circle cx="43" cy="37" r="3" fill="#333"/>
+                <circle cx="57" cy="37" r="3" fill="#333"/>
+                <path d="M 45 47 Q 50 50 55 47" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 32 28 Q 50 18 68 28 L 66 22 Q 50 14 34 22 Z" fill="#566573"/>
+                <path d="M 40 60 L 50 70 L 60 60" fill="#e74c3c"/>
+                <rect x="47" y="60" width="6" height="8" fill="#fff"/>
+            </svg>`,
+
+            // Avatar 12 - Lime Friendly
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#8bc34a"/>
+                <circle cx="50" cy="40" r="20" fill="#f5d0c5"/>
+                <ellipse cx="50" cy="85" rx="30" ry="25" fill="#689f38"/>
+                <circle cx="43" cy="37" r="4" fill="#333"/>
+                <circle cx="57" cy="37" r="4" fill="#333"/>
+                <circle cx="44" cy="36" r="1.5" fill="#fff"/>
+                <circle cx="58" cy="36" r="1.5" fill="#fff"/>
+                <path d="M 42 47 Q 50 55 58 47" stroke="#333" stroke-width="2" fill="none"/>
+                <path d="M 28 30 Q 35 10 50 12 Q 65 10 72 30 Q 68 35 50 32 Q 32 35 28 30" fill="#5d4037"/>
+            </svg>`
+        ];
+
+        let selectedAvatarIndex = null;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Initial load of user data
+            const user = window.getCurrentUser();
+
+            if (user) {
+                // Populate Header
+                document.getElementById('headerUserName').textContent = user.name || 'User';
+
+                // Populate Profile Fields
+                document.getElementById('profileName').textContent = user.name || 'N/A';
+                document.getElementById('profileEmail').textContent = user.email || 'N/A';
+                document.getElementById('profileRole').textContent = (user.role || 'N/A').toUpperCase();
+
+                // Determine Branch/Dept text
+                let branchText = 'N/A';
+                if (user.branch && user.branch.length > 0) {
+                    branchText = user.branch.join(', ');
+                }
+                if (user.department) {
+                    branchText += (branchText !== 'N/A' ? ' / ' : '') + user.department;
+                }
+                document.getElementById('profileBranch').textContent = branchText;
+
+                // Handle saved avatar
+                const savedAvatarIndex = localStorage.getItem('userAvatar');
+                if (savedAvatarIndex !== null) {
+                    selectedAvatarIndex = parseInt(savedAvatarIndex);
+                    displayAvatar(selectedAvatarIndex);
+                }
+            }
+
+            // Populate avatar grid
+            populateAvatarGrid();
+
+            // Setup save button listener
+            document.getElementById('saveAvatarBtn').addEventListener('click', saveSelectedAvatar);
+        });
+
+        function populateAvatarGrid() {
+            const grid = document.getElementById('avatarGrid');
+            grid.innerHTML = '';
+
+            AVATARS.forEach((avatarSvg, index) => {
+                const avatarOption = document.createElement('div');
+                avatarOption.className = 'avatar-option';
+                avatarOption.innerHTML = avatarSvg;
+                avatarOption.dataset.index = index;
+
+                // Mark as selected if it's the current avatar
+                const savedIndex = localStorage.getItem('userAvatar');
+                if (savedIndex !== null && parseInt(savedIndex) === index) {
+                    avatarOption.classList.add('selected');
+                }
+
+                avatarOption.addEventListener('click', () => selectAvatar(index));
+                grid.appendChild(avatarOption);
+            });
+        }
+
+        function selectAvatar(index) {
+            // Remove selection from all
+            document.querySelectorAll('.avatar-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+
+            // Add selection to clicked
+            const selected = document.querySelector(`.avatar-option[data-index="${index}"]`);
+            if (selected) {
+                selected.classList.add('selected');
+            }
+
+            selectedAvatarIndex = index;
+        }
+
+        function displayAvatar(index) {
+            const display = document.getElementById('profileAvatarDisplay');
+            const headerDisplay = document.getElementById('headerAvatarDisplay');
+            const placeholder = document.getElementById('profilePlaceholder');
+
+            if (index !== null && AVATARS[index]) {
+                display.innerHTML = AVATARS[index];
+                if (placeholder) placeholder.classList.add('d-none');
+
+                // Also update header avatar
+                if (headerDisplay) {
+                    headerDisplay.innerHTML = AVATARS[index];
+                    headerDisplay.style.background = 'transparent';
+                }
+            } else {
+                display.innerHTML = '<i id="profilePlaceholder" class="fas fa-user profile-avatar-placeholder"></i>';
+                // Reset header to default
+                if (headerDisplay) {
+                    headerDisplay.innerHTML = '<i class="fas fa-user"></i>';
+                    headerDisplay.style.background = '';
+                    headerDisplay.classList.add('bg-primary');
+                }
+            }
+        }
+
+        function saveSelectedAvatar() {
+            if (selectedAvatarIndex === null) {
+                if (window.showError) {
+                    window.showError('Please select an avatar first');
+                } else {
+                    alert('Please select an avatar first');
+                }
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('userAvatar', selectedAvatarIndex);
+
+            // Update display
+            displayAvatar(selectedAvatarIndex);
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('avatarModal'));
+            modal.hide();
+
+            // Show success message
+            if (window.showSuccess) {
+                window.showSuccess('Avatar updated successfully!');
+            } else {
+                alert('Avatar updated successfully!');
+            }
+        }
+
+        // ========================================
+        // SERVER HEALTH MONITORING
+        // ========================================
+        let healthRefreshInterval = null;
+
+        async function fetchServerHealth() {
+            try {
+                const refreshBtn = document.getElementById('refreshHealthBtn');
+                if (refreshBtn) refreshBtn.classList.add('spinning');
+
+                const token = window.getAuthToken ? window.getAuthToken() : localStorage.getItem('token');
+                const response = await fetch('/api/v1/health', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch health data');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateHealthDashboard(data);
+                }
+
+                if (refreshBtn) {
+                    setTimeout(() => refreshBtn.classList.remove('spinning'), 500);
+                }
+
+            } catch (error) {
+                console.error('Health check error:', error);
+                const liveIndicator = document.getElementById('liveIndicator');
+                if (liveIndicator) {
+                    liveIndicator.classList.remove('connected');
+                    liveIndicator.classList.add('disconnected');
+                }
+            }
+        }
+
+        function updateHealthDashboard(data) {
+            // Update last updated time
+            const lastUpdated = document.getElementById('lastUpdated');
+            if (lastUpdated) {
+                lastUpdated.textContent = new Date().toLocaleTimeString();
+            }
+
+            // Update live indicator
+            const liveIndicator = document.getElementById('liveIndicator');
+            if (liveIndicator) {
+                liveIndicator.classList.add('connected');
+                liveIndicator.classList.remove('disconnected');
+            }
+
+            // Health Score
+            if (data.health) {
+                const healthScore = document.getElementById('healthScore');
+                const healthScoreCircle = document.getElementById('healthScoreCircle');
+                const healthStatus = document.getElementById('healthStatus');
+
+                if (healthScore) healthScore.textContent = `${data.health.score}%`;
+                if (healthScoreCircle) healthScoreCircle.textContent = data.health.score;
+
+                if (healthStatus) {
+                    healthStatus.className = 'status-badge';
+                    if (data.health.status === 'Healthy') {
+                        healthStatus.classList.add('status-healthy');
+                        healthStatus.innerHTML = '<i class="fas fa-check-circle"></i> Healthy';
+                    } else if (data.health.status === 'Warning') {
+                        healthStatus.classList.add('status-warning');
+                        healthStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Warning';
+                    } else {
+                        healthStatus.classList.add('status-critical');
+                        healthStatus.innerHTML = '<i class="fas fa-times-circle"></i> Critical';
+                    }
+                }
+            }
+
+            // Memory
+            if (data.memory && data.memory.system) {
+                const memoryPercent = document.getElementById('memoryPercent');
+                const memoryDetails = document.getElementById('memoryDetails');
+                const memoryBar = document.getElementById('memoryBar');
+
+                if (memoryPercent) memoryPercent.textContent = `${data.memory.system.usagePercent}%`;
+                if (memoryDetails) memoryDetails.textContent = `${data.memory.system.used} / ${data.memory.system.total}`;
+                if (memoryBar) {
+                    memoryBar.style.width = `${data.memory.system.usagePercent}%`;
+                    memoryBar.className = 'health-progress-bar';
+                    if (data.memory.system.usagePercent > 90) {
+                        memoryBar.classList.add('progress-red');
+                    } else if (data.memory.system.usagePercent > 75) {
+                        memoryBar.classList.add('progress-yellow');
+                    } else {
+                        memoryBar.classList.add('progress-blue');
+                    }
+                }
+            }
+
+            // Process Memory
+            if (data.memory && data.memory.process) {
+                const heapUsed = document.getElementById('heapUsed');
+                const heapTotal = document.getElementById('heapTotal');
+                const processRss = document.getElementById('processRss');
+                const processExternal = document.getElementById('processExternal');
+
+                if (heapUsed) heapUsed.textContent = data.memory.process.heapUsed;
+                if (heapTotal) heapTotal.textContent = data.memory.process.heapTotal;
+                if (processRss) processRss.textContent = data.memory.process.rss;
+                if (processExternal) processExternal.textContent = data.memory.process.external;
+            }
+
+            // CPU
+            if (data.cpu) {
+                const cpuPercent = document.getElementById('cpuPercent');
+                const cpuDetails = document.getElementById('cpuDetails');
+                const cpuBar = document.getElementById('cpuBar');
+
+                if (cpuPercent) cpuPercent.textContent = `${data.cpu.usagePercent}%`;
+                if (cpuDetails) cpuDetails.textContent = `${data.cpu.cores} cores | ${data.cpu.model.split(' ').slice(0, 3).join(' ')}`;
+                if (cpuBar) {
+                    cpuBar.style.width = `${Math.min(data.cpu.usagePercent, 100)}%`;
+                    cpuBar.className = 'health-progress-bar';
+                    if (data.cpu.usagePercent > 90) {
+                        cpuBar.classList.add('progress-red');
+                    } else if (data.cpu.usagePercent > 70) {
+                        cpuBar.classList.add('progress-yellow');
+                    } else {
+                        cpuBar.classList.add('progress-green');
+                    }
+                }
+            }
+
+            // Database
+            if (data.database) {
+                const dbStatus = document.getElementById('dbStatus');
+                const dbPulse = document.getElementById('dbPulse');
+                const dbType = document.getElementById('dbType');
+                const dbName = document.getElementById('dbName');
+
+                if (dbType) dbType.textContent = data.database.type;
+                if (dbName) dbName.textContent = data.database.name;
+
+                if (dbStatus) {
+                    dbStatus.className = 'status-badge';
+                    if (data.database.status === 'Connected') {
+                        dbStatus.classList.add('status-connected');
+                        dbStatus.innerHTML = '<i class="fas fa-plug"></i> Connected';
+                    } else {
+                        dbStatus.classList.add('status-disconnected');
+                        dbStatus.innerHTML = '<i class="fas fa-plug"></i> ' + data.database.status;
+                    }
+                }
+
+                if (dbPulse) {
+                    dbPulse.className = 'pulse';
+                    dbPulse.classList.add(data.database.status === 'Connected' ? 'connected' : 'disconnected');
+                }
+            }
+
+            // Server Info
+            if (data.server) {
+                const serverPlatform = document.getElementById('serverPlatform');
+                const serverNode = document.getElementById('serverNode');
+                const serverUptime = document.getElementById('serverUptime');
+                const serverEnv = document.getElementById('serverEnv');
+
+                if (serverPlatform) serverPlatform.textContent = `${data.server.platform} (${data.server.arch})`;
+                if (serverNode) serverNode.textContent = data.server.nodeVersion;
+                if (serverUptime) serverUptime.textContent = data.server.uptime;
+                if (serverEnv) {
+                    serverEnv.textContent = data.server.environment;
+                    serverEnv.style.color = data.server.environment === 'production' ? '#27ae60' : '#f39c12';
+                }
+            }
+        }
+
+        function initHealthMonitoring() {
+            // Initial fetch
+            fetchServerHealth();
+
+            // Setup auto-refresh every 5 seconds
+            healthRefreshInterval = setInterval(fetchServerHealth, 5000);
+
+            // Setup manual refresh button
+            const refreshBtn = document.getElementById('refreshHealthBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    fetchServerHealth();
+                });
+            }
+
+            // Setup clear cache button
+            const clearCacheBtn = document.getElementById('clearCacheBtn');
+            if (clearCacheBtn) {
+                clearCacheBtn.addEventListener('click', clearServerCache);
+            }
+
+            // Check cache status on load
+            checkCacheStatus();
+        }
+
+        // Cache clear cooldown tracking
+        let cacheCooldownInterval = null;
+
+        async function checkCacheStatus() {
+            try {
+                const token = window.getAuthToken ? window.getAuthToken() : localStorage.getItem('token');
+                const response = await fetch('/api/v1/health/cache-status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateCacheButtonState(data);
+                }
+            } catch (error) {
+                console.error('Cache status check error:', error);
+            }
+        }
+
+        function updateCacheButtonState(data) {
+            const btn = document.getElementById('clearCacheBtn');
+            const btnText = document.getElementById('clearCacheBtnText');
+
+            if (!btn || !btnText) return;
+
+            if (data.canClearCache) {
+                btn.disabled = false;
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-outline-danger');
+                btnText.textContent = 'Clear Cache';
+
+                if (cacheCooldownInterval) {
+                    clearInterval(cacheCooldownInterval);
+                    cacheCooldownInterval = null;
+                }
+            } else {
+                btn.disabled = true;
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-secondary');
+
+                // Start countdown
+                let remaining = data.cooldownRemainingSeconds;
+                btnText.textContent = `Wait ${remaining}s`;
+
+                if (!cacheCooldownInterval) {
+                    cacheCooldownInterval = setInterval(() => {
+                        remaining--;
+                        if (remaining <= 0) {
+                            clearInterval(cacheCooldownInterval);
+                            cacheCooldownInterval = null;
+                            checkCacheStatus();
+                        } else {
+                            btnText.textContent = `Wait ${remaining}s`;
+                        }
+                    }, 1000);
+                }
+            }
+        }
+
+        async function clearServerCache() {
+            const btn = document.getElementById('clearCacheBtn');
+            const btnText = document.getElementById('clearCacheBtnText');
+
+            if (!btn) return;
+
+            // Show loading state
+            btn.disabled = true;
+            btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+
+            try {
+                const token = window.getAuthToken ? window.getAuthToken() : localStorage.getItem('token');
+                const response = await fetch('/api/v1/health/clear-cache', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Show success
+                    if (window.showSuccess) {
+                        window.showSuccess(`Cache cleared! Memory freed: ${data.memoryFreed.heapUsed}`);
+                    } else {
+                        alert(`Cache cleared successfully!\nMemory freed: ${data.memoryFreed.heapUsed}`);
+                    }
+
+                    // Refresh health data
+                    fetchServerHealth();
+
+                    // Start cooldown
+                    updateCacheButtonState({
+                        canClearCache: false,
+                        cooldownRemainingSeconds: data.cooldownSeconds
+                    });
+
+                } else if (response.status === 429) {
+                    // Rate limited
+                    if (window.showError) {
+                        window.showError(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                    updateCacheButtonState({
+                        canClearCache: false,
+                        cooldownRemainingSeconds: Math.ceil(data.cooldownRemaining / 1000)
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to clear cache');
+                }
+
+            } catch (error) {
+                console.error('Clear cache error:', error);
+                if (window.showError) {
+                    window.showError('Failed to clear cache: ' + error.message);
+                } else {
+                    alert('Failed to clear cache: ' + error.message);
+                }
+                btn.disabled = false;
+                btnText.textContent = 'Clear Cache';
+            }
+        }
+
+        // Initialize health monitoring on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            // Wait a bit for other scripts to load
+            setTimeout(initHealthMonitoring, 1000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function () {
+            if (healthRefreshInterval) {
+                clearInterval(healthRefreshInterval);
+            }
+            if (cacheCooldownInterval) {
+                clearInterval(cacheCooldownInterval);
+            }
+        });
+    </script>
+</body>
+
+</html>

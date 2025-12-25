@@ -1,0 +1,430 @@
+/* Sidebar Styles - Refined for "MTS" Look */
+:root {
+    --sidebar-bg: #1e4c8c;
+    --sidebar-width-full: 280px;
+    --sidebar-width-mini: 60px;
+    --popover-bg: #263238;
+    --popover-text: #fff;
+    --active-item-bg: #153866;
+    --item-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* Sidebar Container */
+.sidebar-container {
+    height: 100vh;
+    background-color: #1e4c8c;
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1050;
+    /* Above everything else on mobile */
+    /* Increased to stay above sticky-top elements (1020) */
+    transition: left 0.3s, width 0.3s;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-container.full {
+    width: var(--sidebar-width-full);
+}
+
+.sidebar-container.mini {
+    width: var(--sidebar-width-mini);
+}
+
+/* Header */
+.sidebar-header {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #153866;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-header .logo-text {
+    font-weight: bold;
+    font-size: 1.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    margin-left: 10px;
+}
+
+.mini .logo-text,
+.show-mobile .logo-text {
+    display: none !important;
+}
+
+/* Ensure logo fits properly in the circle */
+.user-avatar-circle img {
+    width: 70% !important;
+    height: 70% !important;
+    object-fit: contain;
+    border-radius: 0;
+    /* Keep logo shape natural inside the circle */
+}
+
+.mini .sidebar-header,
+.show-mobile .sidebar-header {
+    justify-content: center;
+}
+
+.sidebar-header i {
+    font-size: 1.25rem;
+}
+
+.user-info-mini {
+    padding: 20px 0;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--sidebar-bg);
+}
+
+.user-avatar-circle {
+    width: 60px;
+    height: 60px;
+    /* Mini mode or mobile will scale this down */
+    background: #fff;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-size: 1.8rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.mini .user-avatar-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+}
+
+/* Navigation Items */
+.sidebar-menu {
+    flex-grow: 1;
+    padding-top: 10px;
+    /* Overflow handled by specific mode classes below */
+}
+
+.nav-item {
+    position: relative;
+    width: 100%;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+    cursor: pointer;
+    text-decoration: none !important;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white !important;
+}
+
+.nav-link i {
+    width: 30px;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.nav-link span {
+    margin-left: 15px;
+    flex-grow: 1;
+}
+
+.nav-link .arrow {
+    transition: transform 0.3s;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Rotate arrow when collapsed open */
+.nav-link[aria-expanded="true"] .arrow {
+    transform: rotate(90deg);
+}
+
+/* Mode Specific Interactions */
+
+/* FULL MODE: Hide Popover, Show Accordion Trigger */
+.sidebar-container.full .popover-menu {
+    display: none !important;
+}
+
+.sidebar-container.full .submenu-inline {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-container.full .small-link {
+    padding-left: 25px;
+    padding-right: 15px;
+    font-size: 0.95em;
+}
+
+/* MINI MODE: Hide Accordion, Show Popover on Hover */
+.sidebar-container.mini .nav-link,
+.sidebar-container.show-mobile .nav-link {
+    justify-content: flex-start;
+    padding: 15px 20px;
+}
+
+.sidebar-container.mini .nav-link span,
+.sidebar-container.mini .nav-link .arrow,
+.sidebar-container.mini .submenu-inline {
+    display: none !important;
+}
+
+/* On mobile, even if mini class is present, we show spans if show-mobile is present */
+.sidebar-container.show-mobile.mini .nav-link span,
+.sidebar-container.show-mobile.mini .nav-link .arrow {
+    display: block !important;
+}
+
+/* Popover Submenu Styling */
+.popover-menu {
+    display: none;
+    position: absolute;
+    left: var(--sidebar-width-mini);
+    top: 0;
+    width: 250px;
+    background-color: var(--popover-bg);
+    color: var(--popover-text);
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 0 4px 4px 0;
+    z-index: 9999;
+    /* Ensure high z-index to stay on top */
+    padding: 10px 0;
+}
+
+.sidebar-container.mini .nav-item:hover .popover-menu {
+    display: block;
+}
+
+.popover-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: bold;
+    background-color: #1e282c;
+}
+
+.popover-item {
+    display: block;
+    padding: 8px 20px;
+    color: #b8c7ce;
+    text-decoration: none;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.popover-item:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Body Margins - Push content when sidebar is present */
+body.sidebar-full {
+    padding-left: var(--sidebar-width-full);
+    transition: padding-left 0.3s;
+}
+
+body.sidebar-mini {
+    padding-left: var(--sidebar-width-mini);
+    transition: padding-left 0.3s;
+}
+
+/* Ensure no other margins interfere */
+.main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Hide standard bootstrap collapse class in mini mode to prevent flashes */
+.mini .collapse {
+    display: none !important;
+}
+
+/* Sidebar Menu Scrolling - Handle Popover Visibility */
+/* In Full mode, we need scrolling. In Mini mode, we need overflow visible for popovers */
+.sidebar-container.full .sidebar-menu {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-container.mini .sidebar-menu {
+    overflow: visible;
+    /* Allow popovers to break out */
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .sidebar-container {
+        left: -280px !important;
+        /* Force hide on mobile by default */
+        width: 280px !important;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar-container.show-mobile {
+        left: 0 !important;
+        /* Show when toggled */
+    }
+
+    /* Duplicate block removed */
+
+    /* Override mini/full widths on mobile - DEPRECATED catch-all, splitting into specific rules below */
+
+    /* Fix user avatar size on mobile to be proportionate */
+    .show-mobile .user-info-mini,
+    .user-info-mini {
+        padding: 10px 0 !important;
+    }
+
+    .show-mobile .user-avatar-circle,
+    .user-avatar-circle {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1.2rem !important;
+    }
+
+    /* Ensure logo text is VISIBLE on mobile when open, BUT ONLY IF NOT explicitly mini */
+    .show-mobile .sidebar-header .logo-text {
+        display: block !important;
+    }
+
+    /* CRITICAL FIX: Restoration of Mobile Layout */
+
+    /* 1. When sidebar is OPEN on mobile, it MUST be 280px wide to show menu text. */
+    .sidebar-container.show-mobile,
+    .sidebar-container.mini.show-mobile {
+        width: 280px !important;
+    }
+
+    /* 2. When strictly in mini mode (desktop) or closed mobile, it can be narrow. */
+    /* 2. When strictly in mini mode (desktop) or closed mobile, it can be narrow. */
+    .sidebar-container.mini {
+        width: 70px !important;
+    }
+
+    /* 3. Show menu text (Spans & Arrows) when open on mobile */
+    .sidebar-container.show-mobile .nav-link span,
+    .sidebar-container.show-mobile .nav-link .arrow,
+    .sidebar-container.mini.show-mobile .nav-link span,
+    .sidebar-container.mini.show-mobile .nav-link .arrow {
+        display: block !important;
+    }
+
+    /* 4. Keep Logo Text HIDDEN to prevent "B" artifact (User Preference) */
+    .show-mobile .sidebar-header .logo-text,
+    .sidebar-container.mini .sidebar-header .logo-text {
+        display: none !important;
+    }
+
+    /* Ensure Full Mode sidebar is Full Width */
+    .sidebar-container.full {
+        width: 280px !important;
+    }
+
+    /* Hide logo ONLY if specifically in a mini-like state on desktop, handled by main rules. 
+       On mobile we force full width so we show text. */
+    /* Handle desktop overrides if needed, but for mobile we are strict */
+
+    /* Align header content */
+    .sidebar-header {
+        justify-content: flex-start !important;
+        /* Left align for BAS text */
+        padding: 10px !important;
+    }
+
+    #sidebarToggleBtn {
+        font-size: 1.2rem !important;
+        margin-right: 10px !important;
+    }
+
+    /* On mobile, popovers are not great, but if they hover we should probably hide them or make them work differently. 
+       Actually, since we force full width on mobile when visible, the accordion will work. */
+    .sidebar-container.mini .nav-link span,
+    .sidebar-container.mini .nav-link .arrow {
+        display: block !important;
+    }
+
+    .sidebar-container.mini .popover-menu {
+        display: none !important;
+    }
+
+    /* Force accordion behavior on mobile even if class is mini */
+    .mini .collapse.show {
+        display: block !important;
+    }
+
+    .sidebar-container.mini .submenu-inline {
+        display: none !important;
+    }
+
+    .sidebar-container.mini .submenu-inline.show {
+        display: block !important;
+    }
+
+    /* Body padding on mobile should be 0 always */
+    body.sidebar-full,
+    body.sidebar-mini {
+        padding-left: 0 !important;
+    }
+
+    /* Backdrop overlay when sidebar is open on mobile */
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1030;
+        display: none;
+    }
+
+    .sidebar-backdrop.show {
+        display: block;
+    }
+
+    /* Mobile Sidebar Toggle Button Styling */
+    #sidebarToggle {
+        background: linear-gradient(135deg, #1e4c8c, #2a69c2);
+        color: white;
+        width: 40px;
+        height: 40px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        font-size: 1.2rem !important;
+        margin-right: 15px !important;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    #sidebarToggle:active {
+        transform: scale(0.95);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+}
+
+@media print {
+    .sidebar-container {
+        display: none !important;
+    }
+
+    body.sidebar-full,
+    body.sidebar-mini {
+        padding-left: 0 !important;
+    }
+}

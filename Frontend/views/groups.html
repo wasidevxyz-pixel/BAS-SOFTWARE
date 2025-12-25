@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Groups - Bilal Accounting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --bas-blue: #2c5ba9;
+            --bas-green: #00a65a;
+            --bas-light-blue: #f4f7fa;
+            --bas-border: #d2d6de;
+        }
+
+        body {
+            background-color: #f4f7fa;
+            font-size: 0.85rem;
+        }
+
+        .main-content {
+            margin-left: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .bas-header {
+            background-color: var(--bas-blue);
+            color: white;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .bas-container {
+            padding: 15px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 2px;
+            font-size: 0.8rem;
+        }
+
+        .form-control-sm,
+        .form-select-sm {
+            border-radius: 2px;
+            border-color: var(--bas-border);
+        }
+
+        .btn-bas-save {
+            background-color: #1e4c8c;
+            color: white;
+            border: none;
+            padding: 2px 25px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .btn-bas-edit {
+            background-color: #1e4c8c;
+            color: white;
+            border: none;
+            padding: 2px 15px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+
+        .rights-header {
+            background-color: var(--bas-blue);
+            color: white;
+            padding: 6px 12px;
+            font-weight: bold;
+        }
+
+        .tree-container {
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+            border: 1px solid var(--bas-border);
+            background: white;
+            padding: 20px;
+        }
+
+        .table-container {
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+            border: 1px solid var(--bas-border);
+            background: white;
+        }
+
+        .table-bas {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-bas thead th {
+            background-color: var(--bas-blue);
+            color: white;
+            position: sticky;
+            top: 0;
+            font-weight: normal;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .table-bas tbody td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .top-form {
+            background: white;
+            padding: 10px 15px;
+            border: 1px solid var(--bas-border);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Tree Styles */
+        #permissionsTree ul {
+            list-style: none;
+            padding-left: 25px;
+            margin-bottom: 5px;
+        }
+
+        #permissionsTree>ul {
+            padding-left: 0;
+        }
+
+        .checkbox-label {
+            margin-left: 8px;
+            cursor: pointer;
+            vertical-align: middle;
+            font-weight: normal;
+        }
+
+        .fw-bold-label {
+            font-weight: bold !important;
+        }
+
+        .form-check-input {
+            margin-top: 0.25em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-content">
+        <!-- Standardized Page Header -->
+        <div class="page-header px-3">
+            <div style="flex: 1; display: flex; align-items: center;">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+                <h4 class="mb-0">User Groups</h4>
+            </div>
+            <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+                <div class="dropdown">
+                    <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown"
+                        style="cursor: pointer;">
+                        <div class="avatar-circle me-2 bg-primary text-white d-flex align-items-center justify-content-center"
+                            style="width: 35px; height: 35px; border-radius: 50%; font-weight: bold;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="userName" class="me-2">User</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item logout-btn" href="#"><i
+                                    class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="bas-container">
+            <!-- Top Form -->
+            <div class="top-form shadow-sm">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0">Name</label>
+                    <input type="text" id="groupName" class="form-control form-control-sm" style="width: 250px;">
+                    <input type="hidden" id="groupId">
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-4">
+                    <label class="form-label mb-0">Active</label>
+                    <input type="checkbox" id="groupActive" class="form-check-input" checked>
+                </div>
+                <button class="btn btn-bas-save ms-auto" onclick="saveGroup()">Save</button>
+            </div>
+
+            <div class="row g-3">
+                <!-- Left: Groups Table -->
+                <div class="col-lg-7">
+                    <div class="table-container shadow-sm">
+                        <table class="table-bas">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60%">Name</th>
+                                    <th style="width: 20%">Active</th>
+                                    <th style="width: 20%">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right: Group Access Tree -->
+                <div class="col-lg-5">
+                    <div class="rights-header shadow-sm">Group Access</div>
+                    <div class="tree-container shadow-sm">
+                        <div id="permissionsTree">
+                            <ul class="list-unstyled">
+                                <li>
+                                    <input type="checkbox" id="dashboard" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="dashboard">Home & Overview</label>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="administration" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="administration">Administration</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="users" class="form-check-input"><label
+                                                class="checkbox-label" for="users">User Management</label></li>
+                                        <li><input type="checkbox" id="groups" class="form-check-input"><label
+                                                class="checkbox-label" for="groups">Group Rights</label></li>
+                                        <li><input type="checkbox" id="stores" class="form-check-input"><label
+                                                class="checkbox-label" for="stores">Stores</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="reports" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="reports">Reports</label>
+                                    <ul>
+                                        <li>
+                                            <input type="checkbox" id="warehouse_reports"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="warehouse_reports">Warehouse Reports</label>
+                                            <ul class="list-unstyled">
+                                                <li><input type="checkbox" id="sales_report_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="sales_report_link">Sales Report</label></li>
+                                                <li><input type="checkbox" id="sales_comparison_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="sales_comparison_link">Sales Comparison</label></li>
+                                                <li><input type="checkbox" id="date_wise_sales_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="date_wise_sales_link">Date-Wise Sales</label></li>
+                                                <li><input type="checkbox" id="payment_reports_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="payment_reports_link">Payment Reports</label></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="sales_reports" class="form-check-input"><label
+                                                class="checkbox-label" for="sales_reports">Sales Reports</label>
+                                            <ul class="list-unstyled">
+                                                <li><input type="checkbox" id="dept_sale_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="dept_sale_link">Dept Wise Sale</label></li>
+                                                <li><input type="checkbox" id="cash_counter_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="cash_counter_rpt_link">Cash Counter Report</label></li>
+                                                <li><input type="checkbox" id="receipts_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="receipts_link">Customer Receipts</label></li>
+                                                <li><input type="checkbox" id="party_stmt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="party_stmt_link">Party Statement</label></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="purchase_reports" class="form-check-input"><label
+                                                class="checkbox-label" for="purchase_reports">Purchase Reports</label>
+                                            <ul>
+                                                <li><input type="checkbox" id="purchase_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="purchase_rpt_link">Purchase Report</label></li>
+                                                <li><input type="checkbox" id="supp_pay_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="supp_pay_link">Supplier Payments</label></li>
+                                                <li><input type="checkbox" id="supplier_tax_cert_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="supplier_tax_cert_link">Supplier WHT Certificate</label>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="stock_reports" class="form-check-input"><label
+                                                class="checkbox-label" for="stock_reports">Stock Reports</label>
+                                            <ul>
+                                                <li><input type="checkbox" id="stock_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="stock_rpt_link">Stock Report</label></li>
+                                                <li><input type="checkbox" id="stock_adj_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="stock_adj_rpt_link">Stock Adjustments</label></li>
+                                                <li><input type="checkbox" id="stock_audit_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="stock_audit_rpt_link">Stock Audit</label></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="financial_reports"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="financial_reports">Financial Reports</label>
+                                            <ul>
+                                                <li><input type="checkbox" id="pl_link" class="form-check-input"><label
+                                                        class="checkbox-label" for="pl_link">Profit & Loss</label></li>
+                                                <li><input type="checkbox" id="ledger_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="ledger_link">Ledger</label></li>
+                                                <li><input type="checkbox" id="bank_ledger_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="bank_ledger_link">Bank Ledger</label></li>
+                                                <li><input type="checkbox" id="expense_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="expense_rpt_link">Expense Report</label></li>
+                                                <li><input type="checkbox" id="vouchers_rpt_link"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="vouchers_rpt_link">Vouchers</label></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="accounts" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="accounts">Accounts</label>
+                                    <ul>
+                                        <li>
+                                            <input type="checkbox" id="payment_vouchers" class="form-check-input"><label
+                                                class="checkbox-label fw-bold-label" for="payment_vouchers">Payment
+                                                Vouchers</label>
+                                            <ul>
+                                                <li><input type="checkbox" id="pv_supplier"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="pv_supplier">Supplier Voucher</label></li>
+                                                <li><input type="checkbox" id="pv_category"
+                                                        class="form-check-input"><label class="checkbox-label"
+                                                        for="pv_category">Category Voucher</label></li>
+                                            </ul>
+                                        </li>
+                                        <li><input type="checkbox" id="vouchers" class="form-check-input"><label
+                                                class="checkbox-label" for="vouchers">Vouchers</label></li>
+                                        <li><input type="checkbox" id="expenses" class="form-check-input"><label
+                                                class="checkbox-label" for="expenses">Expenses</label></li>
+                                        <li><input type="checkbox" id="account_register" class="form-check-input"><label
+                                                class="checkbox-label" for="account_register">Account Register</label>
+                                        </li>
+                                        <li><input type="checkbox" id="account_groups" class="form-check-input"><label
+                                                class="checkbox-label" for="account_groups">Account Groups</label></li>
+                                        <li><input type="checkbox" id="account_categories"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="account_categories">Account Categories</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="bank_mgmt" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="bank_mgmt">Bank Management</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="banks" class="form-check-input"><label
+                                                class="checkbox-label" for="banks">Banks</label></li>
+                                        <li><input type="checkbox" id="bank_management" class="form-check-input"><label
+                                                class="checkbox-label" for="bank_management">Bank Management</label>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="closing" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="closing">Closing</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="branch_departments"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="branch_departments">Branch Departments</label></li>
+                                        <li><input type="checkbox" id="daily_cash" class="form-check-input"><label
+                                                class="checkbox-label" for="daily_cash">Daily Cash</label></li>
+                                        <li><input type="checkbox" id="cash_counter" class="form-check-input"><label
+                                                class="checkbox-label" for="cash_counter">Cash Counter</label></li>
+                                        <li><input type="checkbox" id="closing_sheet" class="form-check-input"><label
+                                                class="checkbox-label" for="closing_sheet">Closing Sheet</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="payroll" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="payroll">Payroll</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="employee_registration"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="employee_registration">Employee Registration</label></li>
+                                        <li><input type="checkbox" id="attendance" class="form-check-input"><label
+                                                class="checkbox-label" for="attendance">Attendance</label></li>
+                                        <li><input type="checkbox" id="employee_advance" class="form-check-input"><label
+                                                class="checkbox-label" for="employee_advance">Employee Advance</label>
+                                        </li>
+                                        <li><input type="checkbox" id="monthly_payroll" class="form-check-input"><label
+                                                class="checkbox-label" for="monthly_payroll">Monthly Payroll</label>
+                                        </li>
+                                        <li><input type="checkbox" id="holy_days" class="form-check-input"><label
+                                                class="checkbox-label" for="holy_days">Holy Days</label></li>
+                                        <li><input type="checkbox" id="employee_penalty" class="form-check-input"><label
+                                                class="checkbox-label" for="employee_penalty">Employee Penalty</label>
+                                        </li>
+                                        <li><input type="checkbox" id="emp_commission" class="form-check-input"><label
+                                                class="checkbox-label" for="emp_commission">Emp. Commission</label></li>
+                                        <li><input type="checkbox" id="emp_clearance" class="form-check-input"><label
+                                                class="checkbox-label" for="emp_clearance">Emp. Clearance</label></li>
+                                        <li><input type="checkbox" id="emp_adjustment" class="form-check-input"><label
+                                                class="checkbox-label" for="emp_adjustment">Emp. Adjustment</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="sales" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="sales">Sales</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="customer_demand" class="form-check-input"><label
+                                                class="checkbox-label" for="customer_demand">Customer Demand</label>
+                                        </li>
+                                        <li><input type="checkbox" id="new_sale" class="form-check-input"><label
+                                                class="checkbox-label" for="new_sale">New Sale</label></li>
+                                        <li><input type="checkbox" id="sale_returns" class="form-check-input"><label
+                                                class="checkbox-label" for="sale_returns">Sales Return</label></li>
+                                        <li><input type="checkbox" id="customer_receipt" class="form-check-input"><label
+                                                class="checkbox-label" for="customer_receipt">Customer Receipt</label>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="purchase" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="purchase">Purchase</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="items" class="form-check-input"><label
+                                                class="checkbox-label" for="items">Items</label></li>
+                                        <li><input type="checkbox" id="parties" class="form-check-input"><label
+                                                class="checkbox-label" for="parties">Parties</label></li>
+                                        <li><input type="checkbox" id="new_purchase" class="form-check-input"><label
+                                                class="checkbox-label" for="new_purchase">New Purchase</label></li>
+                                        <li><input type="checkbox" id="purchase_returns" class="form-check-input"><label
+                                                class="checkbox-label" for="purchase_returns">Purchase Return</label>
+                                        </li>
+                                        <li><input type="checkbox" id="supplier_payment" class="form-check-input"><label
+                                                class="checkbox-label" for="supplier_payment">Supplier Payment</label>
+                                        </li>
+                                        <li><input type="checkbox" id="supplier_wh_tax_link"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="supplier_wh_tax_link">Supplier WH Tax</label></li>
+                                        <li><input type="checkbox" id="wht_supplier_link"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="wht_supplier_link">WHT Supplier</label></li>
+                                        <li><input type="checkbox" id="supplier_tax_report_link"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="supplier_tax_report_link">Supplier Tax Report</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="stock" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="stock">Stock</label>
+                                    <ul>
+                                        <li><input type="checkbox" id="stock_audit" class="form-check-input"><label
+                                                class="checkbox-label" for="stock_audit">Stock Audit</label></li>
+                                        <li><input type="checkbox" id="stock_adjustments"
+                                                class="form-check-input"><label class="checkbox-label"
+                                                for="stock_adjustments">Stock Adjustments</label></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="settings" class="form-check-input"><label
+                                        class="checkbox-label fw-bold-label" for="settings">Settings</label>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/groups.js"></script>
+</body>
+
+</html>
