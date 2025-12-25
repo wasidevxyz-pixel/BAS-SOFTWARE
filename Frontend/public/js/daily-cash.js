@@ -163,7 +163,7 @@ async function loadDepartments() {
 
         if (data.success) {
             const filtered = data.data
-                .filter(d => d.branch === branch && d.isActive)
+                .filter(d => d.branch === branch && d.isActive && !d.combineDepSales)
                 .sort((a, b) => {
                     const codeA = parseInt(a.code) || 999999;
                     const codeB = parseInt(b.code) || 999999;
