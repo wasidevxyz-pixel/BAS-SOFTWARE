@@ -16,6 +16,31 @@ document.addEventListener('DOMContentLoaded', function () {
     initPartiesPage();
 });
 
+// Load Branches
+async function loadBranches() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/stores', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            const branchSelect = document.getElementById('branch');
+            if (branchSelect) {
+                // Keep default option if needed or clear
+                branchSelect.innerHTML = '<option value="">Select Branch</option>';
+
+                data.data.forEach(store => {
+                    branchSelect.innerHTML += `<option value="${store.name}">${store.name}</option>`;
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading branches:', error);
+    }
+}
+
 // Set user name in header
 function setUserName() {
     const user = getCurrentUser();
@@ -27,6 +52,8 @@ function setUserName() {
 
 // Initialize parties page
 function initPartiesPage() {
+    loadBranches(); // Load branches on init
+
     // Disable category dropdown initially (no type selected)
     initializeCategoryDropdown();
 
@@ -282,6 +309,7 @@ async function editParty(partyId) {
             // Populate form
             document.getElementById('partyId').value = party._id;
             document.getElementById('partyCode').value = party.code || '';
+            document.getElementById('branch').value = party.branch || ''; // Set Branch
             document.getElementById('name').value = party.name || '';
             document.getElementById('partyType').value = party.partyType || '';
 
@@ -342,6 +370,7 @@ async function saveParty() {
 
         const formData = {
             code: document.getElementById('partyCode').value,
+            branch: document.getElementById('branch').value,
             name: name,
             partyType: partyType,
             phone: document.getElementById('phone').value,

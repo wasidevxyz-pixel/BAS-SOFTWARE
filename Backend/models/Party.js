@@ -11,6 +11,10 @@ const partySchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
+  branch: {
+    type: String, // Store Name
+    trim: true
+  },
   name: {
     type: String,
     required: [true, 'Please provide party name'],
