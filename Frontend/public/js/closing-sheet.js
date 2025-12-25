@@ -1900,7 +1900,7 @@ function addDeptSaleRow(deptId = '', sale = 0, cost = 0) {
             <input type="number" class="form-control form-control-sm modal-sale-input" value="${sale}" oninput="calcModalTotal()">
         </td>
         <td>
-            <input type="number" class="form-control form-control-sm modal-cost-input" value="${cost}">
+            <input type="number" class="form-control form-control-sm modal-cost-input" value="${cost}" oninput="calcModalTotal()">
         </td>
         <td class="text-center">
             <button class="btn btn-sm btn-danger" onclick="removeDeptSaleRow(this)"><i class="fas fa-trash"></i></button>
@@ -1914,12 +1914,24 @@ function removeDeptSaleRow(btn) {
     calcModalTotal();
 }
 
+// Enhanced Calc Modal Total to include Cost and update footer
 function calcModalTotal() {
-    let total = 0;
-    document.querySelectorAll('.modal-sale-input').forEach(inp => {
-        total += parseFloat(inp.value) || 0;
+    let totalSale = 0;
+    let totalCost = 0;
+
+    document.querySelectorAll('#deptSalesTable tbody tr').forEach(tr => {
+        totalSale += parseFloat(tr.querySelector('.modal-sale-input').value) || 0;
+        totalCost += parseFloat(tr.querySelector('.modal-cost-input').value) || 0;
     });
-    document.getElementById('modalTotalAmount').value = total;
+
+    // Update Input
+    document.getElementById('modalTotalAmount').value = totalSale;
+
+    // Update Footer if exists (it should now)
+    const tFootComp = document.getElementById('modalFooterComp');
+    const tFootCost = document.getElementById('modalFooterCost');
+    if (tFootComp) tFootComp.value = totalSale;
+    if (tFootCost) tFootCost.value = totalCost;
 }
 
 function saveDepartmentSalesModal() {
@@ -2309,6 +2321,24 @@ function copySMSMessage() {
     });
 }
 
+// Helper for SMS Number Format (removes trailing .00, adds commas)
+function formatSmsNumber(num) {
+    if (typeof num !== 'number') num = parseFloat(num) || 0;
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
+}
+
+// Helper for Title Case
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.toLowerCase().split(' ').map(word => {
+        // Handle parenthesis if present, e.g. "Bank (Med)"
+        if (word.startsWith('(')) {
+            return '(' + word.charAt(1).toUpperCase() + word.slice(2);
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(' ');
+}
+
 async function generateSMSPreview() {
     const selectedType = document.querySelector('input[name="smsReportType"]:checked');
     if (!selectedType) return;
@@ -2319,11 +2349,16 @@ async function generateSMSPreview() {
     const date = document.getElementById('date').value;
     const token = localStorage.getItem('token');
 
+    // Set Font
+    previewArea.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    previewArea.style.fontSize = "0.95rem";
+    previewArea.style.lineHeight = "1.4";
+
     let text = '';
 
     // Header for all types
     text += `${type} 🔴\n`;
-    text += `Branch: (${branch})\n`;
+    text += `Branch: (${toTitleCase(branch)})\n`;
     text += `Date: ${date}\n`;
 
     // Use currentFilteredDepts (Consistent with Table)
@@ -2331,11 +2366,11 @@ async function generateSMSPreview() {
 
 
     if (type === 'Daily Sale') {
-        const totalSale = document.getElementById('closing02DeptTotal').textContent || '0';
-        text += `Total Sale: ${totalSale}\n`;
+        const totalSale = parseFloat((document.getElementById('closing02DeptTotal').textContent || '0').replace(/,/g, '')) || 0;
+        text += `Total Sale: ${formatSmsNumber(totalSale)}\n`;
 
-        const totalCC = document.getElementById('closing02BankTotal').textContent || '0';
-        text += `Total CC Sale: ${totalCC}\n`;
+        const totalCC = parseFloat((document.getElementById('closing02BankTotal').textContent || '0').replace(/,/g, '')) || 0;
+        text += `Total CC Sale: ${formatSmsNumber(totalCC)}\n`;
 
         // Separate main departments from cash counter entries
         const mainDepts = [];
@@ -2384,7 +2419,7 @@ async function generateSMSPreview() {
                 const diff = data.difference || 0;
 
                 mainDepts.push({
-                    name: d.name,
+                    name: toTitleCase(d.name),
                     sale: sale,
                     discValue: discValue,
                     discPer: discPer,
@@ -2395,7 +2430,7 @@ async function generateSMSPreview() {
                 // Cash Counter entries (like Optics, Under Garments)
                 if (sale !== 0) {
                     cashCounterEntries.push({
-                        name: d.name,
+                        name: toTitleCase(d.name),
                         sale: sale
                     });
                 }
@@ -2404,19 +2439,18 @@ async function generateSMSPreview() {
 
         // Output Main Departments first (Medicine, Grocery, Cosmetics, etc.)
         mainDepts.forEach(dept => {
-            text += `${dept.name} Sale: ${numberWithCommas(dept.sale.toFixed(2))}\n`;
-            text += `${dept.name} Disc Value: ${numberWithCommas(dept.discValue.toFixed(2))}\n`;
-            text += `${dept.name} Disc Per: ${dept.discPer.toFixed(2)}\n`;
-            text += `${dept.name} CC Sale: ${numberWithCommas(dept.ccSale.toFixed(2))}\n`;
-            text += `${dept.name} Diff: ${numberWithCommas(dept.diff.toFixed(2))}\n`;
+            text += `${dept.name} Sale: ${formatSmsNumber(dept.sale)}\n`;
+            text += `${dept.name} Disc Value: ${formatSmsNumber(dept.discValue)}\n`;
+            text += `${dept.name} Disc Per: ${formatSmsNumber(dept.discPer)}\n`;
+            text += `${dept.name} CC Sale: ${formatSmsNumber(dept.ccSale)}\n`;
+            text += `${dept.name} Diff: ${formatSmsNumber(dept.diff)}\n`;
         });
 
         // Output Cash Counter entries at the end (Optics Sale, Under Garments Sale)
         cashCounterEntries.forEach(entry => {
-            text += `${entry.name} Sale: ${numberWithCommas(entry.sale.toFixed(2))}\n`;
+            text += `${entry.name} Sale: ${formatSmsNumber(entry.sale)}\n`;
         });
     } else if (type === 'Cash Activity') {
-        // Fetch fresh data from API (same as report does) to get correct Net Total values
         try {
             // 1. Fetch Closing Sheet Data for the Date
             const response = await fetch(`/api/v1/closing-sheets?date=${date}&branch=${branch}`, {
@@ -2426,17 +2460,14 @@ async function generateSMSPreview() {
             const sheet = json.data || {};
             const closing02 = sheet.closing02 && sheet.closing02.data ? sheet.closing02.data : {};
 
-            // 2. Fetch Cash Sales for the Date (for Counter Sales integration)
             const csResp = await fetch(`/api/v1/cash-sales?date=${date}&branch=${branch}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const csJson = await csResp.json();
             const cashSales = csJson.data || [];
 
-            // Total Counter Sales (all go to OPTICS)
             const totalCounterSales = cashSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 
-            // Pre-calculate Total % Cash Rec (Deduction Sum) for PERCENTAGE CASH Department
             let totalPercentageCashSum = 0;
             departments.forEach(d => {
                 if (d.name.toUpperCase() === 'PERCENTAGE CASH') return;
@@ -2449,23 +2480,19 @@ async function generateSMSPreview() {
 
             let totalNetCash = 0;
 
-            // Build Cash Activity lines (same logic as report)
             departments.forEach(dept => {
                 const dId = dept._id;
                 const dName = dept.name.toUpperCase();
                 const state = closing02[dId] || {};
 
-                // 1. Opening Amount (From Department Opening Tab)
                 let opAmt = 0;
                 if (Array.isArray(sheet.departmentOpening)) {
                     const found = sheet.departmentOpening.find(x => (x.department === dId || (x.department && x.department._id === dId)));
                     if (found) opAmt = Number(found.amount) || 0;
                 }
 
-                // Filter: Hide department if Opening Amount is 0 (except OPTICS and PERCENTAGE CASH)
                 if (opAmt === 0 && dName !== 'OPTICS' && dName !== 'PERCENTAGE CASH') return;
 
-                // 2. Received Cash
                 const recCashSheet = Number(state.receivedCash) || 0;
                 let recCashCounter = 0;
                 if (dName === 'OPTICS') {
@@ -2476,52 +2503,42 @@ async function generateSMSPreview() {
                     recCash = 0;
                 }
 
-                // 3. Rate and Deduction
                 const rate = dept.deduction || 0;
                 const saleComp = state.totalSaleComputer || 0;
                 const ded = Math.round((saleComp * rate) / 100);
 
-                // 4. % Cash Rec - Only for PERCENTAGE CASH dept
                 let percCashRec = 0;
                 if (dName === 'PERCENTAGE CASH') {
                     percCashRec = totalPercentageCashSum;
                 }
 
-                // 5. GrandTotal = Opening + Received + (% Cash Rec if PERCENTAGE CASH)
                 let grandTotal = Math.round(opAmt + recCash + (dName === 'PERCENTAGE CASH' ? percCashRec : 0));
                 if (dName === 'CASH REC FROM COUNTER') grandTotal = 0;
 
-                // 6. Net Total = GrandTotal - Ded (This is what shows in the report)
                 const netTotal = Math.round(grandTotal - ded);
 
                 totalNetCash += netTotal;
 
-                // Display: DeptName Cash : value
-                const displayVal = formatNeg(netTotal);
-                text += `${dept.name} Cash : ${displayVal}\n`;
+                const displayVal = formatSmsNumber(netTotal); // Use clean format
+                text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
             });
 
-            text += `Total Net Cash : ${formatNeg(totalNetCash)}\n`;
+            text += `Total Net Cash: ${formatSmsNumber(totalNetCash)}\n`;
         } catch (e) {
             console.error('Error fetching Cash Activity data:', e);
             text += 'Error loading Cash Activity data\n';
         }
     } else if (type === 'Income Statement') {
-        // Get closing balance from Income Statement tab (this is Total Balance)
         const closingBalance = parseFloat(document.getElementById('diffBalance').value) || 0;
-
-        // Get Cash Counter sales ONLY from currentCashSalesData grouped by department
         let cashCounterByDept = {};
         let totalCashCounterSale = 0;
 
         if (window.currentCashSalesData) {
             window.currentCashSalesData.forEach(s => {
-                // Get department name from the sale record
                 let deptName = 'Unknown';
                 if (s.department) {
                     deptName = s.department.name || s.department;
                 }
-
                 const amount = s.totalAmount || 0;
                 if (!cashCounterByDept[deptName]) cashCounterByDept[deptName] = 0;
                 cashCounterByDept[deptName] += amount;
@@ -2529,46 +2546,37 @@ async function generateSMSPreview() {
             });
         }
 
-        // Build SMS in exact format requested
-        text = `(${branch})\n`;
+        // Overwrite header to match request
+        text = `(${toTitleCase(branch)})\n`;
         text += `Date: ${date}\n`;
         text += `Daily Sale and Cash Details\n`;
 
-        // Display each department's cash counter sales
         const deptNames = Object.keys(cashCounterByDept);
         if (deptNames.length > 0) {
             deptNames.forEach(name => {
-                text += `${name} Cash Sale = ${cashCounterByDept[name]}\n`;
+                text += `${toTitleCase(name)} Cash Sale = ${formatSmsNumber(cashCounterByDept[name])}\n`;
             });
         }
-        text += `Total = ${totalCashCounterSale}\n\n`;
+        text += `Total = ${formatSmsNumber(totalCashCounterSale)}\n\n`;
 
-        // Cash Activity Section
-        // Calculate Opening Balance = Closing Balance - Cash Counter Sales Total
-        // This ensures: Opening Balance + Cash Sale = Total Balance
         const calculatedOpening = closingBalance - totalCashCounterSale;
 
         text += `Cash Activity\n`;
-        text += `Opening Balance= ${calculatedOpening}\n`;
-        text += `Cash Sale = ${totalCashCounterSale}\n`;
-        text += `Total Balance = ${closingBalance}\n`;
-    } else if (type === 'Department Wise Sale and Activity') {
-        // Combine Daily Sale and Cash Activity
-        // 1. Daily Sale Part
-        text = `Daily Sale 🔴\nBranch: (${branch})\nDate: ${date}\n`; // Overwrite header
-        const totalSale = document.getElementById('closing02DeptTotal').textContent || '0';
-        text += `Total Sale: ${totalSale}\n`;
-        const totalCC = document.getElementById('closing02BankTotal').textContent || '0';
-        text += `Total CC Sale: ${totalCC}\n`;
+        text += `Opening Balance = ${formatSmsNumber(calculatedOpening)}\n`;
+        text += `Cash Sale = ${formatSmsNumber(totalCashCounterSale)}\n`;
+        text += `Total Balance = ${formatSmsNumber(closingBalance)}\n`;
 
-        // reused 'departments' variable from above
+    } else if (type === 'Department Wise Sale and Activity') {
+        text = `Daily Sale 🔴\nBranch: (${toTitleCase(branch)})\nDate: ${date}\n`; // Overwrite header
+        const totalSale = parseFloat((document.getElementById('closing02DeptTotal').textContent || '0').replace(/,/g, '')) || 0;
+        text += `Total Sale: ${formatSmsNumber(totalSale)}\n`;
+        const totalCC = parseFloat((document.getElementById('closing02BankTotal').textContent || '0').replace(/,/g, '')) || 0;
+        text += `Total CC Sale: ${formatSmsNumber(totalCC)}\n`;
+
         departments.forEach(d => {
             const data = closing02State[d._id] || {};
-
-            // 1. Manual Entry
             const manualSale = (data.totalSaleComputer || 0);
 
-            // 2. Auto Entry (Cash Counter)
             let autoSale = 0;
             if (window.currentCashSalesData) {
                 const deptSales = window.currentCashSalesData.filter(s => {
@@ -2582,10 +2590,8 @@ async function generateSMSPreview() {
 
             const sale = manualSale + autoSale;
 
-            // Visibility Logic
             if (!d.closing2DeptDropDown && sale <= 0) return;
 
-            // Calculate CC Sale (Bank Sale)
             let ccSale = data.bankTotal || 0;
             if (ccSale === 0 && window.currentDailyCashData) {
                 const bankRecords = window.currentDailyCashData.filter(r => {
@@ -2597,27 +2603,25 @@ async function generateSMSPreview() {
                 ccSale = bankRecords.reduce((sum, r) => sum + (r.totalAmount || r.amount || 0), 0);
             }
 
-            // Conditional display based on Department Type
             if (d.closing2DeptDropDown) {
                 const discValue = data.discountValue || 0;
                 const discPer = data.discountPer || 0;
                 const diff = data.difference || 0;
 
-                text += `${d.name} Sale: ${numberWithCommas(sale.toFixed(2))}\n`;
-                text += `${d.name} Disc Value: ${numberWithCommas(discValue.toFixed(2))}\n`;
-                text += `${d.name} Disc Per: ${discPer.toFixed(2)}\n`;
-                text += `${d.name} CC Sale: ${numberWithCommas(ccSale.toFixed(2))}\n`;
-                text += `${d.name} Diff: ${numberWithCommas(diff.toFixed(2))}\n`;
+                text += `${toTitleCase(d.name)} Sale: ${formatSmsNumber(sale)}\n`;
+                text += `${toTitleCase(d.name)} Disc Value: ${formatSmsNumber(discValue)}\n`;
+                text += `${toTitleCase(d.name)} Disc Per: ${formatSmsNumber(discPer)}\n`;
+                text += `${toTitleCase(d.name)} CC Sale: ${formatSmsNumber(ccSale)}\n`;
+                text += `${toTitleCase(d.name)} Diff: ${formatSmsNumber(diff)}\n`;
             } else {
                 if (sale !== 0) {
-                    text += `${d.name} Sale: ${numberWithCommas(sale.toFixed(2))}\n`;
+                    text += `${toTitleCase(d.name)} Sale: ${formatSmsNumber(sale)}\n`;
                 }
             }
         });
 
-        text += `\n\nCash Activity 🔴\nBranch: (${branch})\nDate: ${date}\n`;
+        text += `\n\nCash Activity 🔴\nBranch: (${toTitleCase(branch)})\nDate: ${date}\n`;
 
-        // Fetch fresh Cash Activity data from API (same as standalone Cash Activity)
         try {
             const sheetResp = await fetch(`/api/v1/closing-sheets?date=${date}&branch=${branch}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -2669,9 +2673,10 @@ async function generateSMSPreview() {
                     recCash = 0;
                 }
 
-                const rateVal = dept.deduction || 0;
+                const rate = dept.deduction || 0;
                 const saleComp = state.totalSaleComputer || 0;
-                const dedVal = Math.round((saleComp * rateVal) / 100);
+
+                const ded = Math.round((saleComp * rate) / 100);
 
                 let percCashRec = 0;
                 if (dName === 'PERCENTAGE CASH') {
@@ -2681,17 +2686,19 @@ async function generateSMSPreview() {
                 let grandTotal = Math.round(opAmt + recCash + (dName === 'PERCENTAGE CASH' ? percCashRec : 0));
                 if (dName === 'CASH REC FROM COUNTER') grandTotal = 0;
 
-                const netTotal = Math.round(grandTotal - dedVal);
+                const netTotal = Math.round(grandTotal - ded);
                 totalNetCash += netTotal;
 
-                const displayVal = formatNeg(netTotal);
-                text += `${dept.name} Cash : ${displayVal}\n`;
+                // Format negative for display if needed or just use standard
+                const displayVal = formatSmsNumber(netTotal);
+                text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
             });
 
-            text += `Total Net Cash : ${formatNeg(totalNetCash)}\n`;
+            text += `Total Net Cash: ${formatSmsNumber(totalNetCash)}\n`;
+
         } catch (e) {
-            console.error('Error fetching Cash Activity data:', e);
-            text += 'Error loading Cash Activity data\n';
+            console.error(e);
+            text += "Data error";
         }
     } else if (type === 'Bank Activity') {
         // Fetch individual bank balances from API
@@ -2704,12 +2711,12 @@ async function generateSMSPreview() {
             if (json.success && json.banks) {
                 // Display each bank with its balance
                 json.banks.forEach(bank => {
-                    const displayVal = formatNeg(bank.balance);
-                    text += `${bank.displayName} : ${displayVal}\n`;
+                    const displayVal = formatSmsNumber(bank.balance);
+                    text += `${toTitleCase(bank.displayName || bank.bankName)} : ${displayVal}\n`;
                 });
 
                 // Add total balance
-                text += `Balance : ${formatNeg(json.totalBalance)}\n`;
+                text += `Balance : ${formatSmsNumber(json.totalBalance)}\n`;
             } else {
                 text += 'No bank data found\n';
             }
