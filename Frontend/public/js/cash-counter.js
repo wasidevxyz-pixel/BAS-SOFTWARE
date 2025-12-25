@@ -51,6 +51,9 @@ function toggleMode() {
     if (isBank) loadBankList();
 }
 
+
+let currentValidBranches = [];
+
 async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
@@ -60,16 +63,39 @@ async function loadBranches() {
         const data = await response.json();
         if (data.success) {
             const select = document.getElementById('branch');
-            select.innerHTML = '<option value="">Select Branch</option>'; // Clear default options
-            data.data.forEach(store => {
+
+            // Get Logged In User for Filtering
+            const user = JSON.parse(localStorage.getItem('user')) || {};
+            const userBranch = user.branch;
+
+            // Filter stores
+            currentValidBranches = data.data.filter(store => {
+                const uBranch = String(userBranch || '').trim().toLowerCase();
+                if (!uBranch || uBranch.includes('all branches')) return true;
+
+                const sName = (store.name || '').trim().toLowerCase();
+                return uBranch.includes(sName);
+            });
+
+            // Clear and Populate
+            select.innerHTML = '';
+
+            // Logic: If multiple branches => Show "Select Branch". If Single => Don't.
+            if (currentValidBranches.length > 1) {
+                select.innerHTML = '<option value="">Select Branch</option>';
+            }
+
+            currentValidBranches.forEach(store => {
                 const option = document.createElement('option');
                 option.value = store.name;
                 option.textContent = store.name;
                 select.appendChild(option);
             });
-            // Trigger load departments if stores loaded
-            if (data.data.length === 1) {
-                select.value = data.data[0].name;
+
+            // Auto-select if only 1
+            if (currentValidBranches.length === 1) {
+                select.value = currentValidBranches[0].name;
+                // Trigger loadDepartments explicitly if needed, though main flow calls it
             }
         }
     } catch (e) {
@@ -339,10 +365,28 @@ function showList() {
     document.getElementById('listFromDate').value = today;
     document.getElementById('listToDate').value = today;
 
-    // Populate Branch Filter from main dropdown
-    const mainBranch = document.getElementById('branch').innerHTML;
+    // Populate Branch Filter from Valid Branches
     const listBranch = document.getElementById('listBranch');
-    if (listBranch) listBranch.innerHTML = '<option value="">All Branches</option>' + mainBranch;
+    if (listBranch) {
+        listBranch.innerHTML = '';
+
+        // Show "All Branches" only if user has access to multiple
+        if (currentValidBranches.length > 1) {
+            listBranch.innerHTML = '<option value="">All Branches</option>';
+        }
+
+        currentValidBranches.forEach(store => {
+            const opt = document.createElement('option');
+            opt.value = store.name;
+            opt.textContent = store.name;
+            listBranch.appendChild(opt);
+        });
+
+        // Auto-select if only 1
+        if (currentValidBranches.length === 1) {
+            listBranch.value = currentValidBranches[0].name;
+        }
+    }
 
     const modalEl = document.getElementById('listModal');
     if (window.bootstrap) {

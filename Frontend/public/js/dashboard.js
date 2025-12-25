@@ -177,17 +177,38 @@ async function refreshDashboard() {
         console.timeEnd('Dashboard Parallel Fetch');
 
         // Process Metadata
-        globalEnabledStores = (storeData.data || []).filter(s => s.showOnDashboard);
+        // Process Metadata - Filtered by User Access
+        const user = JSON.parse(localStorage.getItem('user')) || {};
+        const userBranch = (user.branch || '').toLowerCase();
 
-        // Populate branch filter if empty
+        globalEnabledStores = (storeData.data || []).filter(s => {
+            if (!s.showOnDashboard) return false;
+            if (!userBranch || userBranch.includes('all branches')) return true;
+            return userBranch.includes((s.name || '').toLowerCase());
+        });
+
+        // Populate branch filter
         const branchFilter = document.getElementById('dashboardBranchFilter');
-        if (branchFilter && branchFilter.options.length === 1) {
+        if (branchFilter && branchFilter.options.length <= 1) { // Populate if not already populated
+            branchFilter.innerHTML = '';
+
+            if (globalEnabledStores.length > 1) {
+                const allOpt = document.createElement('option');
+                allOpt.value = 'all';
+                allOpt.textContent = 'All Branches';
+                branchFilter.appendChild(allOpt);
+            }
+
             globalEnabledStores.forEach(store => {
                 const option = document.createElement('option');
                 option.value = store.name;
                 option.textContent = store.name;
                 branchFilter.appendChild(option);
             });
+
+            if (globalEnabledStores.length === 1) {
+                branchFilter.value = globalEnabledStores[0].name;
+            }
         }
 
         const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');

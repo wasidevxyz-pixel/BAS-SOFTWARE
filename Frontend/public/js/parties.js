@@ -28,12 +28,28 @@ async function loadBranches() {
         if (data.success) {
             const branchSelect = document.getElementById('branch');
             if (branchSelect) {
-                // Keep default option if needed or clear
-                branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                const user = JSON.parse(localStorage.getItem('user')) || {};
+                const userBranch = user.branch;
 
-                data.data.forEach(store => {
+                const validStores = data.data.filter(store => {
+                    const uBranch = String(userBranch || '').trim().toLowerCase();
+                    if (!uBranch || uBranch.includes('all branches')) return true;
+                    return uBranch.includes((store.name || '').trim().toLowerCase());
+                });
+
+                branchSelect.innerHTML = '';
+
+                if (validStores.length > 1) {
+                    branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                }
+
+                validStores.forEach(store => {
                     branchSelect.innerHTML += `<option value="${store.name}">${store.name}</option>`;
                 });
+
+                if (validStores.length === 1) {
+                    branchSelect.value = validStores[0].name;
+                }
             }
         }
     } catch (error) {
