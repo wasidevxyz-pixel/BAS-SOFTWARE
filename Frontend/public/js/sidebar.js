@@ -67,7 +67,10 @@ class SidebarNavigation {
                 children: [
                     { label: 'User Management', link: '/users.html', permission: 'users' },
                     { label: 'Group Rights', link: '/groups.html', permission: 'groups' },
-                    { label: 'Stores', link: '/stores.html', permission: 'stores' }
+                    { label: 'Stores', link: '/stores.html', permission: 'stores' },
+                    { label: 'Items', link: '/items.html', permission: 'items' },
+                    { label: 'Parties', link: '/parties.html', permission: 'parties' },
+                    { label: 'WHT Supplier', link: '/wht-supplier.html', permission: 'wht_supplier_link' }
                 ]
             },
             {
@@ -102,7 +105,8 @@ class SidebarNavigation {
                         submenu: [
                             { label: 'Purchase Report', link: '/purchase-report.html', permission: 'purchase_rpt_link' },
                             { label: 'Supplier Payments', link: '/supplier-payments-report.html', permission: 'supp_pay_link' },
-                            { label: 'Supplier WHT Certificate', link: '/supplier-tax-certificate.html', permission: 'supplier_tax_cert_link' }
+                            { label: 'Supplier WHT Certificate', link: '/supplier-tax-certificate.html', permission: 'supplier_tax_cert_link' },
+                            { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' }
                         ]
                     },
                     {
@@ -194,14 +198,13 @@ class SidebarNavigation {
             {
                 id: 'purchases', icon: 'fa-shopping-bag', label: 'Purchase', permission: 'purchase',
                 children: [
-                    { label: 'Items', link: '/items.html', permission: 'items' },
-                    { label: 'Parties', link: '/parties.html', permission: 'parties' },
+
                     { label: 'New Purchase', link: '/purchases.html', permission: 'new_purchase' },
                     { label: 'Purchase Return', link: '/purchase-returns.html', permission: 'purchase_returns' },
                     { label: 'Supplier Payment', link: '/supplier-payments.html', permission: 'supplier_payment' },
                     { label: 'Supplier WH Tax', link: '/supplier-wh-tax.html', permission: 'supplier_wh_tax_link' },
-                    { label: 'WHT Supplier', link: '/wht-supplier.html', permission: 'wht_supplier_link' },
-                    { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' }
+
+
                 ]
             },
             {
