@@ -104,6 +104,10 @@ function renderSupplierTable(suppliers) {
         const tr = document.createElement('tr');
         if (sup.isActive) tr.classList.add('active-row');
 
+        // Check rights for row-level delete button
+        const user = getCurrentUser();
+        const canDelete = user?.role === 'admin' || user?.rights?.delete_wht_supplier;
+
         tr.innerHTML = `
             <td>${index + 1}</td>
             <td class="text-start fw-bold">${sup.name}</td>
@@ -123,7 +127,10 @@ function renderSupplierTable(suppliers) {
             <td>${sup.branch ? sup.branch.name : '-'}</td>
             <td>No</td>
             <td>
-                <button class="btn btn-edit btn-sm" onclick="editSupplier('${sup._id}')">Edit</button>
+                <div class="d-flex gap-1 justify-content-center">
+                    <button class="btn btn-edit btn-sm" onclick="editSupplier('${sup._id}')">Edit</button>
+                    ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteSupplier('${sup._id}')">Delete</button>` : ''}
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -203,26 +210,37 @@ window.editSupplier = function (id) {
     document.getElementById('isActive').checked = sup.isActive;
 
     document.getElementById('saveBtn').textContent = 'Update';
-    document.getElementById('deleteBtn').style.display = 'inline-block';
+
+    // Check rights - Show delete button only if user has permission or is admin
+    const user = getCurrentUser();
+    const canDelete = user?.role === 'admin' || user?.rights?.delete_wht_supplier;
+
+    if (canDelete) {
+        document.getElementById('deleteBtn').style.display = 'inline-block';
+    } else {
+        document.getElementById('deleteBtn').style.display = 'none';
+    }
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-async function deleteSupplier() {
-    const id = document.getElementById('supplierId').value;
-    if (!id || !confirm('Are you sure you want to delete this supplier?')) return;
+window.deleteSupplier = async function (id) {
+    const targetId = id || document.getElementById('supplierId').value;
+    if (!targetId || !confirm('Are you sure you want to delete this supplier?')) return;
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`/api/v1/suppliers/${id}`, {
+        const res = await fetch(`/api/v1/suppliers/${targetId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.success) {
             alert('Supplier Deleted!');
-            clearForm();
+            if (targetId === document.getElementById('supplierId').value) {
+                clearForm();
+            }
             loadSuppliers();
         }
     } catch (err) {
