@@ -55,7 +55,8 @@ async function loadBankList() {
         const filtered = allBanks.filter(b => {
             if (b.branch !== branch) return false;
             // If bank has department, must match selected department
-            if (b.department && b.department !== deptId) return false;
+            const bDeptId = (b.department && b.department._id) ? b.department._id : b.department;
+            if (bDeptId && bDeptId !== deptId) return false;
 
             // Filter: Hide banks of type 'Branch Bank' (only for Pending Chq)
             if (b.bankType === 'Branch Bank') return false;
@@ -542,7 +543,8 @@ window.handleEdit = async function (id) {
 
     if (item.mode === 'Bank') {
         await loadBankList();
-        document.getElementById('bankSelect').value = item.bank || '';
+        const bankId = (item.bank && item.bank._id) ? item.bank._id : (item.bank || '');
+        document.getElementById('bankSelect').value = bankId;
         document.getElementById('bankAmount').value = item.totalAmount || '';
         document.getElementById('deductedAmount').value = item.deductedAmount || '';
         document.getElementById('deductionCheck').checked = item.isDeduction;

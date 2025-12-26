@@ -102,6 +102,12 @@ let currentCashSalesData = [];
 let currentSheetData = {};
 let closing02State = {};
 
+// Global AbortControllers for managing race conditions
+let loadSheetController = null;
+let refreshDataController = null;
+let closing02DeptController = null;
+let incomeStatementController = null;
+
 async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
@@ -151,15 +157,27 @@ async function loadSheet() {
     const branch = document.getElementById('branch').value;
     const date = document.getElementById('date').value;
 
-    // First clear existing
-    document.getElementById('deptOpeningRows').innerHTML = 'Loading...';
-    document.getElementById('closing01DeptRows').innerHTML = 'Loading...';
+    // First clear existing and show loading
+    document.getElementById('deptOpeningRows').innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+    document.getElementById('closing01DeptRows').innerHTML = '<tr><td colspan="2" class="text-center">Loading...</td></tr>';
+
+    // Abort previous request if running
+    if (loadSheetController) {
+        loadSheetController.abort();
+    }
+    loadSheetController = new AbortController();
+    const signal = loadSheetController.signal;
 
     try {
         const token = localStorage.getItem('token');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+        };
 
         // Load Departments fresh every time to ensure settings changes are reflected
-        const depResp = await fetch('/api/v1/departments', { headers: { 'Authorization': `Bearer ${token}` } });
+        const depResp = await fetch('/api/v1/departments?ts=' + Date.now(), { headers, signal });
         const depData = await depResp.json();
         if (depData.success) {
             currentDepartments = depData.data; // Store all
@@ -193,8 +211,8 @@ async function loadSheet() {
         console.log('Dept Opening Filtered:', deptOpeningFilteredDepts.map(d => d.name));
 
         // Load existing sheet data
-        const sheetResp = await fetch(`/api/v1/closing-sheets?date=${date}&branch=${branch}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const sheetResp = await fetch(`/api/v1/closing-sheets?date=${date}&branch=${branch}&ts=${Date.now()}`, {
+            headers, signal
         });
         const sheetData = await sheetResp.json();
         const sheet = sheetData.data || {};
@@ -251,11 +269,11 @@ async function loadSheet() {
 
         try {
             const [dcResp, csResp] = await Promise.all([
-                fetch(`/api/v1/daily-cash?date=${date}&branch=${branch}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                fetch(`/api/v1/daily-cash?date=${date}&branch=${branch}&ts=${Date.now()}`, {
+                    headers, signal
                 }),
-                fetch(`/api/v1/cash-sales?startDate=${date}&endDate=${date}&branch=${branch}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                fetch(`/api/v1/cash-sales?startDate=${date}&endDate=${date}&branch=${branch}&ts=${Date.now()}`, {
+                    headers, signal
                 })
             ]);
 
@@ -457,8 +475,19 @@ async function loadSheet() {
         }
 
     } catch (e) {
+        if (e.name === 'AbortError') {
+            console.log('Previous loadSheet aborted');
+            return;
+        }
         console.error(e);
-        alert('Error loading sheet data');
+        document.getElementById('deptOpeningRows').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error loading data. Please try again.</td></tr>';
+        document.getElementById('closing01DeptRows').innerHTML = '<tr><td colspan="2" class="text-center text-danger">Error loading data.</td></tr>';
+    } finally {
+        if (loadSheetController && loadSheetController.signal.aborted) {
+            // Do nothing if aborted
+        } else {
+            loadSheetController = null;
+        }
     }
 }
 
@@ -724,13 +753,26 @@ async function refreshDailyCashData() {
     const branch = document.getElementById('branch').value;
     const date = document.getElementById('date').value;
     const token = localStorage.getItem('token');
+
+    // Abort previous refresh if running
+    if (refreshDataController) {
+        refreshDataController.abort();
+    }
+    refreshDataController = new AbortController();
+    const signal = refreshDataController.signal;
+
     try {
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        };
+
         const [dcResp, csResp] = await Promise.all([
-            fetch(`/api/v1/daily-cash?date=${date}&branch=${branch}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            fetch(`/api/v1/daily-cash?date=${date}&branch=${branch}&ts=${Date.now()}`, {
+                headers, signal
             }),
-            fetch(`/api/v1/cash-sales?startDate=${date}&endDate=${date}&branch=${branch}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            fetch(`/api/v1/cash-sales?startDate=${date}&endDate=${date}&branch=${branch}&ts=${Date.now()}`, {
+                headers, signal
             })
         ]);
 
@@ -745,7 +787,12 @@ async function refreshDailyCashData() {
             currentCashSalesData = csJson.data;
             console.log('Cash Sales Data Refreshed');
         }
-    } catch (e) { console.error('Error refreshing data:', e); }
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error('Error refreshing data:', e);
+    } finally {
+        refreshDataController = null;
+    }
 }
 
 // Helper to update Closing 02 derived fields without resetting manual inputs
@@ -808,14 +855,45 @@ async function loadClosing02DeptData(deptId) {
 
     // 2. Fetch Previous Day's Closing for Opening (-)
     let prevOpening = 0;
+
+    // Show loading state on inputs
+    const setInputsLoading = (isLoading) => {
+        const inputs = ['counterClosing', 'openingMinus', 'receivedCashC02', 'bankTotal'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (isLoading) {
+                    el.style.opacity = '0.5';
+                    // el.value = ''; // Don't clear, just dim? Or show 0? 
+                    // Showing 0 is safer but might mislead. Dimming is better.
+                } else {
+                    el.style.opacity = '1';
+                }
+            }
+        });
+    };
+
+    if (closing02DeptController) {
+        closing02DeptController.abort();
+    }
+    closing02DeptController = new AbortController();
+    const signal = closing02DeptController.signal;
+
+    setInputsLoading(true);
+
     try {
         const dateObj = new Date(dateStr);
         dateObj.setDate(dateObj.getDate() - 1);
         const prevDateStr = dateObj.toISOString().split('T')[0];
 
         const token = localStorage.getItem('token');
-        const resp = await fetch(`/api/v1/closing-sheets?date=${prevDateStr}&branch=${branch}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache'
+        };
+
+        const resp = await fetch(`/api/v1/closing-sheets?date=${prevDateStr}&branch=${branch}&ts=${Date.now()}`, {
+            headers, signal
         });
         const json = await resp.json();
         if (json.success && json.data && json.data.closing02 && json.data.closing02.data) {
@@ -834,7 +912,11 @@ async function loadClosing02DeptData(deptId) {
             }
         }
     } catch (e) {
+        if (e.name === 'AbortError') return;
         console.error('Error fetching previous closing:', e);
+    } finally {
+        setInputsLoading(false);
+        closing02DeptController = null;
     }
 
     // 3. Load Saved State (if any)
@@ -2147,9 +2229,19 @@ async function loadIncomeStatementData() {
     const date = document.getElementById('date').value;
     const token = localStorage.getItem('token');
 
+    if (incomeStatementController) {
+        incomeStatementController.abort();
+    }
+    incomeStatementController = new AbortController();
+    const signal = incomeStatementController.signal;
+
     try {
-        const res = await fetch(`/api/v1/closing-sheets/income-statement?date=${date}&branch=${branch}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`/api/v1/closing-sheets/income-statement?date=${date}&branch=${branch}&ts=${Date.now()}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            },
+            signal
         });
         const json = await res.json();
 
@@ -2229,7 +2321,10 @@ async function loadIncomeStatementData() {
             calcIncomeStatementTotals();
         }
     } catch (e) {
+        if (e.name === 'AbortError') return;
         console.error('Error loading income statement:', e);
+    } finally {
+        incomeStatementController = null;
     }
 }
 

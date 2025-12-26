@@ -28,6 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (scope) {
                 console.log(`Branch changed in ${scope.id}, reloading departments/banks`);
                 loadDepartments(scope);
+
+                // Special handling for Bank Payments tab
+                if (scope.id === 'bank-payments') {
+                    if (window.populateBPFilterFromReference) window.populateBPFilterFromReference();
+                    if (window.loadBankPayments) window.loadBankPayments();
+                }
             }
         });
     });
@@ -134,6 +140,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     modeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
             searchBankDetails();
+        });
+    });
+    // Prevent Dropdown from closing when clicking inside (for Multi-Select)
+    document.querySelectorAll('.dropdown-menu.stop-propagation').forEach(menu => {
+        menu.addEventListener('click', function (e) {
+            e.stopPropagation();
         });
     });
 });
@@ -256,6 +268,12 @@ async function loadAllBanks() {
 
 function filterBanks(scopeElement) {
     if (!scopeElement) return;
+    // Custom Multi-Select Logic for Bank Detail Tab
+    if (scopeElement.id === 'bank-detail') {
+        populateBankMultiSelect(scopeElement);
+    }
+
+    // Standard Select Logic for other tabs
     const bankSelects = scopeElement.querySelectorAll('.bank-select');
     if (bankSelects.length === 0) return;
 
@@ -320,6 +338,95 @@ window.filterBanks = filterBanks;
 window.loadBranches = loadBranches;
 window.loadAllBanks = loadAllBanks;
 window.updateBankRowsStatus = updateBankRowsStatus;
+window.allBanksReference = allBanksReference;
+window.populateBankMultiSelect = populateBankMultiSelect;
+window.toggleAllBanks = toggleAllBanks;
+window.filterBankDropdownItems = filterBankDropdownItems;
+window.updateBankButtonText = updateBankButtonText;
+
+// --- Multi-Select Helpers ---
+function populateBankMultiSelect(scopeElement) {
+    const listContainer = document.getElementById('bdBankList');
+    const branch = document.getElementById('bd-branch').value;
+    const dept = document.getElementById('bd-dept').value;
+
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    // Reset Select All
+    const checkAll = document.getElementById('checkAllBanks');
+    if (checkAll) checkAll.checked = false;
+
+    // Filter banks based on Branch and Dept
+    const filtered = allBanksReference.filter(b => {
+        if (branch) {
+            const bBranchName = (b.branch && typeof b.branch === 'object') ? b.branch.name : b.branch;
+            const bBranchId = (b.branch && typeof b.branch === 'object') ? b.branch._id : b.branch;
+            if (bBranchName !== branch && bBranchId !== branch) return false;
+        }
+        if (dept) {
+            const bDeptId = (b.department && typeof b.department === 'object') ? b.department._id : b.department;
+            if (bDeptId && bDeptId !== dept) return false;
+        }
+        // Bank Detail Tab usually hides Branch Banks (keep consistent with previous logic)
+        if (b.bankType === 'Branch Bank') return false;
+
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = '<div class="text-muted p-2 small">No banks found</div>';
+    } else {
+        filtered.forEach(b => {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-1 dropdown-item-text'; // dropdown-item-text allows click? Use standard div
+            div.innerHTML = `
+                <input class="form-check-input bank-checkbox" type="checkbox" value="${b._id}" id="chk_${b._id}" onchange="updateBankButtonText()">
+                <label class="form-check-label small" for="chk_${b._id}" style="cursor:pointer; width: 100%;">${b.bankName}</label>
+             `;
+            listContainer.appendChild(div);
+        });
+    }
+    updateBankButtonText();
+}
+
+function toggleAllBanks(source) {
+    const checkboxes = document.querySelectorAll('#bdBankList .bank-checkbox');
+    checkboxes.forEach(cb => {
+        // Only toggle visible ones (if filtered)
+        if (cb.closest('div').style.display !== 'none') {
+            cb.checked = source.checked;
+        }
+    });
+    updateBankButtonText();
+}
+
+function filterBankDropdownItems(input) {
+    const filter = input.value.toLowerCase();
+    const items = document.querySelectorAll('#bdBankList .form-check');
+    items.forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(filter) ? '' : 'none';
+    });
+}
+
+function updateBankButtonText() {
+    const checked = document.querySelectorAll('#bdBankList .bank-checkbox:checked');
+    const btn = document.getElementById('bdBankDropdownBtn');
+    const span = btn.querySelector('span');
+
+    if (checked.length === 0) {
+        span.textContent = 'Select Banks';
+    } else if (checked.length === 1) {
+        // Find label
+        const id = checked[0].id;
+        const label = document.querySelector(`label[for="${id}"]`).textContent;
+        span.textContent = label;
+    } else {
+        span.textContent = `${checked.length} Banks Selected`;
+    }
+}
 
 // --- Tab 1: Bank Detail Functions ---
 async function searchBankDetails() {
@@ -327,7 +434,11 @@ async function searchBankDetails() {
     const toDate = document.getElementById('bd-to-date').value;
     const branch = document.getElementById('bd-branch').value;
     const dept = document.getElementById('bd-dept').value;
-    const bank = document.getElementById('bd-bank').value;
+    // Multi-Select: Get all checked values
+    const selectedBanks = Array.from(document.querySelectorAll('#bdBankList .bank-checkbox:checked')).map(cb => cb.value);
+
+    // const bank = document.getElementById('bd-bank').value; // OLD SINGLE SELECT
+
     const isDeduction = document.getElementById('deductionOption').checked; // If true, filter for batches/deductions
 
     if (!fromDate || !toDate) {
@@ -364,19 +475,23 @@ async function searchBankDetails() {
 
             if (dept) filtered = filtered.filter(item => item.department && (item.department._id === dept || item.department === dept));
 
-            if (bank) {
+            if (selectedBanks.length > 0) {
                 filtered = filtered.filter(item => {
                     if (isDeduction) {
                         // For Bank Deduction (Daily Cash), check bank object or ID
                         const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
-                        return itemBankId === bank;
+                        // Check if itemBankId matches ANY of the selected banks
+                        return selectedBanks.includes(itemBankId);
                     } else {
                         // For Bank Payment (Bank Transactions), check bankName
-                        const selectedBank = allBanksReference.find(b => b._id === bank);
-                        if (!selectedBank) return false;
+                        // We must match the item's bank name to one of the SELECTED banks' names
+                        // 1. Get names of selected banks
+                        const selectedBankNames = allBanksReference
+                            .filter(b => selectedBanks.includes(b._id))
+                            .map(b => b.bankName);
 
                         const itemBankName = item.bankName || (item.bank && item.bank.bankName) || item.bank;
-                        return itemBankName === selectedBank.bankName;
+                        return selectedBankNames.includes(itemBankName);
                     }
                 });
             }
@@ -411,7 +526,8 @@ async function searchBankDetails() {
 
                 if (isDeduction) {
                     const ratePerc = item.deductedAmount || 0;
-                    const grossBase = (item.totalAmount || 0) + ratePerc;
+                    // Fix: totalAmount acts as the Gross Amount. Do not add ratePerc.
+                    const grossBase = parseFloat(item.totalAmount) || 0;
 
                     mapped.ratePercent = ratePerc;
                     mapped.amount = grossBase;

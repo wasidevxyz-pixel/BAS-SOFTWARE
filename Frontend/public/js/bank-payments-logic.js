@@ -107,7 +107,7 @@ function renderBankPaymentGrid(data) {
     });
 
     // Populate Dropdowns
-    populateBPFilter('bp-filter-bank', Array.from(banks).sort());
+    // populateBPFilter('bp-filter-bank', Array.from(banks).sort()); // REMOVED: Managed by populateBPFilterFromReference
     populateBPFilter('bp-filter-chq-date', Array.from(chqDates).sort().reverse());
     populateBPFilter('bp-filter-inv-date', Array.from(invDates).sort().reverse());
 
@@ -128,6 +128,60 @@ function populateBPFilter(id, values) {
         opt.value = v;
         opt.textContent = v;
         if (v === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+async function populateBPFilterFromReference() {
+    const branchSelect = document.querySelector('#bank-payments .branch-select');
+    const branch = branchSelect ? branchSelect.value : '';
+    const sel = document.getElementById('bp-filter-bank');
+
+    if (!sel) return;
+
+    // Ensure we have banks
+    let banks = window.allBanksReference || [];
+    if (banks.length === 0) {
+        try {
+            const token = localStorage.getItem('token');
+            // Force fetch if missing
+            const response = await fetch('/api/v1/banks', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await response.json();
+            if (data.success) {
+                banks = data.data;
+                // Update global if possible
+                if (window) window.allBanksReference = banks;
+            }
+        } catch (e) {
+            console.error('Error fetching banks for BP filter:', e);
+        }
+    }
+
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">All Banks</option>';
+
+    // Filter banks from reference
+    const filteredBanks = banks.filter(b => {
+        // Filter by Branch
+        if (branch) {
+            const bBranchName = (b.branch && typeof b.branch === 'object') ? b.branch.name : b.branch;
+            // Robust comparison
+            if (bBranchName && branch && bBranchName.trim() !== branch.trim()) return false;
+        }
+
+        // Exclude Branch Banks
+        const bType = (b.bankType || '').toLowerCase();
+        if (bType === 'branch bank') return false;
+
+        return true;
+    });
+
+    // Populate
+    filteredBanks.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.bankName; // Use Name as value for filter 
+        opt.textContent = b.bankName;
+        if (b.bankName === currentVal) opt.selected = true;
         sel.appendChild(opt);
     });
 }
@@ -470,5 +524,6 @@ window.deleteBankPayment = deleteBankPayment;
 window.editBankPayment = editBankPayment;
 window.clearBankPaymentForm = clearBankPaymentForm;
 window.filterBankPaymentsGrid = filterBankPaymentsGrid;
+window.populateBPFilterFromReference = populateBPFilterFromReference;
 window.calculateBPGridTotals = calculateBPGridTotals;
 window.clearDateRange = clearDateRange;
