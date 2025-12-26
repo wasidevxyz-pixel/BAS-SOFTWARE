@@ -71,12 +71,28 @@ router.get('/', async (req, res) => {
 
         // Get database stats if connected
         let dbStats = null;
+        let dbStorageSize = 'N/A';
         if (dbState === 1) {
             try {
                 const admin = mongoose.connection.db.admin();
                 const serverStatus = await admin.serverStatus();
+
+                // Calculate DB internal free space and Disk space
+                const dbStatsInternal = await mongoose.connection.db.stats();
+                dbStorageSize = formatBytes(dbStatsInternal.storageSize || 0);
+
+                // fsTotalSize and fsUsedSize give us the actual Disk/Partition space
+                const diskTotal = dbStatsInternal.fsTotalSize || 0;
+                const diskUsed = dbStatsInternal.fsUsedSize || 0;
+                const diskFree = diskTotal > diskUsed ? diskTotal - diskUsed : 0;
+
                 dbStats = {
                     connections: serverStatus.connections?.current || 0,
+                    size: formatBytes(dbStatsInternal.dataSize || 0),
+                    storageSize: dbStorageSize,
+                    freeSize: formatBytes(diskFree), // Return Hard Drive free space instead of internal DB holes
+                    indexSize: formatBytes(dbStatsInternal.indexSize || 0),
+                    collections: dbStatsInternal.collections || 0,
                     opcounters: {
                         insert: serverStatus.opcounters?.insert || 0,
                         query: serverStatus.opcounters?.query || 0,
@@ -86,8 +102,9 @@ router.get('/', async (req, res) => {
                     uptime: formatUptime(serverStatus.uptime || 0)
                 };
             } catch (e) {
-                // MongoDB Atlas may not allow serverStatus
+                // MongoDB Atlas may not allow serverStatus or stats
                 dbStats = { connections: 'N/A', note: 'Stats unavailable on cloud DB' };
+                dbStorageSize = 'Cloud DB';
             }
         }
 

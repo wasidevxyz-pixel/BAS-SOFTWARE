@@ -443,7 +443,8 @@
             </div>
             <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
                 <div class="dropdown">
-                    <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown"
+                        style="cursor: pointer;">
                         <div class="user-avatar text-white bg-primary rounded-circle d-flex align-items-center justify-content-center me-2"
                             style="width: 35px; height: 35px; overflow: hidden;" id="headerAvatarDisplay">
                             <i class="fas fa-user"></i>
@@ -676,6 +677,14 @@
                                                 <li>
                                                     <span class="server-info-label">Database</span>
                                                     <span class="server-info-value" id="dbName">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Storage Size</span>
+                                                    <span class="server-info-value" id="dbSpace">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Server Free Space</span>
+                                                    <span class="server-info-value" id="dbFreeSpace">--</span>
                                                 </li>
                                             </ul>
                                         </div>
@@ -1206,6 +1215,14 @@
 
                 if (dbType) dbType.textContent = data.database.type;
                 if (dbName) dbName.textContent = data.database.name;
+
+                // New: Database Space/Storage Size
+                const dbSpace = document.getElementById('dbSpace');
+                const dbFreeSpace = document.getElementById('dbFreeSpace');
+                if (data.database.stats) {
+                    if (dbSpace) dbSpace.textContent = data.database.stats.storageSize || '--';
+                    if (dbFreeSpace) dbFreeSpace.textContent = data.database.stats.freeSize || '--';
+                }
 
                 if (dbStatus) {
                     dbStatus.className = 'status-badge';
