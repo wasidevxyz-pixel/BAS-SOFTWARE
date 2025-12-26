@@ -380,6 +380,14 @@ body.sidebar-mini {
         padding-left: 0 !important;
     }
 
+    /* FIX: Enable scrolling on mobile sidebar */
+    .sidebar-container .sidebar-menu,
+    .sidebar-container.mini .sidebar-menu {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
     /* Backdrop overlay when sidebar is open on mobile */
     .sidebar-backdrop {
         position: fixed;

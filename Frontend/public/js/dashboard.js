@@ -179,7 +179,9 @@ async function refreshDashboard() {
         // Process Metadata
         // Process Metadata - Filtered by User Access
         const user = JSON.parse(localStorage.getItem('user')) || {};
-        const userBranch = (user.branch || '').toLowerCase();
+        // Fix: Ensure branch is a string to prevent "not a function" error
+        const rawBranch = user.branch;
+        const userBranch = (typeof rawBranch === 'string' ? rawBranch : String(rawBranch || '')).toLowerCase();
 
         globalEnabledStores = (storeData.data || []).filter(s => {
             if (!s.showOnDashboard) return false;
@@ -380,6 +382,8 @@ function processCategoryVoucherPayments(vouchers, stats, categoriesMap, branchNa
 
         // Filter to only Category Vouchers (entry with detail 'Category Wise Payment')
         vouchers.forEach(v => {
+            if (!v || !v.entries || !Array.isArray(v.entries)) return;
+
             const rawBranch = v.branch || 'Unknown';
             const targetBranchName = branchNameMap.get(normalize(rawBranch));
             if (!targetBranchName) return;
@@ -426,12 +430,18 @@ function processCategoryVoucherPayments(vouchers, stats, categoriesMap, branchNa
 
         paymentDataCache = stats;
 
-        // Populate Dropdowns and render UI
-        populatePaymentFilters(stats, allowedBranchList);
-        renderPaymentUI();
-
     } catch (err) {
         console.error('Error processing category vouchers:', err);
+    } finally {
+        // Populate Dropdowns and render UI regardless of errors
+        try {
+            populatePaymentFilters(paymentDataCache || stats, allowedBranchList);
+            renderPaymentUI();
+        } catch (renderErr) {
+            console.error('Error rendering payment UI:', renderErr);
+            const container = document.getElementById('paymentCategoryBreakdown');
+            if (container) container.innerHTML = '<div class="text-center text-danger py-3">Error rendering payment data</div>';
+        }
     }
 }
 
