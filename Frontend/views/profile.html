@@ -1220,8 +1220,8 @@
                 const dbSpace = document.getElementById('dbSpace');
                 const dbFreeSpace = document.getElementById('dbFreeSpace');
                 if (data.database.stats) {
-                    if (dbSpace) dbSpace.textContent = data.database.stats.storageSize || '--';
-                    if (dbFreeSpace) dbFreeSpace.textContent = data.database.stats.freeSize || '--';
+                    if (dbSpace) dbSpace.textContent = data.database.stats.storageSize || 'N/A (Restart Required)';
+                    if (dbFreeSpace) dbFreeSpace.textContent = data.database.stats.freeSize || 'N/A (Restart Required)';
                 }
 
                 if (dbStatus) {

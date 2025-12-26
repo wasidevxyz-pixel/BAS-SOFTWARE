@@ -200,7 +200,12 @@ async function generateReport() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!response.ok) throw new Error('API Error');
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('API Endpoint not found (404). The backend server may need a restart to apply recent updates.');
+            }
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
 
         const result = await response.json();
         let rawData = result.data || [];

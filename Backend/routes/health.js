@@ -74,23 +74,49 @@ router.get('/', async (req, res) => {
         let dbStorageSize = 'N/A';
         if (dbState === 1) {
             try {
-                const admin = mongoose.connection.db.admin();
-                const serverStatus = await admin.serverStatus();
+                console.log('Health Check: Connected to DB. Fetching stats...');
 
-                // Calculate DB internal free space and Disk space
-                const dbStatsInternal = await mongoose.connection.db.stats();
-                dbStorageSize = formatBytes(dbStatsInternal.storageSize || 0);
+                // Initialize containers
+                let dbStatsInternal = {};
+                let serverStatus = {};
 
-                // fsTotalSize and fsUsedSize give us the actual Disk/Partition space
-                const diskTotal = dbStatsInternal.fsTotalSize || 0;
-                const diskUsed = dbStatsInternal.fsUsedSize || 0;
-                const diskFree = diskTotal > diskUsed ? diskTotal - diskUsed : 0;
+                // 1. Try getting specific DB Stats (Storage, Data Size) - High probability of success
+                try {
+                    dbStatsInternal = await mongoose.connection.db.stats();
+                    console.log('Health Check: DB Stats fetched successfully.');
+                } catch (statsErr) {
+                    console.error('Health Check: DB Stats failed:', statsErr.message);
+                }
+
+                // 2. Try getting Server Status (Connections, Uptime) - Fails on some shared clouds
+                try {
+                    const admin = mongoose.connection.db.admin();
+                    serverStatus = await admin.serverStatus();
+                    console.log('Health Check: Server Status fetched.');
+                } catch (statusErr) {
+                    console.warn('Health Check: Server Status failed:', statusErr.message);
+                }
+
+                // 3. Logic for Disk Free Space
+                let freeSpace = 'N/A';
+
+                // Check if we have disk stats (Physical Server / VPS)
+                if (dbStatsInternal.fsTotalSize && dbStatsInternal.fsUsedSize) {
+                    const diskTotal = dbStatsInternal.fsTotalSize;
+                    const diskUsed = dbStatsInternal.fsUsedSize;
+                    freeSpace = formatBytes(Math.max(0, diskTotal - diskUsed));
+                }
+                // Check if running in Cloud (Atlas, etc.) where fs stats are hidden
+                else if ((process.env.MONGODB_URI && (process.env.MONGODB_URI.includes('mongodb.net') || process.env.MONGODB_URI.includes('cluster'))) ||
+                    (process.env.MONGO_URI && (process.env.MONGO_URI.includes('mongodb.net') || process.env.MONGO_URI.includes('cluster')))) {
+                    freeSpace = 'Cloud Managed';
+                }
 
                 dbStats = {
-                    connections: serverStatus.connections?.current || 0,
+                    connections: serverStatus.connections?.current || 'Active',
                     size: formatBytes(dbStatsInternal.dataSize || 0),
-                    storageSize: dbStorageSize,
-                    freeSize: formatBytes(diskFree), // Return Hard Drive free space instead of internal DB holes
+                    storageSize: formatBytes(dbStatsInternal.storageSize || 0),
+                    freeSize: freeSpace,
                     indexSize: formatBytes(dbStatsInternal.indexSize || 0),
                     collections: dbStatsInternal.collections || 0,
                     opcounters: {
@@ -99,13 +125,23 @@ router.get('/', async (req, res) => {
                         update: serverStatus.opcounters?.update || 0,
                         delete: serverStatus.opcounters?.delete || 0
                     },
-                    uptime: formatUptime(serverStatus.uptime || 0)
+                    uptime: serverStatus.uptime ? formatUptime(serverStatus.uptime) : 'N/A'
                 };
+
+                console.log('Health Check: Final DB Object:', JSON.stringify(dbStats, null, 2));
+
             } catch (e) {
-                // MongoDB Atlas may not allow serverStatus or stats
-                dbStats = { connections: 'N/A', note: 'Stats unavailable on cloud DB' };
-                dbStorageSize = 'Cloud DB';
+                console.error('Critical DB Health Error:', e);
+                dbStats = {
+                    connections: 'N/A',
+                    size: 'Unknown',
+                    storageSize: 'Unavailable',
+                    freeSize: 'Unavailable',
+                    note: 'Stats retrieval failed'
+                };
             }
+        } else {
+            console.log('Health Check: Database not connected. State:', dbState);
         }
 
         // System Uptime
