@@ -69,6 +69,299 @@ exports.getClosingSheetsReport = async (req, res) => {
     }
 };
 
+// @desc    Get department-wise report from closing02 data
+// @route   GET /api/v1/closing-sheets/department-wise-report
+// @access  Private
+exports.getDepartmentWiseReport = async (req, res) => {
+    try {
+        const { startDate, endDate, branch, breakdown } = req.query;
+        if (!startDate || !endDate) {
+            return res.status(400).json({ success: false, message: 'Start and End dates are required' });
+        }
+
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const query = {
+            date: { $gte: start, $lte: end }
+        };
+
+        if (branch && branch !== 'all') {
+            query.branch = branch;
+        }
+
+        // Fetch closing sheets
+        const sheets = await ClosingSheet.find(query).lean();
+
+        // Collect all unique department IDs from closing02 data
+        const allDeptIds = new Set();
+        sheets.forEach(sheet => {
+            if (sheet.closing02 && sheet.closing02.data) {
+                Object.keys(sheet.closing02.data).forEach(deptId => {
+                    allDeptIds.add(deptId);
+                    // If breakdown requested, also collect IDs from salesBreakdown
+                    if (breakdown === 'true') {
+                        const dData = sheet.closing02.data[deptId];
+                        if (dData.salesBreakdown) {
+                            Object.keys(dData.salesBreakdown).forEach(subId => allDeptIds.add(subId));
+                        }
+                    }
+                });
+            }
+        });
+
+        // Fetch all departments in one query
+        const Department = require('../models/Department');
+        const departments = await Department.find({
+            _id: { $in: Array.from(allDeptIds) }
+        }).lean();
+
+        // Create a map of department ID to name
+        const deptIdToName = new Map();
+        departments.forEach(dept => {
+            deptIdToName.set(dept._id.toString(), dept.name);
+        });
+
+        // Aggregate department-wise data from closing02
+        const departmentMap = new Map();
+
+        for (const sheet of sheets) {
+            const branchName = sheet.branch;
+
+            // Extract closing02 data
+            if (sheet.closing02 && sheet.closing02.data) {
+                const closing02Data = sheet.closing02.data;
+
+                // Iterate through each department in closing02
+                for (const [deptId, deptData] of Object.entries(closing02Data)) {
+
+                    const parentName = deptIdToName.get(deptId) || 'UNKNOWN';
+                    let itemsToProcess = [];
+
+                    // Logic: If breakdown=true AND this department has a detailed breakdown, explode it.
+                    if (breakdown === 'true' && deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
+                        const totalSale = parseFloat(deptData.totalSaleComputer) || 0;
+                        const totalDisc = parseFloat(deptData.discountValue) || 0;
+                        const baseDiscountPer = parseFloat(deptData.discountPer) || 0;
+
+                        Object.entries(deptData.salesBreakdown).forEach(([subId, subData]) => {
+                            const subSale = parseFloat(subData.sale) || 0;
+
+                            // Prorate Discount Value based on sales contribution
+                            let subDiscVal = 0;
+                            if (totalSale !== 0) {
+                                subDiscVal = (subSale / totalSale) * totalDisc;
+                            }
+
+                            // Calculate inferred Gross for the sub-item (Net + Disc)
+                            const subGross = subSale + subDiscVal;
+
+                            itemsToProcess.push({
+                                id: subId,
+                                parentDept: parentName,
+                                sale: subSale,
+                                discVal: subDiscVal,
+                                discPer: baseDiscountPer, // Inherit parent discount %
+                                gross: subGross,
+                                // Breakdown items don't have these metrics tracked individually, so we leave them 0
+                                counterClosing: 0, bankTotal: 0, receivedCash: 0, difference: 0, tSaleManual: 0
+                            });
+                        });
+                    } else {
+                        // Standard Mode (or No Breakdown available)
+                        itemsToProcess.push({
+                            id: deptId,
+                            parentDept: parentName,
+                            sale: parseFloat(deptData.totalSaleComputer) || 0,
+                            discVal: parseFloat(deptData.discountValue) || 0,
+                            discPer: parseFloat(deptData.discountPer) || 0,
+                            gross: parseFloat(deptData.grossSale) || 0,
+                            counterClosing: parseFloat(deptData.counterClosing) || 0,
+                            bankTotal: parseFloat(deptData.bankTotal) || 0,
+                            receivedCash: parseFloat(deptData.receivedCash) || 0,
+                            difference: parseFloat(deptData.difference) || 0,
+                            tSaleManual: parseFloat(deptData.tSaleManual) || 0
+                        });
+                    }
+
+                    // Process items
+                    for (const item of itemsToProcess) {
+                        const dName = deptIdToName.get(item.id) || 'UNKNOWN';
+                        const key = `${branchName}-${dName}`;
+
+                        if (!departmentMap.has(key)) {
+                            departmentMap.set(key, {
+                                branch: branchName,
+                                dept: dName,
+                                parentDept: item.parentDept,
+                                totalSaleComputer: 0,
+                                grossSale: 0,
+                                discountValue: 0,
+                                discountPer: 0,
+                                counterClosing: 0,
+                                bankTotal: 0,
+                                receivedCash: 0,
+                                difference: 0,
+                                tSaleManual: 0,
+                                count: 0
+                            });
+                        }
+
+                        const aggregated = departmentMap.get(key);
+                        aggregated.totalSaleComputer += item.sale;
+                        aggregated.grossSale += item.gross;
+                        aggregated.discountValue += item.discVal;
+                        aggregated.discountPer += item.discPer;
+                        aggregated.counterClosing += item.counterClosing;
+                        aggregated.bankTotal += item.bankTotal;
+                        aggregated.receivedCash += item.receivedCash;
+                        aggregated.difference += item.difference;
+                        aggregated.tSaleManual += item.tSaleManual;
+                        aggregated.count += 1;
+                    }
+                }
+            }
+        }
+
+        // Convert map to array and calculate averages
+        const reportData = Array.from(departmentMap.values()).map(item => {
+            const avgDiscountPer = item.count > 0 ? item.discountPer / item.count : 0;
+            const dailyAverage = item.count > 0 ? item.totalSaleComputer / item.count : 0;
+            return {
+                ...item,
+                discountPer: avgDiscountPer,
+                dailyAverage: dailyAverage
+            };
+        });
+
+        res.status(200).json({ success: true, data: reportData });
+    } catch (err) {
+        console.error('Department-Wise Report Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// @desc    Get department details (daily breakdown) for popup
+// @route   GET /api/v1/closing-sheets/department-details
+// @access  Private
+exports.getDepartmentDetails = async (req, res) => {
+    try {
+        const { startDate, endDate, branch, dept } = req.query;
+        if (!startDate || !endDate || !branch || !dept) {
+            return res.status(400).json({ success: false, message: 'All parameters are required' });
+        }
+
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const query = {
+            date: { $gte: start, $lte: end },
+            branch: branch
+        };
+
+        // Fetch closing sheets
+        const sheets = await ClosingSheet.find(query).sort({ date: 1 }).lean();
+
+        // Get all department IDs (including from salesBreakdown)
+        const allDeptIds = new Set();
+        sheets.forEach(sheet => {
+            if (sheet.closing02 && sheet.closing02.data) {
+                Object.entries(sheet.closing02.data).forEach(([deptId, deptData]) => {
+                    allDeptIds.add(deptId);
+                    if (deptData.salesBreakdown) {
+                        Object.keys(deptData.salesBreakdown).forEach(subId => allDeptIds.add(subId));
+                    }
+                });
+            }
+        });
+
+        // Fetch all departments
+        const Department = require('../models/Department');
+        const departments = await Department.find({
+            _id: { $in: Array.from(allDeptIds) }
+        }).lean();
+
+        // Create a map of department ID to name
+        const deptIdToName = new Map();
+        departments.forEach(d => {
+            deptIdToName.set(d._id.toString(), d.name);
+        });
+
+        // Extract daily data for the specific department
+        const dailyData = [];
+
+        for (const sheet of sheets) {
+            if (sheet.closing02 && sheet.closing02.data) {
+                const closing02Data = sheet.closing02.data;
+
+                let daySale = 0;
+                let dayDisc = 0;
+                let dayGross = 0;
+                let foundForDay = false;
+
+                for (const [deptId, deptData] of Object.entries(closing02Data)) {
+                    const mainDeptName = deptIdToName.get(deptId);
+
+                    // Case 1: The Main Department entry itself matches the requested name
+                    if (mainDeptName === dept) {
+                        daySale += parseFloat(deptData.totalSaleComputer) || 0;
+                        dayDisc += parseFloat(deptData.discountValue) || 0;
+                        dayGross += parseFloat(deptData.grossSale) || 0;
+                        foundForDay = true;
+                    }
+
+                    // Case 2: Check inside salesBreakdown for nested sub-department entries
+                    if (deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
+                        const totalParentSale = parseFloat(deptData.totalSaleComputer) || 0;
+                        const totalParentDisc = parseFloat(deptData.discountValue) || 0;
+
+                        for (const [subId, subData] of Object.entries(deptData.salesBreakdown)) {
+                            const subDeptName = deptIdToName.get(subId);
+                            if (subDeptName === dept) {
+                                const subSale = parseFloat(subData.sale) || 0;
+
+                                // Prorate discount from the parent department
+                                let subDiscVal = 0;
+                                if (totalParentSale !== 0) {
+                                    subDiscVal = (subSale / totalParentSale) * totalParentDisc;
+                                }
+
+                                daySale += subSale;
+                                dayDisc += subDiscVal;
+                                dayGross += (subSale + subDiscVal);
+                                foundForDay = true;
+                            }
+                        }
+                    }
+                }
+
+                if (foundForDay) {
+                    // Calculate average discount percentage for the day's aggregated data
+                    // Gross = Sale + Discount. So Discount % = (Discount / Gross) * 100
+                    const dPer = dayGross !== 0 ? (dayDisc / dayGross) * 100 : 0;
+                    dailyData.push({
+                        date: sheet.date,
+                        discountValue: dayDisc,
+                        discountPer: dPer,
+                        totalSaleComputer: daySale,
+                        grossSale: dayGross
+                    });
+                }
+            }
+        }
+
+        res.status(200).json({ success: true, data: dailyData });
+    } catch (err) {
+        console.error('Department Details Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
 // @desc    Save (Upsert) closing sheet
 // @route   POST /api/v1/closing-sheets
 // @access  Private

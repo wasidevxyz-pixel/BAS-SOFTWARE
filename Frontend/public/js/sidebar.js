@@ -92,6 +92,15 @@ class SidebarNavigation {
                         ]
                     },
                     {
+                        id: 'shop-reports', label: 'Shop Reports', icon: 'fa-store', permission: 'shop_reports',
+                        submenu: [
+                            { label: 'Department-Wise Report', link: '/dept-wise-report.html', permission: 'dept_wise_report_link' },
+                            { label: 'Sub-Department-Wise Report', link: '/sub-dept-wise-report.html', permission: 'sub_dept_wise_report_link' },
+                            { label: 'Department-Wise Sale Comparision', link: '/dept-wise-comparison.html', permission: 'dept_wise_comparison_link' },
+                            { label: 'Branch-Wise Sale Comparison', link: '/branch-wise-comparison.html', permission: 'branch_wise_comparison_link' }
+                        ]
+                    },
+                    {
                         id: 'sales-reports', label: 'Sales Reports', icon: 'fa-shopping-cart', permission: 'sales_reports',
                         submenu: [
                             { label: 'Dept Wise Sale', link: '/department-sales-report.html', permission: 'dept_sale_link' },
