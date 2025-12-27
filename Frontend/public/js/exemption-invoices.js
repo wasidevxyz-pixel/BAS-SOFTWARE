@@ -689,64 +689,107 @@ window.saveQuickSupplier = async function () {
 };
 
 window.exportToExcel = function () {
-    const table = document.getElementById('savedRecordsBody').closest('table');
-    if (!table || table.rows.length <= 1) {
+    if (!loadedRecords || loadedRecords.length === 0) {
         alert('No data to export');
         return;
     }
 
-    const tableName = 'Exemption_Invoices';
+    const tableName = 'Exemption_Invoices_Report';
+    const filterDate = document.getElementById('filterDate').value;
+    const branchName = document.getElementById('branchSelect').options[document.getElementById('branchSelect').selectedIndex]?.text || '';
+
+    // Grouping logic (same as report)
+    let grouped = {};
+    loadedRecords.forEach(rec => {
+        rec.entries?.forEach(entry => {
+            let catName = 'Uncategorized';
+            if (entry.supplier) {
+                let c = entry.supplier.category;
+                if (c && typeof c === 'object') catName = c.name || 'Uncategorized';
+                else if (c) catName = categoriesMap[c] || 'Uncategorized';
+            }
+
+            const key = `${catName}||${entry.supplierName}||${entry.subCategory}`;
+            if (!grouped[key]) grouped[key] = { cat: catName, name: entry.supplierName, sub: entry.subCategory, amt: 0 };
+            grouped[key].amt += entry.invoiceAmount || 0;
+        });
+    });
+
+    let catGrouped = {};
+    Object.values(grouped).forEach(item => {
+        if (!catGrouped[item.cat]) catGrouped[item.cat] = [];
+        catGrouped[item.cat].push(item);
+    });
+
     let html = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
         <head>
             <meta charset="utf-8">
             <style>
-                table { border-collapse: collapse; }
+                table { border-collapse: collapse; margin-bottom: 20px; width: 100%; }
                 th, td { border: 0.5pt solid black; padding: 5px; font-family: Arial, sans-serif; font-size: 10pt; }
-                th { background-color: #f2f2f2; font-weight: bold; }
+                th { background-color: #2c3e50; color: white; font-weight: bold; }
                 .text-end { text-align: right; }
                 .text-center { text-align: center; }
+                .category-header { background-color: #2980b9; color: white; font-weight: bold; text-align: center; padding: 8px; font-size: 12pt; }
+                .total-row { background-color: #000; color: #fff; font-weight: bold; }
             </style>
         </head>
         <body>
-            <h2 style="text-align: center;">${tableName} List</h2>
+            <h2 style="text-align: center;">Exemption Invoices Report</h2>
+            <h4 style="text-align: center;">Branch: ${branchName} | Date: ${filterDate}</h3>
             <p style="text-align: center;">Generated on: ${new Date().toLocaleString()}</p>
     `;
 
-    const clone = table.cloneNode(true);
+    Object.keys(catGrouped).sort().forEach(catName => {
+        let catAmt = 0;
+        let srNo = 1;
 
-    // Remove Action column
-    const headers = clone.querySelectorAll('th');
-    let actionIdx = -1;
-    headers.forEach((th, idx) => {
-        const txt = th.textContent.trim().toLowerCase();
-        if (txt === 'action' || txt === '') actionIdx = idx;
-    });
+        html += `
+            <table>
+                <thead>
+                    <tr><th colspan="4" class="category-header">${catName}</th></tr>
+                    <tr>
+                        <th style="width: 50px;">Sr.</th>
+                        <th>Supplier Name</th>
+                        <th>Sub Category</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-    if (actionIdx !== -1) {
-        clone.querySelectorAll('tr').forEach(tr => {
-            if (tr.cells[actionIdx]) tr.deleteCell(actionIdx);
+        catGrouped[catName].sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+            catAmt += item.amt;
+            html += `
+                <tr>
+                    <td class="text-center">${srNo++}</td>
+                    <td>${item.name}</td>
+                    <td>${item.sub || '-'}</td>
+                    <td class="text-end">${Math.round(item.amt).toLocaleString()}</td>
+                </tr>
+            `;
         });
-    }
 
-    // Clean up cells
-    clone.querySelectorAll('td').forEach(td => {
-        const buttons = td.querySelectorAll('button, i');
-        buttons.forEach(b => b.remove());
-
-        const input = td.querySelector('input, select');
-        if (input) td.textContent = input.value;
-        else td.textContent = td.textContent.trim();
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="3" style="text-align: center; background-color: #000; color: #fff;">Total for ${catName}</td>
+                        <td class="text-end" style="background-color: #000; color: #fff;">${Math.round(catAmt).toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
     });
 
-    html += clone.outerHTML;
     html += `</body></html>`;
 
     const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${tableName}_${new Date().toISOString().split('T')[0]}.xls`;
+    a.download = `Exemption_Report_${filterDate}.xls`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
