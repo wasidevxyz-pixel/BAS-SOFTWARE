@@ -115,7 +115,8 @@ class SidebarNavigation {
                             { label: 'Purchase Report', link: '/purchase-report.html', permission: 'purchase_rpt_link' },
                             { label: 'Supplier Payments', link: '/supplier-payments-report.html', permission: 'supp_pay_link' },
                             { label: 'Supplier WHT Certificate', link: '/supplier-tax-certificate.html', permission: 'supplier_tax_cert_link' },
-                            { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' }
+                            { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' },
+                            { label: 'Exemption Invoices Report', link: '/exemption-invoices-report.html', permission: 'exemption_invoices_report_link' }
                         ]
                     },
                     {
@@ -212,6 +213,7 @@ class SidebarNavigation {
                     { label: 'Purchase Return', link: '/purchase-returns.html', permission: 'purchase_returns' },
                     { label: 'Supplier Payment', link: '/supplier-payments.html', permission: 'supplier_payment' },
                     { label: 'Supplier WH Tax', link: '/supplier-wh-tax.html', permission: 'supplier_wh_tax_link' },
+                    { label: 'Exemption Invoices', link: '/exemption-invoices.html', permission: 'exemption_invoices_link' }
 
 
                 ]

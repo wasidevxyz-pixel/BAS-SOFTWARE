@@ -1,11 +1,8 @@
-
 document.addEventListener('DOMContentLoaded', async () => {
     // Set default dates
     const d = new Date();
     const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    // const firstDay = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; // Unused
     document.getElementById('filterDate').value = today;
-    // document.getElementById('filterDateFrom').value = firstDay; // Removed
     document.getElementById('entryDate').value = today;
 
     await loadBranches();
@@ -14,15 +11,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Default selection
     const branchSelect = document.getElementById('branchSelect');
-    // Only auto-select if user has exactly one branch (options include placeholder)
     if (branchSelect.options.length === 2) {
         branchSelect.selectedIndex = 1;
     } else {
-        // If multiple branches (e.g. Admin), default to "Select Branch" (Index 0)
         branchSelect.selectedIndex = 0;
     }
 
-    setupCalculations();
     setupAddButton();
     setupShortcuts();
     await loadSavedData();
@@ -38,7 +32,6 @@ function setupShortcuts() {
 }
 
 // --- Data Loading ---
-
 let branchesMap = {};
 let suppliersMap = {};
 let categoriesMap = {};
@@ -67,7 +60,6 @@ async function loadBranches() {
 async function loadSuppliers() {
     try {
         const token = localStorage.getItem('token');
-        // Load virtually unlimited suppliers to ensure we have everything client-side
         const res = await fetch('/api/v1/suppliers?limit=10000', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -81,7 +73,6 @@ async function loadSuppliers() {
                 const branchId = sup.branch?._id || sup.branch;
                 let branchName = sup.branch?.name || '';
 
-                // Fallback: If we have an ID but no name, try to look it up in our branchesMap
                 if (!branchName && branchId && branchesMap[branchId]) {
                     branchName = branchesMap[branchId];
                 }
@@ -92,14 +83,13 @@ async function loadSuppliers() {
                     subCategory: sup.subCategory || '',
                     categoryId: sup.category?._id || sup.category || '',
                     categoryName: sup.category ? sup.category.name : '',
-                    whtPer: sup.whtPer || 0,
-                    advTaxPer: sup.advTaxPer || 0,
                     branchId: branchId,
                     branchName: branchName
                 };
             });
 
-            setupSearch(); // Initialize logic
+            setupSearch();
+            window.debugSuppliers = suppliersMap; // Expose for debugging
         }
     } catch (err) { console.error('Error loading suppliers:', err); }
 }
@@ -130,7 +120,6 @@ function setupSearch() {
 
         const tokens = val.split(/\s+/).filter(t => t.length > 0);
 
-        // 1. Map and Filter
         const rankedMatches = Object.keys(suppliersMap)
             .map(id => {
                 const s = suppliersMap[id];
@@ -140,30 +129,21 @@ function setupSearch() {
                     return null;
                 }
 
-                // --- Branch Filtering ---
+                // Branch Filtering logic: 
+                // 1. If supplier has a branchId, it MUST match the selected branch.
+                // 2. If supplier has NO branchId, it is a global supplier and should show for all branches.
                 if (selectedBranchId && s.branchId) {
-                    // Check ID match
                     const idMatch = String(s.branchId) === String(selectedBranchId);
-
-                    // Check Name match (Robust & Case Insensitive)
-                    const sName = String(s.branchName || '').trim().toLowerCase();
-                    const selName = String(selectedBranchName || '').trim().toLowerCase();
-                    const nameMatch = sName && selName && (sName === selName);
-
-                    // If neither matches, this supplier is not for this branch
-                    if (!idMatch && !nameMatch) return null;
+                    if (!idMatch) return null;
                 }
 
-                // --- Text Matching ---
                 const nameLower = String(s.name || '').toLowerCase().trim();
                 const subLower = String(s.subCategory || '').toLowerCase().trim();
                 const combinedText = nameLower + ' ' + subLower;
 
-                // Token Check: All typed words must appear in name OR subcategory
                 const allTokensMatch = tokens.every(token => combinedText.includes(token));
                 if (!allTokensMatch) return null;
 
-                // --- Scoring ---
                 let score = 0;
                 if (nameLower.startsWith(val)) score += 2000;
                 else if (nameLower.includes(val)) score += 100;
@@ -173,60 +153,46 @@ function setupSearch() {
             })
             .filter(item => item !== null);
 
-        // 2. Sort
         rankedMatches.sort((a, b) => {
             if (b.score !== a.score) return b.score - a.score;
             return a.nameLower.localeCompare(b.nameLower);
         });
 
-        // 3. Slice (Display Limit)
         const finalResults = rankedMatches.slice(0, 500);
 
         if (finalResults.length > 0) {
             resultsDiv.innerHTML = finalResults.map((item) => {
                 const { id, s } = item;
-
                 let subCatDisplay = '';
-                const rawSub = String(s.subCategory || '');
+                const rawSub = String(s.subCategory || '').trim();
                 if (rawSub) {
-                    const cleanSub = rawSub.trim();
-                    if (cleanSub.startsWith('(') && cleanSub.endsWith(')')) {
-                        subCatDisplay = cleanSub;
-                    } else {
-                        subCatDisplay = `(${cleanSub})`;
-                    }
+                    subCatDisplay = rawSub.startsWith('(') ? rawSub : `(${rawSub})`;
                 }
-
                 return `
-                <div class="search-result-item" onclick="selectSupplier('${id}')">
-                    <div class="fw-bold">
+                <div class="search-result-item" onclick="selectSupplier('${id}')" style="cursor: pointer; padding: 8px 12px; border-bottom: 1px solid #f8f9fa;">
+                    <div class="fw-bold" style="font-size: 0.9rem;">
                         ${s.name} <span class="text-muted fw-normal small">${subCatDisplay}</span>
                     </div>
                 </div>
             `;
             }).join('');
-
             resultsDiv.style.display = 'block';
         } else {
             resultsDiv.style.display = 'none';
         }
     });
 
-    // Keyboard navigation
     searchInput.addEventListener('keydown', function (e) {
         let x = resultsDiv.getElementsByClassName("search-result-item");
         if (e.key === 'ArrowDown') {
-            currentFocus++;
-            addActive(x);
+            currentFocus++; addActive(x);
         } else if (e.key === 'ArrowUp') {
-            currentFocus--;
-            addActive(x);
+            currentFocus--; addActive(x);
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (currentFocus > -1) {
                 if (x && x[currentFocus]) x[currentFocus].click();
             } else if (x.length > 0) {
-                // Auto-select first result on Enter if no specific focus
                 x[0].click();
             }
         }
@@ -237,16 +203,12 @@ function setupSearch() {
         removeActive(x);
         if (currentFocus >= x.length) currentFocus = 0;
         if (currentFocus < 0) currentFocus = (x.length - 1);
-        x[currentFocus].classList.add("active-result");
         x[currentFocus].style.backgroundColor = "#e9ecef";
         x[currentFocus].scrollIntoView({ block: "nearest" });
     }
 
     function removeActive(x) {
-        for (let i = 0; i < x.length; i++) {
-            x[i].classList.remove("active-result");
-            x[i].style.backgroundColor = "";
-        }
+        for (let i = 0; i < x.length; i++) x[i].style.backgroundColor = "";
     }
 
     document.addEventListener('click', function (e) {
@@ -264,14 +226,13 @@ window.selectSupplier = function (id) {
     document.getElementById('entryNTN').value = s.ntn;
     document.getElementById('entryCategory').value = s.categoryName || '';
     document.getElementById('entrySubCat').value = s.subCategory;
-    document.getElementById('entryTaxPct').value = s.whtPer;
-    document.getElementById('entryAiTaxPct').value = s.advTaxPer;
 
     const amtInput = document.getElementById('entryInvAmt');
     if (amtInput.value) {
         const event = new Event('input');
         amtInput.dispatchEvent(event);
     }
+
     document.getElementById('supplierSearchResults').style.display = 'none';
     document.getElementById('entryDate').focus();
 }
@@ -298,28 +259,6 @@ async function loadCategories() {
     } catch (err) { console.error('Error loading categories:', err); }
 }
 
-function setupCalculations() {
-    const amountInput = document.getElementById('entryInvAmt');
-    const taxPctInput = document.getElementById('entryTaxPct');
-    const taxDedInput = document.getElementById('entryTaxDed');
-    const aiPctInput = document.getElementById('entryAiTaxPct');
-    const aiAmtInput = document.getElementById('entryAiTaxAmt');
-
-    function calculate() {
-        const amt = parseFloat(amountInput.value) || 0;
-        const taxPct = parseFloat(taxPctInput.value) || 0;
-        const taxVal = amt * (taxPct / 100);
-        taxDedInput.value = taxVal > 0 ? taxVal.toFixed(2) : '';
-        const aiPct = parseFloat(aiPctInput.value) || 0;
-        const aiVal = amt * (aiPct / 100);
-        aiAmtInput.value = aiVal > 0 ? aiVal.toFixed(2) : '';
-    }
-
-    [amountInput, taxPctInput, aiPctInput].forEach(inp => {
-        inp.addEventListener('input', calculate);
-    });
-}
-
 let addedRows = [];
 let editingTopRowId = null;
 
@@ -330,10 +269,6 @@ function setupAddButton() {
         const date = document.getElementById('entryDate').value;
         const invNum = document.getElementById('entryInvNum').value;
         const invAmt = parseFloat(document.getElementById('entryInvAmt').value) || 0;
-        const taxPct = parseFloat(document.getElementById('entryTaxPct').value) || 0;
-        const taxDed = parseFloat(document.getElementById('entryTaxDed').value) || 0;
-        const aiPct = parseFloat(document.getElementById('entryAiTaxPct').value) || 0;
-        const aiAmt = parseFloat(document.getElementById('entryAiTaxAmt').value) || 0;
 
         if (!supplierId || !date || !invNum || invAmt <= 0) {
             alert('Please fill required fields (Supplier, Date, Invoice #, Amount)');
@@ -345,18 +280,16 @@ function setupAddButton() {
         const supplierName = suppliersMap[supplierId]?.name || 'Unknown';
         const rowData = {
             id: Date.now(),
-            supplierId, supplierName, category, subCat, ntn, date, invNum, invAmt, taxPct, taxDed, aiPct, aiAmt
+            supplierId, supplierName, category, subCat, ntn, date, invNum, invAmt
         };
 
         if (editingTopRowId) {
             const idx = addedRows.findIndex(r => String(r.id) === String(editingTopRowId));
-            if (idx !== -1) {
-                addedRows[idx] = { ...rowData, id: editingTopRowId };
-            }
+            if (idx !== -1) addedRows[idx] = { ...rowData, id: editingTopRowId };
             editingTopRowId = null;
-            document.getElementById('addItemBtn').innerHTML = '<i class="fas fa-plus"></i> Add';
+            document.getElementById('addItemBtn').innerHTML = 'Add';
             document.getElementById('addItemBtn').classList.remove('btn-warning');
-            document.getElementById('addItemBtn').classList.add('btn-primary');
+            document.getElementById('addItemBtn').classList.add('btn-success');
         } else {
             addedRows.push(rowData);
         }
@@ -365,13 +298,11 @@ function setupAddButton() {
         clearEntryInputs();
     });
 
-    ['entryInvAmt', 'entryAiTaxAmt'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('addItemBtn').click();
-            }
-        });
+    document.getElementById('entryInvAmt').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('addItemBtn').click();
+        }
     });
 }
 
@@ -383,24 +314,15 @@ function clearEntryInputs() {
     document.getElementById('entryNTN').value = '';
     document.getElementById('entryInvNum').value = '';
     document.getElementById('entryInvAmt').value = '';
-    document.getElementById('entryTaxPct').value = '';
-    document.getElementById('entryTaxDed').value = '';
-    document.getElementById('entryAiTaxPct').value = '';
-    document.getElementById('entryAiTaxAmt').value = '';
     document.getElementById('entrySupplierSearch').focus();
 }
 
 function renderTableRows() {
-    const tbody = document.querySelector('#taxTable tbody');
+    const tbody = document.querySelector('#exemptionTable tbody');
     const rows = Array.from(tbody.children);
-    for (let i = 1; i < rows.length; i++) {
-        rows[i].remove();
-    }
+    for (let i = 1; i < rows.length; i++) rows[i].remove();
 
     let totalAmt = 0;
-    let totalTax = 0;
-    let totalAi = 0;
-
     addedRows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -411,36 +333,28 @@ function renderTableRows() {
             <td>${row.date}</td>
             <td>${row.invNum}</td>
             <td class="text-end">${row.invAmt.toFixed(2)}</td>
-            <td>${row.taxPct}%</td>
-            <td class="text-end">${row.taxDed.toFixed(2)}</td>
-            <td>${row.aiPct}%</td>
-            <td class="text-end">${row.aiAmt.toFixed(2)}</td>
             <td>
                 <div class="d-flex gap-1 justify-content-center">
-                    <button class="btn btn-sm btn-outline-primary px-2 py-0" title="Edit row" onclick="editTopRow('${row.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger px-2 py-0" title="Remove row" onclick="removeRow('${row.id}')"><i class="fas fa-times"></i></button>
+                    <button class="btn btn-sm btn-outline-primary px-2 py-0" onclick="editTopRow('${row.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger px-2 py-0" onclick="removeRow('${row.id}')"><i class="fas fa-times"></i></button>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
-
         totalAmt += row.invAmt;
-        totalTax += row.taxDed;
-        totalAi += row.aiAmt;
     });
 
     document.getElementById('totalInvAmt').textContent = totalAmt.toFixed(2);
-    document.getElementById('totalTaxDed').textContent = totalTax.toFixed(2);
-    document.getElementById('totalAiTaxAmt').textContent = totalAi.toFixed(2);
+    renderGrandSummary(loadedRecords); // Pass full list for accurate summary
 }
 
 window.removeRow = function (id) {
     addedRows = addedRows.filter(r => String(r.id) !== String(id));
     if (String(editingTopRowId) === String(id)) {
         editingTopRowId = null;
-        document.getElementById('addItemBtn').innerHTML = '<i class="fas fa-plus"></i> Add';
+        document.getElementById('addItemBtn').innerHTML = 'Add';
         document.getElementById('addItemBtn').classList.remove('btn-warning');
-        document.getElementById('addItemBtn').classList.add('btn-primary');
+        document.getElementById('addItemBtn').classList.add('btn-success');
         clearEntryInputs();
     }
     renderTableRows();
@@ -451,7 +365,6 @@ window.editTopRow = function (id) {
     if (!row) return;
     editingTopRowId = id;
 
-    // Populate fields
     document.getElementById('entrySupplierSearch').value = row.supplierName;
     document.getElementById('entrySupplier').value = row.supplierId;
     document.getElementById('entryNTN').value = row.ntn;
@@ -460,15 +373,10 @@ window.editTopRow = function (id) {
     document.getElementById('entryDate').value = row.date;
     document.getElementById('entryInvNum').value = row.invNum;
     document.getElementById('entryInvAmt').value = row.invAmt;
-    document.getElementById('entryTaxPct').value = row.taxPct;
-    document.getElementById('entryTaxDed').value = row.taxDed;
-    document.getElementById('entryAiTaxPct').value = row.aiPct;
-    document.getElementById('entryAiTaxAmt').value = row.aiAmt;
 
-    // Change Add button to Update
     const btn = document.getElementById('addItemBtn');
     btn.innerHTML = '<i class="fas fa-check"></i> Update Row';
-    btn.classList.remove('btn-primary');
+    btn.classList.remove('btn-success');
     btn.classList.add('btn-warning');
 
     document.getElementById('entryInvAmt').focus();
@@ -480,16 +388,16 @@ let loadedRecords = [];
 
 document.getElementById('saveBtn').addEventListener('click', saveData);
 document.getElementById('listBtn').addEventListener('click', () => {
-    document.getElementById('savedRecordsTable').scrollIntoView({ behavior: 'smooth' });
+    const table = document.getElementById('savedRecordsBody').closest('table');
+    if (table) table.scrollIntoView({ behavior: 'smooth' });
     loadSavedData();
 });
-
 document.getElementById('searchFilterBtn').addEventListener('click', loadSavedData);
 document.getElementById('filterDate').addEventListener('change', loadSavedData);
 document.getElementById('categorySelect').addEventListener('change', () => {
     // Re-trigger search when category changes
     const searchInput = document.getElementById('entrySupplierSearch');
-    if (searchInput && searchInput.value) {
+    if (searchInput.value) {
         searchInput.dispatchEvent(new Event('input'));
     }
     loadSavedData();
@@ -500,25 +408,17 @@ document.getElementById('listSearch').addEventListener('input', function (e) {
     const term = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('#savedRecordsBody tr');
     rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
+        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
     });
 });
 
 async function saveData() {
-    if (addedRows.length === 0) {
-        alert('No entries to save');
-        return;
-    }
+    if (addedRows.length === 0) { alert('No entries to save'); return; }
     const branch = document.getElementById('branchSelect').value;
     const date = document.getElementById('filterDate').value;
-    if (!branch || !date) {
-        alert('Please select Branch and Date');
-        return;
-    }
+    if (!branch || !date) { alert('Please select Branch and Date'); return; }
+
     const totalAmt = addedRows.reduce((acc, r) => acc + r.invAmt, 0);
-    const totalTax = addedRows.reduce((acc, r) => acc + r.taxDed, 0);
-    const totalAi = addedRows.reduce((acc, r) => acc + r.aiAmt, 0);
 
     const payload = {
         branch,
@@ -527,35 +427,26 @@ async function saveData() {
             supplier: r.supplierId,
             supplierName: r.supplierName,
             subCategory: r.subCat,
+            categoryName: r.category,
             ntn: r.ntn,
             invoiceDate: r.date,
             invoiceNumber: r.invNum,
-            invoiceAmount: r.invAmt,
-            taxPct: r.taxPct,
-            taxDeducted: r.taxDed,
-            aiTaxPct: r.aiPct,
-            aiTaxAmount: r.aiAmt
+            invoiceAmount: r.invAmt
         })),
-        totalAmount: totalAmt,
-        totalTaxDeducted: totalTax,
-        totalAiTaxAmount: totalAi
+        totalAmount: totalAmt
     };
 
     try {
         const token = localStorage.getItem('token');
         const method = currentEditId ? 'PUT' : 'POST';
-        const url = currentEditId ? `/api/v1/supplier-taxes/${currentEditId}` : '/api/v1/supplier-taxes';
+        const url = currentEditId ? `/api/v1/exemption-invoices/${currentEditId}` : '/api/v1/exemption-invoices';
 
         const res = await fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-
         if (data.success) {
             alert(currentEditId ? 'Data Updated Successfully!' : 'Data Saved Successfully!');
             addedRows = [];
@@ -567,19 +458,16 @@ async function saveData() {
             btn.classList.add('btn-success');
             loadSavedData();
         } else {
-            alert('Error: ' + (data.message || 'Unknown error'));
+            alert('Error: ' + data.message);
         }
-    } catch (err) {
-        alert('Network Error: ' + err.message);
-        console.error(err);
-    }
+    } catch (err) { alert('Network Error: ' + err.message); }
 }
 
 async function loadSavedData() {
     const branch = document.getElementById('branchSelect').value;
     const date = document.getElementById('filterDate').value;
 
-    let url = '/api/v1/supplier-taxes?limit=1000';
+    let url = '/api/v1/exemption-invoices?limit=1000';
     if (branch) url += `&branch=${branch}`;
     if (date) url += `&date=${date}`;
 
@@ -596,7 +484,12 @@ async function loadSavedData() {
     } catch (err) { console.error(err); }
 }
 
-function formatDate(dateStr) {
+function renderSavedTableFromLoaded() {
+    renderSavedTable(loadedRecords);
+    renderGrandSummary(loadedRecords);
+}
+
+function formatDateDisplay(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '-';
@@ -608,54 +501,36 @@ function formatDate(dateStr) {
 
 function renderSavedTable(records) {
     const tbody = document.getElementById('savedRecordsBody');
-    if (!tbody) return;
     const filterCatId = document.getElementById('categorySelect').value;
     tbody.innerHTML = '';
     if (!records || records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No records found</td></tr>';
         return;
     }
     let flatRows = [];
     records.forEach(rec => {
-        const sheetDate = formatDate(rec.date);
-        const branchName = rec.branch ? (rec.branch.name || 'Unknown') : 'Unknown';
-        if (rec.entries && rec.entries.length > 0) {
-            rec.entries.forEach(entry => {
-                let catName = '-';
-                let entryCatId = null;
-
-                // Obtain category and cat ID
-                if (entry.supplier) {
-                    let c = entry.supplier.category;
-                    if (c && typeof c === 'object') {
-                        catName = c.name || '-';
-                        entryCatId = c._id;
-                    } else if (c) {
-                        catName = categoriesMap[c] || '-';
-                        entryCatId = c;
-                    }
+        const sheetDate = formatDateDisplay(rec.date);
+        const branchName = rec.branch?.name || 'Unknown';
+        rec.entries?.forEach(entry => {
+            let catName = '-';
+            let entryCatId = null;
+            if (entry.supplier) {
+                let c = entry.supplier.category;
+                if (c && typeof c === 'object') {
+                    catName = c.name || '-';
+                    entryCatId = c._id;
+                } else if (c) {
+                    catName = categoriesMap[c] || '-';
+                    entryCatId = c;
                 }
-
-                // Filter by category if selected
-                if (filterCatId && String(entryCatId) !== String(filterCatId)) {
-                    return;
-                }
-
-                flatRows.push({
-                    parentId: rec._id,
-                    sheetDate,
-                    branchName,
-                    categoryName: catName,
-                    ...entry
-                });
-            });
-        }
+            }
+            if (filterCatId && String(entryCatId) !== String(filterCatId)) return;
+            flatRows.push({ parentId: rec._id, sheetDate, branchName, categoryName: catName, ...entry });
+        });
     });
 
     flatRows.forEach(row => {
-        const invDate = formatDate(row.invoiceDate);
         const tr = document.createElement('tr');
-        tr.className = 'align-middle';
         tr.innerHTML = `
             <td>${row.sheetDate}</td>
             <td>${row.branchName}</td>
@@ -664,16 +539,12 @@ function renderSavedTable(records) {
             <td>${row.categoryName || '-'}</td>
             <td>${row.ntn || '-'}</td>
             <td>${row.invoiceNumber || '-'}</td>
-            <td>${invDate}</td>
+            <td>${formatDateDisplay(row.invoiceDate)}</td>
             <td class="text-end">${(row.invoiceAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            <td class="text-end">${row.taxPct || 0}%</td>
-            <td class="text-end fw-bold text-danger">${(row.taxDeducted || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            <td class="text-end">${row.aiTaxPct || 0}%</td>
-            <td class="text-end fw-bold text-success">${(row.aiTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
             <td>
                 <div class="d-flex justify-content-center gap-1">
-                    <button class="btn btn-sm btn-outline-primary px-2" title="Edit Sheet" onclick="editRecord('${row.parentId}')"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="btn btn-sm btn-outline-danger px-2" title="Delete Row" onclick="deleteEntry('${row.parentId}', '${row._id}')"><i class="fas fa-trash-can"></i></button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editRecord('${row.parentId}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry('${row.parentId}', '${row._id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
         `;
@@ -687,90 +558,49 @@ function renderGrandSummary(records) {
     const container = document.getElementById('summaryContainer');
     const filterCatId = document.getElementById('categorySelect').value;
 
-    if (!records || records.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
+    if (!records || records.length === 0) { container.style.display = 'none'; return; }
 
-    // Initialize Aggregation
     let summary = {};
     let grandAmt = 0;
-    let grandTax = 0;
-    let grandAi = 0;
 
     records.forEach(rec => {
-        if (rec.entries && rec.entries.length > 0) {
-            rec.entries.forEach(entry => {
-                let catName = 'Uncategorized';
-                let entryCatId = null;
-
-                if (entry.supplier) {
-                    let c = entry.supplier.category;
-                    if (c && typeof c === 'object') {
-                        catName = c.name || 'Uncategorized';
-                        entryCatId = c._id;
-                    } else if (c) {
-                        catName = categoriesMap[c] || 'Uncategorized';
-                        entryCatId = c;
-                    }
+        rec.entries?.forEach(entry => {
+            let catName = 'Uncategorized';
+            let entryCatId = null;
+            if (entry.supplier) {
+                let c = entry.supplier.category;
+                if (c && typeof c === 'object') {
+                    catName = c.name || 'Uncategorized';
+                    entryCatId = c._id;
+                } else if (c) {
+                    catName = categoriesMap[c] || 'Uncategorized';
+                    entryCatId = c;
                 }
-
-                if (filterCatId && String(entryCatId) !== String(filterCatId)) {
-                    return;
-                }
-
-                if (!summary[catName]) {
-                    summary[catName] = { amount: 0, tax: 0, ai: 0 };
-                }
-
-                const invAmt = entry.invoiceAmount || 0;
-                const taxDed = entry.taxDeducted || 0;
-                const aiAmt = entry.aiTaxAmount || 0;
-
-                summary[catName].amount += invAmt;
-                summary[catName].tax += taxDed;
-                summary[catName].ai += aiAmt;
-
-                grandAmt += invAmt;
-                grandTax += taxDed;
-                grandAi += aiAmt;
-            });
-        }
+            }
+            if (filterCatId && String(entryCatId) !== String(filterCatId)) return;
+            if (!summary[catName]) summary[catName] = { amount: 0 };
+            const invAmt = entry.invoiceAmount || 0;
+            summary[catName].amount += invAmt;
+            grandAmt += invAmt;
+        });
     });
 
-    // Render Rows
-    let rowsHtml = '';
     const sortedCats = Object.keys(summary).sort();
+    if (sortedCats.length === 0) { container.style.display = 'none'; return; }
 
-    if (sortedCats.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
+    summaryBody.innerHTML = sortedCats.map(cat => `
+        <tr>
+            <td style="border: 1px solid #000; text-align: left;">${cat}</td>
+            <td class="text-end" style="border: 1px solid #000;">${Math.round(summary[cat].amount).toLocaleString()}</td>
+        </tr>
+    `).join('');
 
-    sortedCats.forEach(cat => {
-        const data = summary[cat];
-        rowsHtml += `
-            <tr style="border-bottom: 1px solid #000;">
-                <td style="border: 1px solid #000;">${cat}</td>
-                <td class="text-end" style="border: 1px solid #000;">${Math.round(data.amount).toLocaleString()}</td>
-                <td class="text-end" style="border: 1px solid #000;">${Math.round(data.tax).toLocaleString()}</td>
-                <td class="text-end" style="border: 1px solid #000;">${Math.round(data.ai).toLocaleString()}</td>
-            </tr>
-        `;
-    });
-
-    summaryBody.innerHTML = rowsHtml;
-
-    // Render Footer
     summaryFoot.innerHTML = `
         <tr style="background-color: #cccccc; border: 1px solid #000; font-weight: bold; font-size: 1.1em;">
-            <td style="border: 1px solid #000;">TOTAL</td>
+            <td style="border: 1px solid #000; text-align: left;">TOTAL</td>
             <td class="text-end" style="border: 1px solid #000;">${Math.round(grandAmt).toLocaleString()}</td>
-            <td class="text-end" style="border: 1px solid #000;">${Math.round(grandTax).toLocaleString()}</td>
-            <td class="text-end" style="border: 1px solid #000;">${Math.round(grandAi).toLocaleString()}</td>
         </tr>
     `;
-
     container.style.display = 'block';
 }
 
@@ -779,128 +609,85 @@ window.editRecord = function (id) {
     if (!record) return;
     currentEditId = id;
     document.getElementById('branchSelect').value = record.branch?._id || record.branch || '';
-    const recDate = record.date ? new Date(record.date).toISOString().split('T')[0] : '';
-    document.getElementById('filterDate').value = recDate;
-    // document.getElementById('filterDateFrom').value = recDate;
+    document.getElementById('filterDate').value = record.date ? new Date(record.date).toISOString().split('T')[0] : '';
     addedRows = record.entries.map(e => ({
         id: e._id || Date.now() + Math.random(),
         supplierId: e.supplier?._id || e.supplier,
         supplierName: e.supplierName,
         subCat: e.subCategory,
+        category: e.categoryName,
         ntn: e.ntn,
         date: e.invoiceDate ? new Date(e.invoiceDate).toISOString().split('T')[0] : '',
         invNum: e.invoiceNumber,
-        invAmt: e.invoiceAmount,
-        taxPct: e.taxPct,
-        taxDed: e.taxDeducted,
-        aiPct: e.aiTaxPct,
-        aiAmt: e.aiTaxAmount
+        invAmt: e.invoiceAmount
     }));
-
     renderTableRows();
-    if (addedRows.length > 0) {
-        const first = addedRows[0];
-        document.getElementById('entrySupplierSearch').value = first.supplierName;
-        document.getElementById('entrySupplier').value = first.supplierId;
-        document.getElementById('entryNTN').value = first.ntn;
-        document.getElementById('entrySubCat').value = first.subCat;
-        document.getElementById('entryTaxPct').value = first.taxPct;
-        document.getElementById('entryAiTaxPct').value = first.aiPct;
-    }
     const btn = document.getElementById('saveBtn');
     btn.innerHTML = '<i class="fas fa-edit"></i> Update';
-    btn.classList.remove('btn-success');
-    btn.classList.add('btn-warning');
+    btn.classList.replace('btn-success', 'btn-warning');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-window.deleteRecord = async function (id) {
-    if (!confirm('CAUTION: Are you sure you want to delete this ENTIRE SHEET? (All entries on this sheet will be deleted)')) return;
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`/api/v1/supplier-taxes/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            alert('Entire sheet deleted successfully');
-            loadSavedData();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    } catch (e) { alert(e); }
-}
-
 window.deleteEntry = async function (parentId, entryId) {
-    if (!confirm('Are you sure you want to delete only this single entry/row?')) return;
+    if (!confirm('Are you sure you want to delete this entry?')) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`/api/v1/supplier-taxes/${parentId}/entries/${entryId}`, {
+        const res = await fetch(`/api/v1/exemption-invoices/${parentId}/entries/${entryId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.success) {
-            alert('Entry deleted successfully');
+            alert('Deleted successfully');
             loadSavedData();
         } else {
             alert('Error: ' + data.message);
         }
-    } catch (e) { alert(e); }
+    } catch (err) { alert('Network Error'); }
 }
 
 window.openQuickSupplierModal = function () {
-    document.getElementById('quickSupplierForm').reset();
-    new bootstrap.Modal(document.getElementById('quickSupplierModal')).show();
-}
+    const modal = new bootstrap.Modal(document.getElementById('quickSupplierModal'));
+    modal.show();
+};
 
 window.saveQuickSupplier = async function () {
-    const formData = {
-        name: document.getElementById('qsName').value,
-        category: document.getElementById('qsCategory').value,
-        ntn: document.getElementById('qsNTN').value,
-        subCategory: document.getElementById('qsSubCat').value,
-        whtPer: parseFloat(document.getElementById('qsWht').value) || 0,
-        advTaxPer: parseFloat(document.getElementById('qsAdv').value) || 0,
-        isActive: true,
-        branch: document.getElementById('branchSelect').value
-    };
+    const name = document.getElementById('qsName').value;
+    const category = document.getElementById('qsCategory').value;
+    const ntn = document.getElementById('qsNTN').value;
+    const subCategory = document.getElementById('qsSubCat').value;
+    const branch = document.getElementById('branchSelect').value;
 
-    if (!formData.name || !formData.category) {
-        alert('Please fill Supplier Name and Category');
-        return;
-    }
+    if (!name || !category) { alert('Name and Category are required'); return; }
 
+    const payload = { name, category, ntn, subCategory, branch };
     try {
         const token = localStorage.getItem('token');
         const res = await fetch('/api/v1/suppliers', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(formData)
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
         });
-
         const data = await res.json();
         if (data.success) {
-            alert('Supplier Added Successfully!');
+            alert('Supplier added!');
             bootstrap.Modal.getInstance(document.getElementById('quickSupplierModal')).hide();
             await loadSuppliers();
             const newSupId = data.data._id;
             suppliersMap[newSupId] = {
-                name: formData.name,
-                ntn: formData.ntn,
-                subCategory: formData.subCategory,
-                whtPer: formData.whtPer,
-                advTaxPer: formData.advTaxPer
+                name: name,
+                ntn: ntn,
+                subCategory: subCategory,
+                categoryName: categoriesMap[category] || '',
+                branchId: branch
             };
             selectSupplier(newSupId);
         } else {
             alert('Error: ' + data.message);
         }
-    } catch (err) {
-        console.error('Error saving quick supplier:', err);
-    }
-}
+    } catch (err) { alert('Error adding supplier'); }
+};
+
+window.exportToExcel = function () {
+    alert('Excel export coming soon');
+};

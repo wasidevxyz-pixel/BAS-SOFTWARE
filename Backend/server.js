@@ -68,6 +68,8 @@ const holyDayRoutes = require('./routes/holyDays');
 const supplierTaxCPRRoutes = require('./routes/supplierTaxCPRs');
 const groupRoutes = require('./routes/groups');
 const backupRoutes = require('./routes/backup');
+const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
+
 
 
 // Error handler
@@ -290,6 +292,8 @@ app.use('/api/v1/holy-days', holyDayRoutes);
 app.use('/api/v1/supplier-tax-cprs', supplierTaxCPRRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/backup', backupRoutes);
+app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
+
 
 
 // Serve login page at root
@@ -469,6 +473,13 @@ app.get('/supplier-wh-tax.html', (req, res) => {
 app.get('/supplier-tax-report.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'supplier-tax-report.html'));
 });
+app.get('/exemption-invoices.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'exemption-invoices.html'));
+});
+app.get('/exemption-invoices-report.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'exemption-invoices-report.html'));
+});
+
 
 // ... [skipping routes requires] ...
 
