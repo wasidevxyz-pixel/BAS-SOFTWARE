@@ -694,12 +694,22 @@ window.exportToExcel = function () {
         return;
     }
 
-    const tableName = 'Exemption_Invoices_Report';
     const filterDate = document.getElementById('filterDate').value;
-    const branchName = document.getElementById('branchSelect').options[document.getElementById('branchSelect').selectedIndex]?.text || '';
+    const branchSelect = document.getElementById('branchSelect');
+    const branchName = branchSelect.options[branchSelect.selectedIndex]?.text || 'All Branches';
 
-    // Grouping logic (same as report)
-    let grouped = {};
+    const formatDateStr = (d) => {
+        if (!d) return '-';
+        const date = new Date(d);
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${date.getDate().toString().padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    };
+
+    // Grouping for Detail
+    let catGrouped = {};
+    let grandSummary = {};
+    let totalGrandAmt = 0;
+
     loadedRecords.forEach(rec => {
         rec.entries?.forEach(entry => {
             let catName = 'Uncategorized';
@@ -709,16 +719,20 @@ window.exportToExcel = function () {
                 else if (c) catName = categoriesMap[c] || 'Uncategorized';
             }
 
-            const key = `${catName}||${entry.supplierName}||${entry.subCategory}`;
-            if (!grouped[key]) grouped[key] = { cat: catName, name: entry.supplierName, sub: entry.subCategory, amt: 0 };
-            grouped[key].amt += entry.invoiceAmount || 0;
-        });
-    });
+            if (!catGrouped[catName]) catGrouped[catName] = [];
+            catGrouped[catName].push({
+                supplierName: entry.supplierName,
+                subCategory: entry.subCategory || '-',
+                ntn: entry.ntn || '-',
+                invoiceDate: entry.invoiceDate,
+                invoiceNumber: entry.invoiceNumber || '-',
+                invoiceAmount: entry.invoiceAmount || 0
+            });
 
-    let catGrouped = {};
-    Object.values(grouped).forEach(item => {
-        if (!catGrouped[item.cat]) catGrouped[item.cat] = [];
-        catGrouped[item.cat].push(item);
+            if (!grandSummary[catName]) grandSummary[catName] = 0;
+            grandSummary[catName] += (entry.invoiceAmount || 0);
+            totalGrandAmt += (entry.invoiceAmount || 0);
+        });
     });
 
     let html = `
@@ -726,19 +740,25 @@ window.exportToExcel = function () {
         <head>
             <meta charset="utf-8">
             <style>
-                table { border-collapse: collapse; margin-bottom: 20px; width: 100%; }
-                th, td { border: 0.5pt solid black; padding: 5px; font-family: Arial, sans-serif; font-size: 10pt; }
-                th { background-color: #2c3e50; color: white; font-weight: bold; }
+                table { border-collapse: collapse; margin-top: 10px; width: 100%; border: 0.5pt solid black; }
+                th, td { border: 0.5pt solid black; padding: 5px; font-family: Calibri, Arial, sans-serif; font-size: 10pt; }
+                .report-title { text-align: center; font-size: 16pt; font-weight: bold; text-decoration: underline; }
+                .report-branch { text-align: center; font-size: 14pt; font-weight: bold; }
+                .report-subtitle { text-align: center; font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+                .report-date { text-align: center; font-size: 10pt; font-weight: bold; }
+                .category-header { background-color: #3498db; color: white; font-weight: bold; text-align: center; font-size: 12pt; border: 0.5pt solid black; }
+                thead th { background-color: #2c3e50; color: white; font-weight: bold; border: 0.5pt solid black; }
+                .total-row { background-color: #000000; color: #ffffff; font-weight: bold; }
                 .text-end { text-align: right; }
                 .text-center { text-align: center; }
-                .category-header { background-color: #2980b9; color: white; font-weight: bold; text-align: center; padding: 8px; font-size: 12pt; }
-                .total-row { background-color: #000; color: #fff; font-weight: bold; }
             </style>
         </head>
         <body>
-            <h2 style="text-align: center;">Exemption Invoices Report</h2>
-            <h4 style="text-align: center;">Branch: ${branchName} | Date: ${filterDate}</h3>
-            <p style="text-align: center;">Generated on: ${new Date().toLocaleString()}</p>
+            <div class="report-title">EXEMPTION INVOICES REPORT</div>
+            <div class="report-branch">(${branchName})</div>
+            <div class="report-subtitle">INVOICE EXEMPTION DETAIL</div>
+            <div class="report-date">Date: ${formatDateStr(filterDate)}</div>
+            <br>
     `;
 
     Object.keys(catGrouped).sort().forEach(catName => {
@@ -748,25 +768,31 @@ window.exportToExcel = function () {
         html += `
             <table>
                 <thead>
-                    <tr><th colspan="4" class="category-header">${catName}</th></tr>
+                    <tr><th colspan="7" class="category-header">${catName}</th></tr>
                     <tr>
                         <th style="width: 50px;">Sr.</th>
                         <th>Supplier Name</th>
-                        <th>Sub Category</th>
-                        <th class="text-end">Amount</th>
+                        <th style="width: 120px;">Sub Category</th>
+                        <th style="width: 120px;">NTN</th>
+                        <th>Inv Date</th>
+                        <th>Inv No.</th>
+                        <th class="text-end" style="width: 120px;">Inv Amount</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
-        catGrouped[catName].sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
-            catAmt += item.amt;
+        catGrouped[catName].sort((a, b) => a.supplierName.localeCompare(b.supplierName)).forEach(item => {
+            catAmt += item.invoiceAmount;
             html += `
                 <tr>
                     <td class="text-center">${srNo++}</td>
-                    <td>${item.name}</td>
-                    <td>${item.sub || '-'}</td>
-                    <td class="text-end">${Math.round(item.amt).toLocaleString()}</td>
+                    <td>${item.supplierName}</td>
+                    <td class="text-center">${item.subCategory}</td>
+                    <td class="text-center">${item.ntn}</td>
+                    <td class="text-center">${formatDateStr(item.invoiceDate)}</td>
+                    <td class="text-center">${item.invoiceNumber}</td>
+                    <td class="text-end">${Math.round(item.invoiceAmount).toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -775,13 +801,37 @@ window.exportToExcel = function () {
                 </tbody>
                 <tfoot>
                     <tr class="total-row">
-                        <td colspan="3" style="text-align: center; background-color: #000; color: #fff;">Total for ${catName}</td>
+                        <td colspan="6" style="text-align: center; background-color: #000; color: #fff;">Total for ${catName}</td>
                         <td class="text-end" style="background-color: #000; color: #fff;">${Math.round(catAmt).toLocaleString()}</td>
                     </tr>
                 </tfoot>
             </table>
         `;
     });
+
+    // Add Grand Summary
+    html += `
+        <div style="margin-top: 30px; text-align: center;">
+            <h4 style="font-weight: bold;">Summary</h4>
+            <table style="width: 400px; margin: 10px auto; border: 0.5pt solid black;">
+                <thead style="background-color: #2c3e50; color: #ffffff;">
+                    <tr><th>Category</th><th class="text-end">Amount</th></tr>
+                </thead>
+                <tbody>
+    `;
+
+    Object.keys(grandSummary).sort().forEach(cat => {
+        html += `<tr><td>${cat}</td><td class="text-end">${Math.round(grandSummary[cat]).toLocaleString()}</td></tr>`;
+    });
+
+    html += `
+                </tbody>
+                <tfoot style="background-color: #000000; color: #ffffff; font-weight: bold;">
+                    <tr><td style="background-color: #000000; color: #ffffff;">TOTAL</td><td class="text-end" style="background-color: #000000; color: #ffffff;">${Math.round(totalGrandAmt).toLocaleString()}</td></tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
 
     html += `</body></html>`;
 
@@ -795,3 +845,5 @@ window.exportToExcel = function () {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
+
+
