@@ -1,11 +1,55 @@
-// Page Access Control - Must be included in all protected pages
 document.addEventListener('DOMContentLoaded', function () {
     // Check authentication on page load
     checkAuthentication();
 
+    // Setup Idle Timer (30 minutes)
+    setupIdleTimer();
+
     // Set up periodic token validation
     setInterval(checkTokenValidity, 60000); // Check every minute
 });
+
+/**
+ * Setup Idle Timer for 30 minutes
+ */
+function setupIdleTimer() {
+    const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes in ms
+    let idleTimer;
+
+    const resetTimer = () => {
+        clearTimeout(idleTimer);
+        localStorage.setItem('lastActivity', Date.now());
+        idleTimer = setTimeout(autoLogout, IDLE_TIMEOUT);
+    };
+
+    const autoLogout = () => {
+        const path = window.location.pathname;
+        if (path === '/' || path === '/login.html' || path.includes('login.html')) return;
+
+        console.log('User inactive for 30 minutes. Logging out...');
+        window.pageAccess.logout();
+    };
+
+    // Check last activity on load to catch browser restarts/long tabs
+    const lastActivity = localStorage.getItem('lastActivity');
+    if (lastActivity && (Date.now() - parseInt(lastActivity)) > IDLE_TIMEOUT) {
+        // Prevent immediate logout if already on login page
+        const path = window.location.pathname;
+        if (!(path === '/' || path === '/login.html' || path.includes('login.html'))) {
+            setTimeout(autoLogout, 100);
+            return;
+        }
+    }
+
+    // List of events to track activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(name => {
+        document.addEventListener(name, resetTimer, true);
+    });
+
+    // Initial start
+    resetTimer();
+}
 
 // Check if user is authenticated
 function checkAuthentication() {
