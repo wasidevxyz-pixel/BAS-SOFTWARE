@@ -340,4 +340,52 @@ function renderSummaryReport(records, selectedSupplierId, invStart, invEnd) {
     container.innerHTML = html;
 }
 
-window.exportToExcel = function () { alert('Excel export coming soon'); };
+window.exportToExcel = function () {
+    const container = document.getElementById('reportContainer');
+    if (!container || !container.querySelector('table')) {
+        alert('No data to export');
+        return;
+    }
+
+    const tableName = 'Exemption_Invoices_Report';
+    let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                table { border-collapse: collapse; margin-bottom: 20px; width: 100%; }
+                th, td { border: 0.5pt solid black; padding: 5px; font-family: Arial, sans-serif; font-size: 10pt; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                .text-end { text-align: right; }
+                .text-center { text-align: center; }
+                .category-header { background-color: #2980b9; color: white; font-weight: bold; text-align: center; padding: 5px; }
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align: center;">${tableName}</h2>
+            <p style="text-align: center;">Sheet Date: ${document.getElementById('filterFromDate').value} to ${document.getElementById('filterToDate').value}</p>
+    `;
+
+    // Clone the container
+    const clone = container.cloneNode(true);
+
+    // Process styling for export (since CSS classes won't carry over well)
+    clone.querySelectorAll('.category-header').forEach(h => {
+        h.style.background = '#2980b9';
+        h.style.color = 'white';
+        h.style.border = '1px solid black';
+    });
+
+    html += clone.innerHTML;
+    html += `</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tableName}_${new Date().toISOString().split('T')[0]}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};

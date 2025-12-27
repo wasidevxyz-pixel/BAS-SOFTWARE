@@ -689,5 +689,66 @@ window.saveQuickSupplier = async function () {
 };
 
 window.exportToExcel = function () {
-    alert('Excel export coming soon');
+    const table = document.getElementById('savedRecordsBody').closest('table');
+    if (!table || table.rows.length <= 1) {
+        alert('No data to export');
+        return;
+    }
+
+    const tableName = 'Exemption_Invoices';
+    let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                table { border-collapse: collapse; }
+                th, td { border: 0.5pt solid black; padding: 5px; font-family: Arial, sans-serif; font-size: 10pt; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                .text-end { text-align: right; }
+                .text-center { text-align: center; }
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align: center;">${tableName} List</h2>
+            <p style="text-align: center;">Generated on: ${new Date().toLocaleString()}</p>
+    `;
+
+    const clone = table.cloneNode(true);
+
+    // Remove Action column
+    const headers = clone.querySelectorAll('th');
+    let actionIdx = -1;
+    headers.forEach((th, idx) => {
+        const txt = th.textContent.trim().toLowerCase();
+        if (txt === 'action' || txt === '') actionIdx = idx;
+    });
+
+    if (actionIdx !== -1) {
+        clone.querySelectorAll('tr').forEach(tr => {
+            if (tr.cells[actionIdx]) tr.deleteCell(actionIdx);
+        });
+    }
+
+    // Clean up cells
+    clone.querySelectorAll('td').forEach(td => {
+        const buttons = td.querySelectorAll('button, i');
+        buttons.forEach(b => b.remove());
+
+        const input = td.querySelector('input, select');
+        if (input) td.textContent = input.value;
+        else td.textContent = td.textContent.trim();
+    });
+
+    html += clone.outerHTML;
+    html += `</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tableName}_${new Date().toISOString().split('T')[0]}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 };
