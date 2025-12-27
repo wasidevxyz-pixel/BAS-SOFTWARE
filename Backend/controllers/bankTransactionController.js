@@ -122,9 +122,6 @@ exports.getBankTransaction = asyncHandler(async (req, res) => {
 // @route   POST /api/v1/bank-transactions
 // @access  Private (accounts access)
 exports.createBankTransaction = asyncHandler(async (req, res) => {
-  const session = await BankTransaction.startSession();
-  session.startTransaction();
-
   try {
     // Frontend Payload: { transactionType, chequeDate, branch, department, bank, amount, remarks, invoiceNo, invoiceDate }
     let {
@@ -138,6 +135,10 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
       invoiceNo,
       invoiceDate
     } = req.body;
+
+    // Sanitize ObjectId fields
+    if (department === '') department = null;
+    if (req.body.partyId === '') req.body.partyId = null;
 
     // 1. Resolve Bank Details to get Name
     const bankDoc = await Bank.findById(bank);
@@ -170,10 +171,10 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
         currentBalance: 0,
         createdBy: req.user.id
       });
-      await newBankLedger.save({ session });
+      await newBankLedger.save();
     }
 
-    const ledger = bankLedger || await Ledger.findOne({ ledgerName: bankName }).session(session);
+    const ledger = bankLedger || await Ledger.findOne({ ledgerName: bankName });
 
     // 4. Create bank transaction
     // Schema expects: bankName, bankAccount, type, refType, refId, amount, narration
@@ -198,7 +199,7 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
     // Note: If schema excludes branch/dept/invoices, they are lost unless we update schema.
     // Assuming for now the goal is just to SAVE successfully.
 
-    await transaction.save({ session });
+    await transaction.save();
 
     // 5. Create ledger entry for bank account
     const ledgerEntry = new LedgerEntry({
@@ -212,7 +213,7 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
       createdBy: req.user.id
     });
 
-    await ledgerEntry.save({ session });
+    await ledgerEntry.save();
 
     // 6. Update bank ledger balance
     if (type === 'withdrawal') {
@@ -220,9 +221,7 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
     } else {
       ledger.currentBalance += amount; // Received = Debit Bank = Increase
     }
-    await ledger.save({ session });
-
-    await session.commitTransaction();
+    await ledger.save();
 
     res.status(201).json({
       success: true,
@@ -230,14 +229,11 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
     console.error('Bank transaction creation error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error during bank transaction creation'
     });
-  } finally {
-    session.endSession();
   }
 });
 
@@ -245,14 +241,10 @@ exports.createBankTransaction = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/bank-transactions/:id
 // @access  Private (admin, manager)
 exports.updateBankTransaction = asyncHandler(async (req, res) => {
-  const session = await BankTransaction.startSession();
-  session.startTransaction();
-
   try {
     const transaction = await BankTransaction.findById(req.params.id);
 
     if (!transaction) {
-      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: 'Bank transaction not found'
@@ -274,6 +266,10 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
       branch,
       department
     } = req.body;
+
+    // Sanitize ObjectId fields
+    if (department === '') department = null;
+    if (partyId === '') partyId = null;
 
     // Map frontend fields if backend native fields are missing
     if (!type && transactionType) {
@@ -297,7 +293,7 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
         branch,
         department
       },
-      { new: true, runValidators: true, session }
+      { new: true, runValidators: true }
     );
 
     // Update corresponding ledger entry
@@ -328,11 +324,9 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
 
       ledgerEntry.narration = narration;
       ledgerEntry.refType = `bank_${type}`;
-      await ledgerEntry.save({ session });
-      await bankLedger.save({ session });
+      await ledgerEntry.save();
+      await bankLedger.save();
     }
-
-    await session.commitTransaction();
 
     const populatedTransaction = await BankTransaction.findById(updatedTransaction._id)
       .populate('partyId', 'name email phone')
@@ -344,14 +338,11 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
     console.error('Bank transaction update error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error during bank transaction update'
     });
-  } finally {
-    session.endSession();
   }
 });
 
@@ -359,14 +350,10 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/bank-transactions/:id
 // @access  Private (admin only)
 exports.deleteBankTransaction = asyncHandler(async (req, res) => {
-  const session = await BankTransaction.startSession();
-  session.startTransaction();
-
   try {
     const transaction = await BankTransaction.findById(req.params.id);
 
     if (!transaction) {
-      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: 'Bank transaction not found'
@@ -381,24 +368,27 @@ exports.deleteBankTransaction = asyncHandler(async (req, res) => {
 
     if (ledgerEntry) {
       const bankLedger = await Ledger.findById(ledgerEntry.ledgerId);
-      if (transaction.type === 'withdrawal') {
-        bankLedger.currentBalance -= transaction.amount;
+
+      if (bankLedger) {
+        // Reverse the transaction effect
+        // Withdrawal (was -) -> Now +
+        // Deposit (was +) -> Now -
+        if (transaction.type === 'withdrawal') {
+          bankLedger.currentBalance += transaction.amount;
+        } else {
+          bankLedger.currentBalance -= transaction.amount;
+        }
+        await bankLedger.save();
       } else {
-        bankLedger.currentBalance += transaction.amount;
+        console.warn(`Bank Transaction Delete: Ledger ${ledgerEntry.ledgerId} not found for entry ${ledgerEntry._id}`);
       }
-      await bankLedger.save({ session });
+
+      // Delete ledger entry
+      await LedgerEntry.findByIdAndDelete(ledgerEntry._id);
     }
 
-    // Delete ledger entry
-    await LedgerEntry.deleteOne(
-      { refType: `bank_${transaction.type}`, refId: transaction._id },
-      { session }
-    );
-
     // Delete transaction
-    await BankTransaction.findByIdAndDelete(req.params.id, { session });
-
-    await session.commitTransaction();
+    await BankTransaction.deleteOne({ _id: req.params.id });
 
     res.status(200).json({
       success: true,
@@ -406,14 +396,11 @@ exports.deleteBankTransaction = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
     console.error('Bank transaction deletion error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error during bank transaction deletion'
     });
-  } finally {
-    session.endSession();
   }
 });
 
