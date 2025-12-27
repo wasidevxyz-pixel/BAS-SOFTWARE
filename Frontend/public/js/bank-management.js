@@ -268,8 +268,8 @@ async function loadAllBanks() {
 
 function filterBanks(scopeElement) {
     if (!scopeElement) return;
-    // Custom Multi-Select Logic for Bank Detail Tab
-    if (scopeElement.id === 'bank-detail') {
+    // Custom Multi-Select Logic for Bank Detail and Bank Summary Tabs
+    if (scopeElement.id === 'bank-detail' || scopeElement.id === 'bank-summary') {
         populateBankMultiSelect(scopeElement);
     }
 
@@ -346,16 +346,23 @@ window.updateBankButtonText = updateBankButtonText;
 
 // --- Multi-Select Helpers ---
 function populateBankMultiSelect(scopeElement) {
-    const listContainer = document.getElementById('bdBankList');
-    const branch = document.getElementById('bd-branch').value;
-    const dept = document.getElementById('bd-dept').value;
+    if (!scopeElement) return;
+    const isSummary = scopeElement.id === 'bank-summary';
+    const prefix = isSummary ? 'bs' : 'bd';
+
+    const listContainer = document.getElementById(`${prefix}BankList`);
+    const branchSel = scopeElement.querySelector('.branch-select');
+    const deptSel = scopeElement.querySelector('.dept-select');
+
+    const branch = branchSel ? branchSel.value : '';
+    const dept = deptSel ? deptSel.value : '';
 
     if (!listContainer) return;
 
     listContainer.innerHTML = '';
 
     // Reset Select All
-    const checkAll = document.getElementById('checkAllBanks');
+    const checkAll = document.getElementById(isSummary ? 'checkAllBanksSummary' : 'checkAllBanks');
     if (checkAll) checkAll.checked = false;
 
     // Filter banks based on Branch and Dept
@@ -363,13 +370,14 @@ function populateBankMultiSelect(scopeElement) {
         if (branch) {
             const bBranchName = (b.branch && typeof b.branch === 'object') ? b.branch.name : b.branch;
             const bBranchId = (b.branch && typeof b.branch === 'object') ? b.branch._id : b.branch;
+            // Name or ID match
             if (bBranchName !== branch && bBranchId !== branch) return false;
         }
         if (dept) {
             const bDeptId = (b.department && typeof b.department === 'object') ? b.department._id : b.department;
             if (bDeptId && bDeptId !== dept) return false;
         }
-        // Bank Detail Tab usually hides Branch Banks (keep consistent with previous logic)
+        // Multi-select tabs usually hide Branch Banks (keep consistent with previous logic)
         if (b.bankType === 'Branch Bank') return false;
 
         return true;
@@ -380,40 +388,46 @@ function populateBankMultiSelect(scopeElement) {
     } else {
         filtered.forEach(b => {
             const div = document.createElement('div');
-            div.className = 'form-check mb-1 dropdown-item-text'; // dropdown-item-text allows click? Use standard div
+            div.className = 'form-check mb-1 dropdown-item-text';
             div.innerHTML = `
-                <input class="form-check-input bank-checkbox" type="checkbox" value="${b._id}" id="chk_${b._id}" onchange="updateBankButtonText()">
-                <label class="form-check-label small" for="chk_${b._id}" style="cursor:pointer; width: 100%;">${b.bankName}</label>
+                <input class="form-check-input bank-checkbox" type="checkbox" value="${b._id}" id="chk_${prefix}_${b._id}" onchange="updateBankButtonText('${scopeElement.id}')">
+                <label class="form-check-label small" for="chk_${prefix}_${b._id}" style="cursor:pointer; width: 100%;">${b.bankName}</label>
              `;
             listContainer.appendChild(div);
         });
     }
-    updateBankButtonText();
+    updateBankButtonText(scopeElement.id);
 }
 
-function toggleAllBanks(source) {
-    const checkboxes = document.querySelectorAll('#bdBankList .bank-checkbox');
+function toggleAllBanks(source, scopeId) {
+    const prefix = scopeId === 'bank-summary' ? 'bs' : 'bd';
+    const checkboxes = document.querySelectorAll(`#${prefix}BankList .bank-checkbox`);
     checkboxes.forEach(cb => {
         // Only toggle visible ones (if filtered)
         if (cb.closest('div').style.display !== 'none') {
             cb.checked = source.checked;
         }
     });
-    updateBankButtonText();
+    updateBankButtonText(scopeId);
 }
 
-function filterBankDropdownItems(input) {
+function filterBankDropdownItems(input, scopeId) {
+    const prefix = scopeId === 'bank-summary' ? 'bs' : 'bd';
     const filter = input.value.toLowerCase();
-    const items = document.querySelectorAll('#bdBankList .form-check');
+    const items = document.querySelectorAll(`#${prefix}BankList .form-check`);
     items.forEach(item => {
         const text = item.innerText.toLowerCase();
         item.style.display = text.includes(filter) ? '' : 'none';
     });
 }
 
-function updateBankButtonText() {
-    const checked = document.querySelectorAll('#bdBankList .bank-checkbox:checked');
-    const btn = document.getElementById('bdBankDropdownBtn');
+function updateBankButtonText(scopeId = 'bank-detail') {
+    const isSummary = scopeId === 'bank-summary';
+    const prefix = isSummary ? 'bs' : 'bd';
+    const checked = document.querySelectorAll(`#${prefix}BankList .bank-checkbox:checked`);
+    const btnId = isSummary ? 'bsBankDropdownBtn' : 'bdBankDropdownBtn';
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
     const span = btn.querySelector('span');
 
     if (checked.length === 0) {
@@ -1023,7 +1037,9 @@ async function searchBankSummary() {
     const toDate = document.getElementById('bs-to-date').value;
     const branch = document.getElementById('bs-branch').value;
     const dept = document.getElementById('bs-dept').value;
-    const bank = document.getElementById('bs-bank').value;
+
+    // Multi-Select: Get all checked values
+    const selectedBanks = Array.from(document.querySelectorAll('#bsBankList .bank-checkbox:checked')).map(cb => cb.value);
 
     if (!fromDate || !toDate) {
         alert('Please select a date range');
@@ -1057,7 +1073,7 @@ async function searchBankSummary() {
                 // Filtering
                 if (dept && item.department && (item.department._id !== dept && item.department !== dept)) return;
                 const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
-                if (bank && itemBankId !== bank) return;
+                if (selectedBanks.length > 0 && !selectedBanks.includes(itemBankId)) return;
 
                 const ratePerc = item.deductedAmount || 0;
                 const grossBase = (item.totalAmount || 0) + ratePerc;
@@ -1085,7 +1101,17 @@ async function searchBankSummary() {
                 // Filtering
                 if (dept && item.department && (item.department._id !== dept && item.department !== dept)) return;
                 const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
-                if (bank && itemBankId !== bank) return;
+
+                if (selectedBanks.length > 0) {
+                    // Match by ID or by Name (BankTransaction model sometimes has bankName but not bank object)
+                    const selectedBankNames = allBanksReference
+                        .filter(b => selectedBanks.includes(b._id))
+                        .map(b => b.bankName);
+
+                    const itemBankName = item.bankName || (item.bank && item.bank.bankName) || item.bank;
+
+                    if (!selectedBanks.includes(itemBankId) && !selectedBankNames.includes(itemBankName)) return;
+                }
 
                 const rawType = (item.transactionType || item.type || '').toLowerCase();
                 const isDeposit = rawType === 'deposit' || rawType === 'received';

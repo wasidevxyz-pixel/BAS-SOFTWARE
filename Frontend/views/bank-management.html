@@ -559,12 +559,12 @@
                                 style="width: 250px; max-height: 400px; overflow-y: auto; z-index: 5000;">
                                 <li>
                                     <input type="text" class="form-control form-control-sm mb-2" id="bdBankSearch"
-                                        placeholder="Search..." onkeyup="filterBankDropdownItems(this)">
+                                        placeholder="Search..." onkeyup="filterBankDropdownItems(this, 'bank-detail')">
                                 </li>
                                 <li>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="checkAllBanks"
-                                            onchange="toggleAllBanks(this)">
+                                            onchange="toggleAllBanks(this, 'bank-detail')">
                                         <label class="form-check-label fw-bold small" for="checkAllBanks">Select
                                             All</label>
                                     </div>
@@ -779,8 +779,37 @@
                         <select id="bs-dept" class="form-select form-select-sm dept-select"></select>
                     </div>
                     <div class="filter-group">
-                        <label>Bank</label>
-                        <select id="bs-bank" class="form-select form-select-sm bank-select"></select>
+                        <label>Banks</label>
+                        <!-- Custom Multi-Select Dropdown for Bank Summary -->
+                        <div class="dropdown" id="bs-bank-container">
+                            <button
+                                class="btn btn-sm btn-outline-secondary dropdown-toggle text-start d-flex justify-content-between align-items-center bg-white"
+                                type="button" id="bsBankDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                style="width: 180px; border-color: #dee2e6; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span>Select Banks</span>
+                            </button>
+                            <ul class="dropdown-menu p-2 shadow stop-propagation" aria-labelledby="bsBankDropdownBtn"
+                                style="width: 250px; max-height: 400px; overflow-y: auto; z-index: 5000;">
+                                <li>
+                                    <input type="text" class="form-control form-control-sm mb-2" id="bsBankSearch"
+                                        placeholder="Search..." onkeyup="filterBankDropdownItems(this, 'bank-summary')">
+                                </li>
+                                <li>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="checkAllBanksSummary"
+                                            onchange="toggleAllBanks(this, 'bank-summary')">
+                                        <label class="form-check-label fw-bold small" for="checkAllBanksSummary">Select
+                                            All</label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+                                <div id="bsBankList">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </ul>
+                        </div>
                     </div>
                     <div class="filter-group ms-auto">
                         <label>From</label>
