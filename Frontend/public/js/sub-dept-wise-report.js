@@ -267,12 +267,19 @@ function updateSummary(data) {
 }
 
 function renderReport(data) {
-    const tbody = document.getElementById('reportTableBody');
+    const table = document.querySelector('.custom-table');
     const tfoot = document.getElementById('reportTableFoot');
-    tbody.innerHTML = '';
+
+    // Clear existing bodies
+    const oldBodies = table.querySelectorAll('tbody');
+    oldBodies.forEach(b => b.remove());
 
     if (data.length === 0) {
+        const tbody = document.createElement('tbody');
+        tbody.id = 'reportTableBody';
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No records found for the selected criteria.</td></tr>';
+        // Insert after thead
+        table.insertBefore(tbody, tfoot);
         tfoot.style.display = 'none';
         return;
     }
@@ -286,41 +293,47 @@ function renderReport(data) {
 
     let tDisc = 0, tNet = 0, tDaily = 0;
 
-    // Grouping Logic
-    let currentGroupKey = ''; // Combination of Branch + ParentDept
+    // Group items
+    const groups = {};
+    data.forEach(item => {
+        const key = `${item.branch}-${item.parentDept}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+    });
 
-    data.forEach((item, index) => {
-        const itemGroupKey = `${item.branch}-${item.parentDept}`;
+    // Render each group as a TBODY
+    Object.keys(groups).forEach(key => {
+        const items = groups[key];
+        const tbody = document.createElement('tbody');
+        tbody.className = 'dept-group'; // For styling
 
-        // Check if we need to start a NEW group header
-        if (itemGroupKey !== currentGroupKey) {
-            // Before starting a new group (except for the very first one), 
-            // maybe we want a sub-total for the PREVIOUS group? 
-            // Let's implement that below by checking if currentGroupKey is set.
-            if (currentGroupKey !== '') {
-                renderSubTotal(currentGroupKey, data, tbody);
-            }
+        const firstItem = items[0];
 
-            // Render Group Header
-            const headerRow = `
-                <tr class="table-light group-header">
-                    <td colspan="6" class="fw-bold text-uppercase" style="background-color: #f0f7ff; color: #0056b3;">
-                        <i class="fas fa-folder-open me-2"></i> ${item.branch} | ${item.parentDept}
-                    </td>
-                </tr>
-            `;
-            tbody.innerHTML += headerRow;
-            currentGroupKey = itemGroupKey;
-        }
+        // Group Header Row
+        let groupHtml = `
+            <tr class="table-light group-header">
+                <td colspan="6" class="fw-bold text-uppercase" style="background-color: #f0f7ff; color: #0056b3;">
+                    <i class="fas fa-folder-open me-2"></i> ${firstItem.branch} | ${firstItem.parentDept}
+                </td>
+            </tr>
+        `;
 
-        tDisc += item.discount;
-        tNet += item.net;
-        tDaily += item.dailyAverage;
+        // Sub-Dept Rows
+        let subDisc = 0, subNet = 0, subDaily = 0;
 
-        const row = `
+        items.forEach(item => {
+            tDisc += item.discount;
+            tNet += item.net;
+            tDaily += item.dailyAverage;
+
+            subDisc += item.discount;
+            subNet += item.net;
+            subDaily += item.dailyAverage;
+
+            groupHtml += `
             <tr class="dept-row">
-                <td class="ps-4 text-muted small">${item.branch}</td>
-                <td>
+                <td data-label="Branch" class="ps-4 text-muted small">${item.branch}</td>
+                <td data-label="Sub-Department">
                     <div class="d-flex align-items-center">
                         <span class="badge bg-light text-dark border-secondary">${item.dept}</span>
                         <button class="btn btn-sm btn-outline-primary ms-auto py-0 px-2" onclick="showDetails('${item.branch}', '${item.dept}')" title="View Details" style="font-size: 0.7rem;">
@@ -328,18 +341,30 @@ function renderReport(data) {
                         </button>
                     </div>
                 </td>
-                <td class="text-end" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
-                <td class="text-end"><span class="badge bg-soft-info text-info border border-info" style="background-color: #e0faff;">${item.discountPer.toFixed(2)}%</span></td>
-                <td class="text-end fw-bold">${formatCurrency(item.net)}</td>
-                <td class="text-end text-primary fw-bold" style="background-color: #f8faff;">${formatCurrency(item.dailyAverage)}</td>
+                <td data-label="Discount" class="text-end" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
+                <td data-label="Disc %" class="text-end"><span class="badge bg-soft-info text-info border border-info" style="background-color: #e0faff;">${item.discountPer.toFixed(2)}%</span></td>
+                <td data-label="Net Sale" class="text-end fw-bold">${formatCurrency(item.net)}</td>
+                <td data-label="Daily Average" class="text-end text-primary fw-bold" style="background-color: #f8faff;">${formatCurrency(item.dailyAverage)}</td>
+            </tr>
+            `;
+        });
+
+        // Subtotal Row
+        const totalGross = subNet + subDisc;
+        const avgDiscPer = totalGross !== 0 ? (subDisc / totalGross) * 100 : 0;
+
+        groupHtml += `
+            <tr class="table-info subtotal-row" style="background-color: #e3f2fd; font-weight: 600; border-top: 2px solid #90caf9;">
+                <td colspan="2" data-label="Sub-Total" class="text-end">SUB-TOTAL:</td>
+                <td data-label="Discount" class="text-end">${formatCurrency(subDisc)}</td>
+                <td data-label="Disc %" class="text-end"><span class="badge bg-secondary">${avgDiscPer.toFixed(2)}%</span></td>
+                <td data-label="Net Sale" class="text-end">${formatCurrency(subNet)}</td>
+                <td data-label="Daily Avg" class="text-end text-primary">${formatCurrency(subDaily)}</td>
             </tr>
         `;
-        tbody.innerHTML += row;
 
-        // If this is the LAST item in the entire list, render the sub-total for the final group
-        if (index === data.length - 1) {
-            renderSubTotal(currentGroupKey, data, tbody);
-        }
+        tbody.innerHTML = groupHtml;
+        table.insertBefore(tbody, tfoot);
     });
 
     // Footer Totals (Grand Totals)
@@ -347,37 +372,10 @@ function renderReport(data) {
     document.getElementById('tblNet').textContent = formatCurrency(tNet);
     document.getElementById('tblDaily').textContent = formatCurrency(tDaily);
 
-    tfoot.style.display = 'table-header-group';
+    tfoot.style.display = 'table-footer-group'; // Fix display type
 }
+// Removed outdated renderSubTotal function as it is integrated above
 
-function renderSubTotal(groupKey, allData, tbody) {
-    // Filter data belonging to this group
-    const groupItems = allData.filter(d => `${d.branch}-${d.parentDept}` === groupKey);
-
-    let subDisc = 0, subNet = 0, subDaily = 0;
-    groupItems.forEach(i => {
-        subDisc += i.discount;
-        subNet += i.net;
-        subDaily += i.dailyAverage;
-    });
-
-    // Calculate effective average discount % for the group
-    // Note: Net = Gross - Disc. So Gross = Net + Disc.
-    const totalGross = subNet + subDisc;
-    const avgDiscPer = totalGross !== 0 ? (subDisc / totalGross) * 100 : 0;
-
-    const subTotalRow = `
-        <tr class="table-info subtotal-row" style="background-color: #e3f2fd; font-weight: 600; border-top: 2px solid #90caf9;">
-            <td colspan="2" class="text-end">SUB-TOTAL:</td>
-            <td class="text-end">${formatCurrency(subDisc)}</td>
-            <td class="text-end"><span class="badge bg-secondary">${avgDiscPer.toFixed(2)}%</span></td>
-            <td class="text-end">${formatCurrency(subNet)}</td>
-            <td class="text-end text-primary">${formatCurrency(subDaily)}</td>
-        </tr>
-        <tr style="height: 10px;"><td colspan="6" style="border: none;"></td></tr> 
-    `;
-    tbody.innerHTML += subTotalRow;
-}
 
 async function showDetails(branch, dept) {
     const fromDate = document.getElementById('fromDate').value;

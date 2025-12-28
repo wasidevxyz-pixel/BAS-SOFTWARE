@@ -26,6 +26,14 @@ function setupIdleTimer() {
         const path = window.location.pathname;
         if (path === '/' || path === '/login.html' || path.includes('login.html')) return;
 
+        // Skip auto logout on mobile devices (using touch as a proxy or screen width)
+        const isMobile = ('ontouchstart' in window) || (window.innerWidth <= 768);
+        if (isMobile) {
+            console.log('Mobile device detected. Skipping auto logout.');
+            resetTimer(); // Refresh timer to prevent stacking
+            return;
+        }
+
         console.log('User inactive for 30 minutes. Logging out...');
         window.pageAccess.logout();
     };

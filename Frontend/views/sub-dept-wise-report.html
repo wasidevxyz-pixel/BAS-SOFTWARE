@@ -174,6 +174,202 @@
             color: #664d03;
             border-top: 2px solid #ffecb5;
         }
+
+        .summary-card .value {
+            font-size: 1.5rem !important;
+            /* Adjusted font size for mobile */
+        }
+
+        .custom-table table {
+            border-collapse: separate;
+            border-spacing: 0 15px;
+            /* Spacing between cards */
+        }
+
+        .custom-table,
+        .custom-table thead,
+        .custom-table tfoot th,
+        .custom-table tfoot td {
+            display: block;
+            width: 100%;
+        }
+
+        .custom-table thead {
+            display: none;
+        }
+
+        /* TBODY acts as the Card Container */
+        .custom-table tbody.dept-group {
+            display: block;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 1px solid #e1e5eb;
+            padding-bottom: 5px;
+        }
+
+        /* Group Header Styles inside the card */
+        .custom-table tbody tr.group-header {
+            display: block;
+            background-color: #f8f9fa !important;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .custom-table tbody tr.group-header td {
+            display: block;
+            padding: 12px 15px;
+            font-size: 1rem;
+            color: #2c5ba9 !important;
+            text-align: left;
+            width: 100% !important;
+        }
+
+        /* Content Rows Styles */
+        .custom-table tbody tr.dept-row {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #f1f1f1;
+            padding: 10px 15px;
+            background: white;
+        }
+
+        .custom-table tbody tr.dept-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Data Cells */
+        .custom-table tbody tr.dept-row td {
+            display: block;
+            width: 100%;
+            /* Default full width */
+            padding: 4px 0;
+            text-align: left !important;
+            font-size: 0.9rem;
+            border: none;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Hide Branch Name in individual rows since it's in header */
+        .custom-table tbody tr.dept-row td[data-label="Branch"] {
+            display: none;
+        }
+
+        /* Sub-Dept Name - Make it prominent */
+        .custom-table tbody tr.dept-row td[data-label="Sub-Department"] {
+            width: 100%;
+            font-weight: 700;
+            margin-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
+        }
+
+        .custom-table tbody tr.dept-row td[data-label="Sub-Department"]::before {
+            display: none;
+            /* No label needed */
+        }
+
+        /* Other Cells - Key Value Pairs */
+        .custom-table tbody tr.dept-row td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-right: 10px;
+        }
+
+        /* Two columns for metrics */
+        .custom-table tbody tr.dept-row td[data-label="Discount"],
+        .custom-table tbody tr.dept-row td[data-label="Disc %"],
+        .custom-table tbody tr.dept-row td[data-label="Net Sale"],
+        .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+            width: 50%;
+            /* 2 items per row visual */
+            display: inline-flex;
+        }
+
+        .custom-table tbody tr.dept-row td[data-label="Discount"],
+        .custom-table tbody tr.dept-row td[data-label="Net Sale"] {
+            padding-right: 5px;
+        }
+
+        .custom-table tbody tr.dept-row td[data-label="Disc %"],
+        .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+            padding-left: 5px;
+        }
+
+        /* Subtotal Row Styles */
+        .custom-table tbody tr.subtotal-row {
+            display: flex;
+            flex-wrap: wrap;
+            background-color: #e3f2fd !important;
+            padding: 10px 15px;
+            margin-top: 5px;
+            border-top: 1px solid #90caf9;
+        }
+
+        .custom-table tbody tr.subtotal-row td {
+            display: block;
+            width: 50%;
+            font-size: 0.85rem;
+            padding: 2px 0;
+            border: none;
+            text-align: right;
+            background: transparent !important;
+        }
+
+        .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"] {
+            width: 100%;
+            text-align: left;
+            font-weight: 800;
+            color: #1565c0;
+            margin-bottom: 5px;
+        }
+
+        .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"]::before {
+            display: none;
+        }
+
+        .custom-table tbody tr.subtotal-row td::before {
+            content: attr(data-label) ": ";
+            font-weight: 600;
+        }
+
+        /* Grand footer */
+        .custom-table tfoot {
+            margin-top: 20px;
+            background: transparent;
+        }
+
+        .custom-table tfoot tr {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            display: block;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .custom-table tfoot td {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            border: none;
+            padding: 5px 0;
+            font-size: 1rem;
+        }
+
+        .custom-table tfoot td:nth-child(2)::before {
+            content: "Total ";
+        }
+
+        /* Label for total */
+        }
     </style>
 </head>
 
@@ -252,13 +448,13 @@
             <!-- Summary Cards -->
             <div class="summary-cards-row">
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-6 col-md-6">
                         <div class="summary-card yellow">
                             <div class="label" style="color: #212529;">Total Discount</div>
                             <div class="value" id="totalDiscount" style="color: #212529;">0</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-6 col-md-6">
                         <div class="summary-card dark">
                             <div class="label">Net Sale</div>
                             <div class="value" id="netSale">0</div>

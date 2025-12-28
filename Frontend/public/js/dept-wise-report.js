@@ -258,16 +258,33 @@ function updateSummary(data) {
 
     // Update summary cards
     document.getElementById('totalDiscount').textContent = formatCurrency(tDisc);
+
+    // Update Branch Card
+    const branchSelect = document.getElementById('branchSelect');
+    const summaryBranchName = document.getElementById('summaryBranchName');
+    if (summaryBranchName) {
+        const selectedOption = branchSelect.options[branchSelect.selectedIndex];
+        summaryBranchName.textContent = (selectedOption && selectedOption.value) ? selectedOption.text : 'All Branches';
+    }
     document.getElementById('netSale').textContent = formatCurrency(tNet);
 }
 
 function renderReport(data) {
-    const tbody = document.getElementById('reportTableBody');
+    const table = document.querySelector('.custom-table');
+    // Clear existing tbodies (except the main one if we are replacing it, but here we replace structure)
+    // Note: The HTML has a single tbody id="reportTableBody". We will REMOVE it and append new tbodies.
+
+    // Find existing tbodies and remove them (to reset)
+    const oldTbodies = table.querySelectorAll('tbody');
+    oldTbodies.forEach(tb => tb.remove());
+
     const tfoot = document.getElementById('reportTableFoot');
-    tbody.innerHTML = '';
 
     if (data.length === 0) {
+        const tbody = document.createElement('tbody');
+        tbody.id = 'reportTableBody';
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No records found for the selected criteria.</td></tr>';
+        table.insertBefore(tbody, tfoot);
         tfoot.style.display = 'none';
         return;
     }
@@ -278,24 +295,61 @@ function renderReport(data) {
         return a.branch.localeCompare(b.branch);
     });
 
+    // Group by Branch
+    const groups = {};
+    data.forEach(item => {
+        if (!groups[item.branch]) groups[item.branch] = [];
+        groups[item.branch].push(item);
+    });
+
     let tDisc = 0, tNet = 0, tDaily = 0;
 
-    data.forEach(item => {
-        tDisc += item.discount;
-        tNet += item.net;
-        tDaily += item.dailyAverage;
+    // Render Groups
+    Object.keys(groups).forEach(branchName => {
+        const items = groups[branchName];
+        const tbody = document.createElement('tbody');
+        tbody.className = 'branch-group';
 
-        const row = `
-            <tr>
-                <td>${item.branch}</td>
-                <td><span class="badge bg-light text-dark border">${item.dept}</span></td>
-                <td class="text-end text-warning-dark" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
-                <td class="text-end"><span class="badge bg-info">${item.discountPer.toFixed(2)}%</span></td>
-                <td class="text-end fw-bold">${formatCurrency(item.net)}</td>
-                <td class="text-end text-primary fw-bold">${formatCurrency(item.dailyAverage)}</td>
-            </tr>
+        // Add rows
+        items.forEach((item, index) => {
+            tDisc += item.discount;
+            tNet += item.net;
+            tDaily += item.dailyAverage;
+
+            const row = document.createElement('tr');
+
+            // Branch Cell: Only show on first row for desktop (rowspan) or handle via CSS
+            // For Mobile "One Card": We want the Branch Name visible. 
+            // We can put Branch Name in the first column of every row, and use CSS to hide duplicates or style the first one as header.
+            // BETTER APPORACH for Mobile Card:
+            // The first row of the tbody acts as the "Header" containing the branch name.
+
+            row.innerHTML = `
+                <td data-label="Branch">${item.branch}</td>
+                <td data-label="Department"><span class="badge bg-light text-dark border">${item.dept}</span></td>
+                <td data-label="Discount" class="text-end text-warning-dark" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
+                <td data-label="Disc %" class="text-end"><span class="badge bg-info">${item.discountPer.toFixed(2)}%</span></td>
+                <td data-label="Net Sale" class="text-end fw-bold">${formatCurrency(item.net)}</td>
+                <td data-label="Daily Average" class="text-end text-primary fw-bold">${formatCurrency(item.dailyAverage)}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Add Branch Total Row
+        const branchTotalRow = document.createElement('tr');
+        branchTotalRow.className = 'branch-total-row';
+        branchTotalRow.innerHTML = `
+            <td colspan="2" class="text-end fw-bold bg-light">Total ${branchName}:</td>
+            
+            <!-- Mobile Labels for Total Row -->
+            <td data-label="Total Discount" class="text-end fw-bold bg-light">${formatCurrency(items.reduce((sum, i) => sum + i.discount, 0))}</td>
+            <td class="bg-light"></td> <!-- Skip % col -->
+            <td data-label="Total Net Sale" class="text-end fw-bold bg-light text-success">${formatCurrency(items.reduce((sum, i) => sum + i.net, 0))}</td>
+            <td data-label="Total Daily Avg" class="text-end fw-bold bg-light">${formatCurrency(items.reduce((sum, i) => sum + i.dailyAverage, 0))}</td>
         `;
-        tbody.innerHTML += row;
+        tbody.appendChild(branchTotalRow);
+
+        table.insertBefore(tbody, tfoot);
     });
 
     // Footer Totals
@@ -303,7 +357,7 @@ function renderReport(data) {
     document.getElementById('tblNet').textContent = formatCurrency(tNet);
     document.getElementById('tblDaily').textContent = formatCurrency(tDaily);
 
-    tfoot.style.display = 'table-header-group';
+    tfoot.style.display = 'table-footer-group'; // Use proper display for tfoot
 }
 
 function formatCurrency(num) {

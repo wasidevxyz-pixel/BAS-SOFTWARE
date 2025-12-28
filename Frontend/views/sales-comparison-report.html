@@ -289,12 +289,38 @@
         @media (max-width: 992px) {
             .summary-cards {
                 grid-template-columns: repeat(2, 1fr);
+                padding: 15px;
+                gap: 12px;
+            }
+
+            .summary-card .value {
+                font-size: 1.5rem;
             }
         }
 
         @media (max-width: 576px) {
             .summary-cards {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
+                padding: 10px;
+                gap: 8px;
+            }
+
+            .summary-card {
+                padding: 15px 10px;
+            }
+
+            .summary-card .value {
+                font-size: 1.25rem;
+                font-weight: 800 !important;
+                color: #ffffff !important;
+                word-break: break-all;
+            }
+
+            .summary-card .label {
+                font-size: 0.7rem;
+                font-weight: 700 !important;
+                color: #ffffff !important;
+                opacity: 0.9;
             }
         }
 
@@ -441,7 +467,358 @@
                 color: white !important;
             }
         }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px !important;
+            }
+
+            /* 1. TOP SUMMARY CARDS (GRADIENTS STYLE LIKE PAYMENT REPORT) */
+            .summary-cards {
+                grid-template-columns: 1fr 1fr !important;
+                padding: 15px !important;
+                gap: 12px !important;
+                background: white !important;
+            }
+
+            .summary-card {
+                padding: 20px !important;
+                border-radius: 8px !important;
+                text-align: center !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+                color: white !important;
+            }
+
+            .summary-card.green,
+            .summary-card.teal {
+                background: linear-gradient(135deg, #17a2b8, #138496) !important;
+            }
+
+            .summary-card.red,
+            .summary-card.dark {
+                background: linear-gradient(135deg, #fd7e14, #f8961e) !important;
+            }
+
+            .summary-card .label {
+                font-size: 0.75rem !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                margin-bottom: 8px !important;
+                opacity: 0.9 !important;
+            }
+
+            .summary-card .value {
+                font-size: 1.4rem !important;
+                font-weight: 800 !important;
+            }
+
+            /* 2. CATEGORY CARD CONTAINER */
+            .category-section {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                margin-bottom: 25px;
+                overflow: hidden;
+                border: 1px solid #e1e5eb;
+                padding-bottom: 5px;
+            }
+
+            .category-title-bar {
+                background: linear-gradient(135deg, #17a2b8, #138496) !important;
+                color: white !important;
+                padding: 12px 20px !important;
+                font-weight: 700 !important;
+                font-size: 1rem !important;
+                text-transform: uppercase;
+                display: flex !important;
+                justify-content: center !important;
+                text-align: center !important;
+            }
+
+            /* 3. LIST LAYOUT FOR DATA */
+            .data-table,
+            .data-table tbody {
+                display: block;
+                width: 100%;
+            }
+
+            .data-table thead {
+                display: none;
+            }
+
+            /* 3. DATA ROWS (UNIFIED CARD STACK) */
+            .data-table tr:not(.category-total-row):not(.total-row) {
+                display: flex;
+                flex-wrap: wrap;
+                border-bottom: 2px solid #edf2f7;
+                /* Clear separator between branches */
+                padding: 15px 12px;
+                background: white;
+            }
+
+            .data-table tr:not(.category-total-row):not(.total-row):last-child {
+                border-bottom: none;
+            }
+
+            .data-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                padding: 4px 0;
+                font-size: 0.9rem;
+                border: none !important;
+            }
+
+            .data-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                font-size: 0.8rem;
+                color: #6c757d;
+                text-transform: uppercase;
+                margin-right: 10px;
+            }
+
+            /* Rank Badge */
+            .rank-cell {
+                width: auto !important;
+                display: inline-flex !important;
+                background: #f8f9fa;
+                color: #7f8c8d;
+                font-size: 0.7rem;
+                font-weight: 800;
+                padding: 1px 8px;
+                border-radius: 4px;
+                margin-bottom: 6px;
+                border: 1px solid #e9ecef;
+            }
+
+            .rank-cell::before {
+                content: "RANK #";
+            }
+
+            /* Branch Sub-Header (Inside the Card) */
+            .data-table td:nth-child(2) {
+                width: 100% !important;
+                font-weight: 800 !important;
+                font-size: 0.95rem !important;
+                color: #1e4c8c !important;
+                margin-bottom: 10px !important;
+                padding: 8px !important;
+                text-align: center !important;
+                display: block !important;
+                background-color: #f1f8ff !important;
+                border-radius: 4px !important;
+                border: 1px solid #d0e3f0 !important;
+                justify-content: center !important;
+            }
+
+            .data-table td:nth-child(2)::before {
+                display: none;
+            }
+
+            /* Professional Horizontal Sale Row (DATA ROWS) */
+            .data-table tr:not(.category-total-row):not(.total-row) td[data-label="Total Sales"] {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                background-color: #f8faff !important;
+                border-bottom: 2px solid #edf2f7 !important;
+                padding: 12px 15px !important;
+                font-weight: 800 !important;
+                font-size: 1rem !important;
+                color: #2c3e50 !important;
+                position: relative !important;
+            }
+
+            .data-table tr:not(.category-total-row):not(.total-row) td[data-label="Total Sales"]::after {
+                content: "" !important;
+                position: absolute !important;
+                left: 50% !important;
+                top: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                height: 20px !important;
+                width: 1px !important;
+                background: #e1e5eb !important;
+                display: block !important;
+            }
+
+            .data-table td[data-label="Total Cost"],
+            .data-table td[data-label="Total Profit"] {
+                width: 50% !important;
+                display: inline-flex !important;
+                padding: 10px 8px !important;
+                box-sizing: border-box !important;
+                font-size: 0.85rem !important;
+            }
+
+            .data-table td[data-label="Total Cost"] {
+                border-right: 1px solid #f1f3f5 !important;
+                color: #dc3545 !important;
+            }
+
+            .data-table td[data-label="Total Profit"] {
+                color: #28a745 !important;
+            }
+
+            /* Remove Profit Margin */
+            .data-table td[data-label="Profit Margin"] {
+                display: none !important;
+            }
+
+            /* 4. TOTALS (MATCHING SUB-TOTAL & GRAND TOTAL STYLES) */
+
+            /* Category Subtotal (Blue Theme) */
+            .category-total-row {
+                background: #2c5ba9 !important;
+                /* Payment Report Blue */
+                display: flex !important;
+                flex-wrap: wrap !important;
+                padding: 10px !important;
+                margin-top: 15px !important;
+                border-radius: 12px !important;
+                color: white !important;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            }
+
+            /* Grand Total (Premium Dark Theme) */
+            .total-row {
+                background: #2c3e50 !important;
+                /* Payment Report Dark Navy */
+                display: flex !important;
+                flex-wrap: wrap !important;
+                padding: 15px !important;
+                margin-top: 30px !important;
+                border: none !important;
+                border-radius: 8px !important;
+                color: white !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            .category-total-row td,
+            .total-row td {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 12px 5px !important;
+                background: transparent !important;
+                /* Force transparent inside card */
+                border: none !important;
+                color: white !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Total Sales Horizontal Adjust (Summary Card Fix) */
+            .category-total-row td[data-label="Total Sales"],
+            .total-row td[data-label="Total Sales"] {
+                width: 100% !important;
+                background: rgba(255, 255, 255, 0.08) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                padding: 15px 20px !important;
+                margin-bottom: 8px !important;
+                border-radius: 6px !important;
+                color: white !important;
+                display: flex !important;
+                flex-direction: row !important;
+                /* Side-by-Side */
+                justify-content: space-between !important;
+                align-items: center !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+            }
+
+            /* Center Border for Summary Sale */
+            .category-total-row td[data-label="Total Sales"]::after,
+            .total-row td[data-label="Total Sales"]::after {
+                content: "" !important;
+                position: absolute !important;
+                left: 50% !important;
+                top: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                height: 24px !important;
+                width: 1px !important;
+                background: rgba(255, 255, 255, 0.2) !important;
+                display: block !important;
+            }
+
+            .category-total-row td[data-label="Total Sales"]::before,
+            .total-row td[data-label="Total Sales"]::before {
+                margin-bottom: 0 !important;
+                flex: 1 !important;
+                text-align: left !important;
+                display: block !important;
+            }
+
+            .category-total-row td[data-label="Total Cost"],
+            .category-total-row td[data-label="Total Profit"],
+            .total-row td[data-label="Total Cost"],
+            .total-row td[data-label="Total Profit"] {
+                width: 50% !important;
+                display: inline-flex !important;
+                background: transparent !important;
+                /* Ensure transparent footer grid */
+                color: white !important;
+            }
+
+            .category-total-row td[data-label="Total Cost"],
+            .total-row td[data-label="Total Cost"] {
+                border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+            }
+
+            /* Hide Margin from Grid */
+            .category-total-row td[data-label="Profit Margin"],
+            .total-row td[data-label="Profit Margin"] {
+                display: none !important;
+            }
+
+            /* Footer Main Headings Styling (Restored) */
+            .category-total-row td:first-child,
+            .total-row td:first-child {
+                width: 100% !important;
+                text-align: center !important;
+                font-size: 0.9rem !important;
+                font-weight: 800 !important;
+                color: white !important;
+                text-transform: uppercase;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+                padding-bottom: 10px !important;
+                margin-bottom: 10px !important;
+                display: block !important;
+            }
+
+            .category-total-row td:first-child::before,
+            .total-row td:first-child::before {
+                display: none !important;
+            }
+
+            /* Labels and Values (Stacked) */
+            .category-total-row td::before,
+            .total-row td::before {
+                content: attr(data-label) !important;
+                /* Restore the heading */
+                color: white !important;
+                opacity: 0.95 !important;
+                font-weight: 700 !important;
+                margin-bottom: 4px !important;
+                font-size: 0.75rem !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+            }
+
+            .category-total-row td strong,
+            .total-row td strong {
+                color: white !important;
+                font-size: 1.2rem !important;
+                display: block !important;
+            }
+        }
     </style>
+    <!-- ... (rest of head/body start omitted, handled by tool context) ... -->
+
 </head>
 
 <body>
@@ -928,12 +1305,12 @@
                     const rank = index + 1;
                     html += `
                         <tr class="data-row">
-                            <td class="rank-cell">${rank}</td>
-                            <td>${branch.branch}</td>
-                            <td style="text-align: center;">${formatCurrency(branch.sales)}</td>
-                            <td style="text-align: center;">${formatCurrency(branch.cost)}</td>
-                            <td style="text-align: center;">${formatCurrency(branch.profit)}</td>
-                            <td style="text-align: center;"><span class="margin-badge">${branch.margin.toFixed(1)}%</span></td>
+                            <td class="rank-cell" data-label="Rank">#${rank}</td>
+                            <td data-label="Branch">${branch.branch}</td>
+                            <td data-label="Total Sales" style="text-align: center;">${formatCurrency(branch.sales)}</td>
+                            <td data-label="Total Cost" style="text-align: center;">${formatCurrency(branch.cost)}</td>
+                            <td data-label="Total Profit" style="text-align: center;">${formatCurrency(branch.profit)}</td>
+                            <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge">${branch.margin.toFixed(1)}%</span></td>
                         </tr>
                     `;
                 });
@@ -941,11 +1318,11 @@
                 // Category Total Row
                 html += `
                             <tr class="category-total-row">
-                                <td colspan="2" style="text-align: left;"><i class="fas fa-calculator me-2"></i><strong>Category Total:</strong></td>
-                                <td style="text-align: center;"><strong>${formatCurrency(categoryTotalSales)}</strong></td>
-                                <td style="text-align: center;"><strong>${formatCurrency(categoryTotalCost)}</strong></td>
-                                <td style="text-align: center;"><strong>${formatCurrency(categoryTotalProfit)}</strong></td>
-                                <td style="text-align: center;"><span class="margin-badge">${categoryMargin.toFixed(1)}%</span></td>
+                                <td data-label="Category Total" style="text-align: center;"><i class="fas fa-calculator me-2"></i><strong>Category Total:</strong></td>
+                                <td data-label="Total Sales" style="text-align: center;"><strong>${formatCurrency(categoryTotalSales)}</strong></td>
+                                <td data-label="Total Cost" style="text-align: center;"><strong>${formatCurrency(categoryTotalCost)}</strong></td>
+                                <td data-label="Total Profit" style="text-align: center;"><strong>${formatCurrency(categoryTotalProfit)}</strong></td>
+                                <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge">${categoryMargin.toFixed(1)}%</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -999,11 +1376,11 @@
 
                 summaryHtml += `
                     <tr>
-                        <td style="text-align: left;"><i class="fas fa-building me-2 text-info"></i>${branchName}</td>
-                        <td style="text-align: center;">${formatCurrency(data.sales)}</td>
-                        <td style="text-align: center;">${formatCurrency(data.cost)}</td>
-                        <td style="text-align: center;">${formatCurrency(data.profit)}</td>
-                        <td style="text-align: center;"><span class="margin-badge">${margin.toFixed(1)}%</span></td>
+                        <td data-label="Branch Name" style="text-align: left;"><i class="fas fa-building me-2 text-info"></i>${branchName}</td>
+                        <td data-label="Total Sales" style="text-align: center;">${formatCurrency(data.sales)}</td>
+                        <td data-label="Total Cost" style="text-align: center;">${formatCurrency(data.cost)}</td>
+                        <td data-label="Total Profit" style="text-align: center;">${formatCurrency(data.profit)}</td>
+                        <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge">${margin.toFixed(1)}%</span></td>
                     </tr>
                 `;
             });
@@ -1011,11 +1388,11 @@
             const grandMargin = grandTotalSales > 0 ? (grandTotalProfit / grandTotalSales * 100) : 0;
             summaryHtml += `
                         <tr class="total-row">
-                            <td style="text-align: right;"><strong>GRAND TOTAL:</strong></td>
-                            <td style="text-align: center;"><strong>${formatCurrency(grandTotalSales)}</strong></td>
-                            <td style="text-align: center;"><strong>${formatCurrency(grandTotalCost)}</strong></td>
-                            <td style="text-align: center;"><strong>${formatCurrency(grandTotalProfit)}</strong></td>
-                            <td style="text-align: center;"><span class="margin-badge" style="background: #28a745;">${grandMargin.toFixed(1)}%</span></td>
+                            <td data-label="Grand Total" style="text-align: center;"><strong>GRAND TOTAL:</strong></td>
+                            <td data-label="Total Sales" style="text-align: center;"><strong>${formatCurrency(grandTotalSales)}</strong></td>
+                            <td data-label="Total Cost" style="text-align: center;"><strong>${formatCurrency(grandTotalCost)}</strong></td>
+                            <td data-label="Total Profit" style="text-align: center;"><strong>${formatCurrency(grandTotalProfit)}</strong></td>
+                            <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge" style="background: #28a745;">${grandMargin.toFixed(1)}%</span></td>
                         </tr>
                     </tbody>
                 </table>

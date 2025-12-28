@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (res.ok) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
+                // Reset idle timer to prevent immediate logout
+                localStorage.setItem('lastActivity', Date.now());
                 window.location.href = '/main.html';
             } else {
                 throw new Error(data.message || 'Login failed');
@@ -57,5 +59,19 @@ document.addEventListener('DOMContentLoaded', function () {
             alertBox.textContent = 'Please contact system administrator to reset your password.';
             alertBox.style.display = 'block';
         });
+    }
+
+    // Check for messages in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reason') === 'server_restart') {
+        const alertBox = document.getElementById('alertBox');
+        if (alertBox) {
+            alertBox.className = 'alert alert-warning';
+            alertBox.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>System was restarted. Please log in again.';
+            alertBox.style.display = 'block';
+
+            // Clear URL param without refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }
 });

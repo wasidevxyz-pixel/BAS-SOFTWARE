@@ -226,6 +226,11 @@
             padding: 10px 15px !important;
             color: white !important;
             border: none !important;
+            text-align: center !important;
+            /* Center Align Branch Name */
+            font-size: 1.1rem !important;
+            /* Slightly larger */
+            text-transform: uppercase;
         }
 
         .category-row {
@@ -237,13 +242,28 @@
         }
 
         .branch-total-row {
-            background: #e9ecef !important;
-            font-weight: 600;
+            background: #2c5ba9 !important;
+            /* Dark Blue */
+            color: white !important;
+            font-weight: 700;
         }
 
         .branch-total-row td {
-            border-top: 2px solid #dee2e6 !important;
-            border-bottom: 2px solid #dee2e6 !important;
+            color: white !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            /* Borders */
+            border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+            font-weight: 800 !important;
+            /* Bold Amounts */
+        }
+
+        /* Category Name Cell Styling */
+        .data-table tbody td:first-child {
+            background-color: #f8f9fa;
+            /* Light Background */
+            font-weight: 600;
+            color: #2c3e50;
         }
 
         .margin-badge {
@@ -272,7 +292,47 @@
 
         @media (max-width: 576px) {
             .summary-cards {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            /* Summary Card Compact Fix */
+            .summary-card {
+                border-radius: 12px;
+                padding: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-height: 80px;
+            }
+
+            .summary-card .label {
+                font-size: 0.8rem;
+                color: #ffffff !important;
+                /* White Font */
+                font-weight: 700 !important;
+                /* Bold */
+                text-transform: uppercase;
+                margin-bottom: 4px;
+                opacity: 0.9;
+            }
+
+            .summary-card .value {
+                font-size: 1.1rem !important;
+                font-weight: 800 !important;
+                /* Extra Bold */
+                color: #ffffff !important;
+                /* White Font */
+                word-break: break-all;
+                line-height: 1.2;
+            }
+
+            .summary-card .icon-box {
+                margin-bottom: 5px;
+                font-size: 1.2rem;
+                /* Smaller Icon */
             }
         }
 
@@ -431,6 +491,181 @@
 
             .total-row td {
                 color: white !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .data-table,
+            .data-table tbody,
+            .data-table tr,
+            .data-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .data-table thead {
+                display: none;
+            }
+
+            .data-table tr {
+                margin-bottom: 0;
+                /* Remove per-row margin, handle in card */
+                border: none;
+                border-bottom: 1px solid #f1f3f5;
+                border-radius: 0;
+                box-shadow: none;
+                background: white;
+            }
+
+            /* CARD DESIGN: Branch Section */
+            .data-table tbody.branch-section {
+                display: block;
+                background: white;
+                border-radius: 16px;
+                /* Modern Rounding */
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+                /* Premium Shadow */
+                margin-bottom: 25px;
+                border: 1px solid rgba(0, 0, 0, 0.05);
+                overflow: hidden;
+                transition: transform 0.2s;
+            }
+
+            /* Branch Header in Card */
+            .data-table tbody.branch-section tr.branch-header {
+                background: linear-gradient(135deg, #17a2b8, #138496) !important;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            /* Grand Total Card - Blue Theme */
+            .data-table tfoot {
+                display: block;
+                background: #3498db !important;
+                /* User preferred Blue */
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                padding: 5px;
+                margin-top: 30px;
+                color: white;
+            }
+
+            .data-table tfoot tr {
+                background: transparent !important;
+                border: none !important;
+            }
+
+            .data-table td {
+                text-align: right !important;
+                padding-left: 50% !important;
+                padding-right: 15px !important;
+                position: relative;
+                border-bottom: 1px solid #f1f1f1;
+                font-size: 0.9rem;
+                height: auto !important;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .data-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 15px;
+                width: 40%;
+                white-space: nowrap;
+                font-weight: 700;
+                text-align: left;
+                color: #6c757d;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            /* Branch Header Special Handling */
+            .data-table tr.branch-header {
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                margin-bottom: 5px;
+            }
+
+            .data-table tr.branch-header td {
+                background: linear-gradient(135deg, #17a2b8, #138496) !important;
+                color: white !important;
+                border-radius: 8px;
+                justify-content: center;
+                /* Center Flex Content */
+                padding-left: 15px !important;
+            }
+
+            .data-table tr.branch-header td::before {
+                display: none;
+            }
+
+            /* Branch Total Special Handling */
+            .data-table tr.branch-total-row {
+                background-color: #3498db !important;
+                /* Light Blue */
+                border: 1px solid #2980b9;
+                color: white !important;
+            }
+
+            .data-table tr.branch-total-row td {
+                background-color: transparent !important;
+                color: white !important;
+                /* White Text */
+                font-weight: 800 !important;
+                /* Bold */
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+            }
+
+            .data-table tr.branch-total-row td::before {
+                color: white !important;
+                font-weight: 800 !important;
+                opacity: 0.9;
+            }
+
+            /* Highlight Total Sales Generally (All Rows) */
+            .data-table td[data-label="Total Sales"] {
+                background-color: #ffecec !important;
+                /* Light Red */
+                color: #c0392b !important;
+                /* Dark Red */
+                font-weight: 700 !important;
+                text-shadow: none !important;
+            }
+
+            .data-table td[data-label="Total Sales"]::before {
+                color: #c0392b !important;
+                opacity: 0.8;
+            }
+
+            /* Exception: Branch Total Sales should follow Blue Theme */
+            .data-table tr.branch-total-row td[data-label="Total Sales"] {
+                background-color: transparent !important;
+                color: white !important;
+                font-weight: 800 !important;
+            }
+
+            .data-table tr.branch-total-row td[data-label="Total Sales"]::before {
+                color: white !important;
+            }
+
+            .data-table tr.total-row {
+                background-color: #343a40 !important;
+            }
+
+            .data-table tr.total-row td {
+                background-color: #343a40 !important;
+                color: white !important;
+                border-bottom: 1px solid #495057;
+            }
+
+            .data-table tr.total-row td::before {
+                color: #adb5bd;
             }
         }
     </style>
@@ -876,10 +1111,9 @@
                         </tr>
                     </thead>
                     <tbody>
-            `;
+                        `;
 
             // Sort branches by total sales (descending - highest first)
-            // Filter out branches with no sales or no categories
             const sortedBranches = Object.keys(data.branchData)
                 .filter(branchName => {
                     const branch = data.branchData[branchName];
@@ -893,15 +1127,17 @@
                 const branch = data.branchData[branchName];
                 const categories = branch.categories;
 
+                // Start Branch Card (tbody)
+                html += `<tbody class="branch-section">`;
+
                 // Branch header
-                console.log('Rendering branch:', branchName); // Debug
                 html += `
-                    <tr class="branch-header" style="background: linear-gradient(135deg, #17a2b8, #138496) !important;">
-                        <td colspan="5" style="text-align: left; color: white !important; padding: 10px 15px; font-weight: 600; background: transparent;">
-                            <i class="fas fa-building me-2"></i>(${branchName})
-                        </td>
-                    </tr>
-                `;
+                        <tr class="branch-header">
+                            <td colspan="5" style="text-align: center;">
+                                <i class="fas fa-building me-2"></i>(${branchName})
+                            </td>
+                        </tr>
+                        `;
 
                 // Categories
                 let rowIndex = 0;
@@ -914,42 +1150,45 @@
 
                     html += `
                         <tr class="${rowClass}">
-                            <td style="text-align: left;">${catName}</td>
-                            <td style="text-align: center;">${formatCurrency(cat.sale)}</td>
-                            <td style="text-align: center;">${formatCurrency(cat.cost)}</td>
-                            <td style="text-align: center;">${formatCurrency(profit)}</td>
-                            <td style="text-align: center;"><span class="margin-badge">${margin.toFixed(1)}%</span></td>
+                            <td data-label="Category" style="text-align: left;">${catName}</td>
+                            <td data-label="Total Sales" style="text-align: center;">${formatCurrency(cat.sale)}</td>
+                            <td data-label="Total Cost" style="text-align: center;">${formatCurrency(cat.cost)}</td>
+                            <td data-label="Total Profit" style="text-align: center;">${formatCurrency(profit)}</td>
+                            <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge">${margin.toFixed(1)}%</span></td>
                         </tr>
-                    `;
+                        `;
                 });
 
                 // Branch total
                 const branchProfit = branch.totalSale - branch.totalCost;
                 const branchMargin = branch.totalSale > 0 ? (branchProfit / branch.totalSale * 100) : 0;
                 html += `
-                    <tr class="branch-total-row">
-                        <td style="text-align: left;"><i class="fas fa-calculator me-2"></i><strong>Branch Total:</strong></td>
-                        <td style="text-align: center;"><strong>${formatCurrency(branch.totalSale)}</strong></td>
-                        <td style="text-align: center;"><strong>${formatCurrency(branch.totalCost)}</strong></td>
-                        <td style="text-align: center;"><strong>${formatCurrency(branchProfit)}</strong></td>
-                        <td style="text-align: center;"><span class="margin-badge">${branchMargin.toFixed(1)}%</span></td>
-                    </tr>
-                `;
+                        <tr class="branch-total-row">
+                            <td data-label="Branch Total" style="text-align: left;"><i class="fas fa-calculator me-2"></i><strong>Branch Total:</strong></td>
+                            <td data-label="Total Sales" style="text-align: center;"><strong>${formatCurrency(branch.totalSale)}</strong></td>
+                            <td data-label="Total Cost" style="text-align: center;"><strong>${formatCurrency(branch.totalCost)}</strong></td>
+                            <td data-label="Total Profit" style="text-align: center;"><strong>${formatCurrency(branchProfit)}</strong></td>
+                            <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge">${branchMargin.toFixed(1)}%</span></td>
+                        </tr>
+                        `;
+
+                html += `</tbody>`; // End Branch Card
             });
 
-            // Grand Total Row
+            // Grand Total Row (Footer)
             html += `
-                <tr class="total-row">
-                    <td style="text-align: right;"><strong>GRAND TOTAL:</strong></td>
-                    <td style="text-align: center;"><strong>${formatCurrency(data.totalSales)}</strong></td>
-                    <td style="text-align: center;"><strong>${formatCurrency(data.totalCost)}</strong></td>
-                    <td style="text-align: center;"><strong>${formatCurrency(data.totalProfit)}</strong></td>
-                    <td style="text-align: center;"><span class="margin-badge" style="background: #28a745;">${data.profitMargin.toFixed(1)}%</span></td>
-                </tr>
-            `;
+                    <tfoot>
+                        <tr class="total-row">
+                            <td data-label="Grand Total" style="text-align: right;"><strong>GRAND TOTAL:</strong></td>
+                            <td data-label="Total Sales" style="text-align: center;"><strong>${formatCurrency(data.totalSales)}</strong></td>
+                            <td data-label="Total Cost" style="text-align: center;"><strong>${formatCurrency(data.totalCost)}</strong></td>
+                            <td data-label="Total Profit" style="text-align: center;"><strong>${formatCurrency(data.totalProfit)}</strong></td>
+                            <td data-label="Profit Margin" style="text-align: center;"><span class="margin-badge" style="background: #28a745;">${data.profitMargin.toFixed(1)}%</span></td>
+                        </tr>
+                    </tfoot>
+                    `;
 
             html += `
-                    </tbody>
                 </table>
             `;
 

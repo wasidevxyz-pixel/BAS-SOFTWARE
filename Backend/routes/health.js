@@ -201,7 +201,8 @@ router.get('/', async (req, res) => {
                 environment: process.env.NODE_ENV || 'development',
                 processId: process.pid,
                 uptime: formatUptime(serverUptime),
-                systemUptime: formatUptime(systemUptime)
+                systemUptime: formatUptime(systemUptime),
+                startTime: serverStartTime
             },
 
             memory: {

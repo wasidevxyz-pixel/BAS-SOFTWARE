@@ -229,7 +229,13 @@
             }
 
             .summary-cards {
-                flex-direction: column;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .summary-cards>.summary-card {
+                margin: 0;
             }
         }
 
@@ -282,6 +288,93 @@
                 background: #333 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .data-table,
+            .data-table tbody,
+            .data-table tr,
+            .data-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .data-table thead {
+                display: none;
+            }
+
+            .data-table tr {
+                margin-bottom: 15px;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                background: white;
+                position: relative;
+            }
+
+            .data-table td {
+                text-align: right !important;
+                padding-left: 50% !important;
+                padding-right: 15px !important;
+                position: relative;
+                border-bottom: 1px solid #f1f1f1;
+                font-size: 0.9rem;
+                height: auto !important;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .data-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 15px;
+                width: 40%;
+                white-space: nowrap;
+                font-weight: 700;
+                text-align: left;
+                color: #6c757d;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            /* Group Header & Total Styles */
+            .data-table tr.group-header td {
+                background: #eceff1 !important;
+                color: #1a5f7a;
+                font-weight: bold;
+                text-align: left !important;
+                padding-left: 15px !important;
+                justify-content: flex-start;
+            }
+
+            .data-table tr.group-header td::before {
+                display: none;
+            }
+
+            .data-table tr.group-total td {
+                background: #cfd8dc !important;
+                font-weight: bold;
+            }
+
+            .data-table tr.total-row td {
+                background: linear-gradient(135deg, #1a5f7a 0%, #0288d1 100%) !important;
+                color: white !important;
+                border: none;
+            }
+
+            .data-table tr.total-row td::before {
+                color: rgba(255, 255, 255, 0.7);
+            }
+
+            /* Hide print header on mobile */
+            .print-header {
+                display: none !important;
             }
         }
     </style>
@@ -538,17 +631,17 @@
                 else if (qty <= min) stockClass = 'stock-low';
 
                 html += `<tr>
-                    <td>${i.barcode || '-'}</td>
-                    <td><strong>${i.name || '-'}</strong></td>
-                    <td>${i.category?.name || i.category || '-'}</td>
-                    <td>${i.unit?.name || i.unit || 'Pcs'}</td>
-                    <td class="text-end">${formatCurrency(cost)}</td>
-                    <td class="text-end">${formatCurrency(sale)}</td>
-                    <td class="text-center ${stockClass}">${qty}</td>
-                    <td class="text-end">${formatCurrency(value)}</td>
+                    <td data-label="Barcode">${i.barcode || '-'}</td>
+                    <td data-label="Item Name"><strong>${i.name || '-'}</strong></td>
+                    <td data-label="Category">${i.category?.name || i.category || '-'}</td>
+                    <td data-label="Unit">${i.unit?.name || i.unit || 'Pcs'}</td>
+                    <td data-label="Cost Price" class="text-end">${formatCurrency(cost)}</td>
+                    <td data-label="Sale Price" class="text-end">${formatCurrency(sale)}</td>
+                    <td data-label="Stock" class="text-center ${stockClass}">${qty}</td>
+                    <td data-label="Stock Value" class="text-end">${formatCurrency(value)}</td>
                 </tr>`;
             });
-            html += `<tr class="total-row"><td colspan="7" class="text-end">Total Stock Value</td><td class="text-end">${formatCurrency(totalValue)}</td></tr>`;
+            html += `<tr class="total-row"><td colspan="7" class="text-end">Total Stock Value</td><td data-label="Total Value" class="text-end">${formatCurrency(totalValue)}</td></tr>`;
             tbody.innerHTML = html;
         }
 
@@ -581,20 +674,20 @@
                     else if (qty <= min) stockClass = 'stock-low';
 
                     html += `<tr>
-                        <td>${i.barcode || '-'}</td>
-                        <td><strong>${i.name || '-'}</strong></td>
-                        <td>${i.category?.name || i.category || '-'}</td>
-                        <td>${i.unit?.name || i.unit || 'Pcs'}</td>
-                        <td class="text-end">${formatCurrency(cost)}</td>
-                        <td class="text-end">${formatCurrency(sale)}</td>
-                        <td class="text-center ${stockClass}">${qty}</td>
-                        <td class="text-end">${formatCurrency(value)}</td>
+                        <td data-label="Barcode">${i.barcode || '-'}</td>
+                        <td data-label="Item Name"><strong>${i.name || '-'}</strong></td>
+                        <td data-label="Category">${i.category?.name || i.category || '-'}</td>
+                        <td data-label="Unit">${i.unit?.name || i.unit || 'Pcs'}</td>
+                        <td data-label="Cost Price" class="text-end">${formatCurrency(cost)}</td>
+                        <td data-label="Sale Price" class="text-end">${formatCurrency(sale)}</td>
+                        <td data-label="Stock" class="text-center ${stockClass}">${qty}</td>
+                        <td data-label="Stock Value" class="text-end">${formatCurrency(value)}</td>
                     </tr>`;
                 });
-                html += `<tr class="group-total"><td colspan="7" class="text-end">Subtotal</td><td class="text-end">${formatCurrency(groupTotal)}</td></tr>`;
+                html += `<tr class="group-total"><td colspan="7" class="text-end">Subtotal</td><td data-label="Subtotal" class="text-end">${formatCurrency(groupTotal)}</td></tr>`;
                 grandTotal += groupTotal;
             });
-            html += `<tr class="total-row"><td colspan="7" class="text-end">Grand Total Stock Value</td><td class="text-end">${formatCurrency(grandTotal)}</td></tr>`;
+            html += `<tr class="total-row"><td colspan="7" class="text-end">Grand Total Stock Value</td><td data-label="Grand Total" class="text-end">${formatCurrency(grandTotal)}</td></tr>`;
             tbody.innerHTML = html;
         }
 

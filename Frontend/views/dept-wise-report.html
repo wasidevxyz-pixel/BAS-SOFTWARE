@@ -147,9 +147,13 @@
         }
 
         .summary-card .value {
-            font-size: 2rem;
+            font-size: 1.15rem;
             font-weight: 700;
             line-height: 1.1;
+            white-space: nowrap;
+            /* Try to keep on one line */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .data-table-section {
@@ -181,6 +185,230 @@
             font-size: 3rem;
             margin-bottom: 15px;
             color: #dee2e6;
+        }
+
+        @media (max-width: 768px) {
+
+            /* Mobile Card Design: Group by TBODY (Branch) */
+            .custom-table {
+                display: block;
+                background: transparent;
+                border: none;
+            }
+
+            .custom-table thead {
+                display: none;
+            }
+
+            /* The TBODY acts as the "Card" */
+            tbody.branch-group {
+                display: block;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+                margin-bottom: 25px;
+                overflow: hidden;
+                border: 1px solid #e1e5eb;
+            }
+
+            /* Rows inside the card */
+            tbody.branch-group tr {
+                display: flex;
+                flex-direction: column;
+                /* Stack cells vertically */
+                border-bottom: 1px solid #f1f3f5;
+                /* Separator between Depts */
+                padding: 15px;
+                position: relative;
+            }
+
+            tbody.branch-group tr:last-child {
+                border-bottom: none;
+            }
+
+            /* CELLS */
+            .custom-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 0;
+                border: none !important;
+                width: 100%;
+                text-align: right;
+                font-size: 0.9rem;
+            }
+
+            /* Labels */
+            .custom-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #7f8c8d;
+                font-size: 0.85rem;
+                text-align: left;
+                margin-right: 15px;
+            }
+
+            /* --- BRANCH HEADER STYLING --- */
+            /* We want the Branch Name to appear ONCE at the top. */
+
+            /* First row in tbody is the first department. It has the Branch Name cell. */
+            /* We style the first row's Branch cell as the Main Headeer. */
+            tbody.branch-group tr:first-child td[data-label="Branch"] {
+                background: #2c5ba9;
+                color: white;
+                font-weight: 700;
+                font-size: 1.1rem;
+                padding: 12px 15px;
+                margin: -15px -15px 15px -15px;
+                /* Pull to edges */
+                width: calc(100% + 30px);
+                justify-content: center;
+                /* Center text */
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            tbody.branch-group tr:first-child td[data-label="Branch"]::before {
+                display: none;
+            }
+
+            /* Hide "Branch" label in header */
+
+            /* For subsequent rows, HIDE the Branch cell (it's redundant) */
+            tbody.branch-group tr:not(:first-child) td[data-label="Branch"] {
+                display: none;
+            }
+
+            /* --- DEPARTMENT STYLING --- */
+            /* Department Name is the sub-header for the row */
+            .custom-table td[data-label="Department"] {
+                font-weight: 700;
+                color: #2c3e50;
+                font-size: 1rem;
+                margin-bottom: 5px;
+                border-bottom: 1px dashed #eee !important;
+                padding-bottom: 8px;
+            }
+
+            .custom-table td[data-label="Department"]::before {
+                display: none;
+            }
+
+            /* Hide "Department" label, name is enough */
+            .custom-table td[data-label="Department"] span {
+                background: transparent !important;
+                border: none !important;
+                padding: 0;
+                font-weight: 700;
+                font-size: 1rem;
+            }
+
+            /* NET SALE Highlight */
+            .custom-table td[data-label="Net Sale"] {
+                color: #c0392b;
+                /* Dark Red text */
+                font-weight: 700;
+                font-size: 1.05rem;
+                background-color: #ffecec !important;
+                /* Light Red Background */
+            }
+
+            /* --- BRANCH TOTAL ROW (Inside Card) --- */
+            /* Overide Bootstrap Striping on Mobile to prevent mixed card colors */
+            .table-striped>tbody>tr:nth-of-type(odd)>* {
+                --bs-table-accent-bg: transparent !important;
+                box-shadow: none !important;
+            }
+
+            /* --- BRANCH TOTAL ROW (Inside Card) --- */
+            .branch-total-row {
+                background: #2c5ba9 !important;
+                /* Match Branch Header Color */
+                border-top: none !important;
+                margin-top: 5px;
+                padding-top: 10px !important;
+                color: white !important;
+            }
+
+            /* Ensure cells inside total row match the background */
+            /* Ensure cells inside total row match the background */
+            .branch-total-row td,
+            .branch-total-row td[data-label] {
+                background: #2c5ba9 !important;
+                color: white !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+                border: none;
+                /* Keep other borders none */
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+                font-weight: bold !important;
+            }
+
+            .branch-total-row td::before {
+                font-weight: bold !important;
+                color: #ffffff !important;
+                /* Pure White */
+                opacity: 1 !important;
+                text-transform: uppercase;
+                font-size: 0.85rem;
+            }
+
+            /* Hide the "Total Branch:" text cell on mobile if we want a cleaner look, 
+               OR style it to be full width. Let's make it a header. */
+            .branch-total-row td:first-child {
+                justify-content: center;
+                font-size: 1rem;
+                text-transform: uppercase;
+                font-weight: 800;
+                color: white !important;
+            }
+
+            /* Metrics in Total Row */
+            .branch-total-row td[data-label="Total Net Sale"] {
+                color: white !important;
+                /* White text on dark blue */
+                font-size: 1.1rem;
+                font-weight: 800;
+            }
+
+            .branch-total-row td[data-label="Total Net Sale"]::before,
+            .branch-total-row td[data-label]::before {
+                color: white !important;
+                /* Pure White label */
+                opacity: 1 !important;
+                font-weight: 800 !important;
+            }
+
+            /* Hide empty cells or non-critical columns in total if needed */
+            .branch-total-row td:empty {
+                display: none;
+            }
+
+            /* Footer Styling */
+            .custom-table tfoot {
+                display: block !important;
+                margin-top: 20px;
+            }
+
+            .custom-table tfoot tr {
+                background: #343a40 !important;
+                border-radius: 8px;
+                display: block;
+                padding: 15px;
+                color: white;
+            }
+
+            .custom-table tfoot td {
+                display: flex;
+                justify-content: space-between;
+                color: white;
+                padding: 5px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .custom-table tfoot td::before {
+                color: #aaa;
+            }
+
         }
     </style>
 </head>
@@ -260,14 +488,20 @@
             <!-- Summary Cards -->
             <div class="summary-cards-row">
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="summary-card yellow">
-                            <div class="label" style="color: #212529;">Total Discount</div>
-                            <div class="value" id="totalDiscount" style="color: #212529;">0</div>
+                    <div class="col-12 col-md-4">
+                        <div class="summary-card teal">
+                            <div class="label text-white">Branch</div>
+                            <div class="value text-white" id="summaryBranchName">All Branches</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="summary-card dark">
+                    <div class="col-6 col-md-4">
+                        <div class="summary-card yellow">
+                            <div class="label text-white">Total Discount</div>
+                            <div class="value text-white" id="totalDiscount">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="summary-card green">
                             <div class="label">Net Sale</div>
                             <div class="value" id="netSale">0</div>
                         </div>

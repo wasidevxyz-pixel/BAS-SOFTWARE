@@ -64,6 +64,8 @@ async function handleLogin(e) {
             // Store token and user data
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            // Reset idle timer to prevent immediate logout
+            localStorage.setItem('lastActivity', Date.now());
 
             // Show success message
             showAlert('Login successful! Redirecting...', 'success');

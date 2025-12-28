@@ -286,6 +286,8 @@
                 if (res.ok) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    // Reset idle timer to prevent immediate logout
+                    localStorage.setItem('lastActivity', Date.now());
                     console.log('Login success, redirecting...');
                     window.location.href = '/main.html';
                 } else {

@@ -112,10 +112,14 @@ exports.getDepartmentWiseReport = async (req, res) => {
             }
         });
 
+        // Filter out non-ObjectId strings to prevent CastErrors
+        const mongoose = require('mongoose');
+        const validDeptIds = Array.from(allDeptIds).filter(id => mongoose.isValidObjectId(id));
+
         // Fetch all departments in one query
         const Department = require('../models/Department');
         const departments = await Department.find({
-            _id: { $in: Array.from(allDeptIds) }
+            _id: { $in: validDeptIds }
         }).lean();
 
         // Create a map of department ID to name
@@ -136,17 +140,24 @@ exports.getDepartmentWiseReport = async (req, res) => {
 
                 // Iterate through each department in closing02
                 for (const [deptId, deptData] of Object.entries(closing02Data)) {
+                    if (!deptData) continue; // Skip invalid entries
 
                     const parentName = deptIdToName.get(deptId) || 'UNKNOWN';
                     let itemsToProcess = [];
 
                     // Logic: If breakdown=true AND this department has a detailed breakdown, explode it.
-                    if (breakdown === 'true' && deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
+                    if (breakdown === 'true' &&
+                        deptData.salesBreakdown &&
+                        typeof deptData.salesBreakdown === 'object' &&
+                        Object.keys(deptData.salesBreakdown).length > 0) {
+
                         const totalSale = parseFloat(deptData.totalSaleComputer) || 0;
                         const totalDisc = parseFloat(deptData.discountValue) || 0;
                         const baseDiscountPer = parseFloat(deptData.discountPer) || 0;
 
                         Object.entries(deptData.salesBreakdown).forEach(([subId, subData]) => {
+                            if (!subData) return; // Skip invalid sub-data
+
                             const subSale = parseFloat(subData.sale) || 0;
 
                             // Prorate Discount Value based on sales contribution
