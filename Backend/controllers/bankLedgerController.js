@@ -388,3 +388,70 @@ exports.getBranchBankBalances = asyncHandler(async (req, res) => {
         bankCount: banks.length
     });
 });
+
+// @desc    Get Opening Balance for Bank Summary (multiple banks)
+// @route   GET /api/v1/reports/bank-ledger/summary-opening-balance
+// @access  Private
+// Uses same formula approach as Zakat - aggregate all transactions before startDate
+exports.getSummaryOpeningBalance = asyncHandler(async (req, res) => {
+    const { startDate, branch, bankIds } = req.query;
+
+    if (!startDate) {
+        return res.status(400).json({ success: false, message: 'Please provide startDate' });
+    }
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    console.log('=== BANK SUMMARY OPENING BALANCE ===');
+    console.log('Start Date:', start);
+    console.log('Branch:', branch);
+
+    let openingBalance = 0;
+
+    // Build branch filter for DailyCash - must have bank assigned (hasBank=true)
+    // Use $lt start date to get all entries BEFORE the start date
+    const dayBefore = new Date(start);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    dayBefore.setHours(23, 59, 59, 999);
+
+    let dcMatchFilter = {
+        mode: 'Bank',
+        bank: { $exists: true, $ne: null },
+        date: { $lte: dayBefore }
+    };
+    if (branch) {
+        dcMatchFilter.branch = branch;
+    }
+
+    console.log('DailyCash Query:', JSON.stringify(dcMatchFilter));
+
+    // Get all DailyCash entries and apply same deduction formula as Bank Summary frontend
+    const dcEntries = await DailyCash.find(dcMatchFilter).lean();
+
+    let dcTotal = 0;
+    dcEntries.forEach(item => {
+        const ratePerc = item.deductedAmount || 0;
+        const grossBase = (item.totalAmount || 0) + ratePerc;
+        const deduction = (grossBase * ratePerc) / 100;
+        const netAmount = Math.round(grossBase - deduction);
+        dcTotal += netAmount;
+    });
+
+    console.log('DailyCash entries count:', dcEntries.length);
+    console.log('DailyCash net total after deductions:', dcTotal);
+    openingBalance = dcTotal;
+
+    // NOTE: Only using DailyCash, same as Bank Summary table display
+    // BankTransactions are NOT included to match the Bank Summary closing balance
+
+    console.log('TOTAL Opening Balance:', openingBalance);
+    console.log('=====================================');
+
+    res.status(200).json({
+        success: true,
+        openingBalance: openingBalance
+    });
+});
+
+// Helper function to calculate opening balance - defined above at line 226

@@ -2819,6 +2819,60 @@ async function generateSMSPreview() {
             console.error('Error fetching Bank Activity data:', e);
             text += 'Error loading Bank Activity data\n';
         }
+    } else if (type === 'Zakat') {
+        // Fetch Zakat data for the date
+        try {
+            const zakatResp = await fetch(`/api/v1/zakats/date-range?startDate=${date}&endDate=${date}&branch=${branch}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const zakatJson = await zakatResp.json();
+
+            if (zakatJson.success && zakatJson.data) {
+                const zakats = zakatJson.data;
+                const openingBalance = zakatJson.openingBalance || 0;
+                const closingBalance = zakatJson.closingBalance || 0;
+
+                // Group receives by source (fromBranch)
+                const receiveBySource = {};
+                let totalReceive = 0;
+                let totalPay = 0;
+
+                zakats.forEach(z => {
+                    const amount = z.amount || 0;
+                    if (z.type === 'Receive') {
+                        totalReceive += amount;
+                        const source = z.fromBranch || 'Unknown';
+                        if (!receiveBySource[source]) {
+                            receiveBySource[source] = 0;
+                        }
+                        receiveBySource[source] += amount;
+                    } else {
+                        totalPay += amount;
+                    }
+                });
+
+                // Build SMS in required format
+                text = `Date: ${date}\n`;
+                text += `Zakat Pay and Rec Detail\n`;
+                text += `Opening Balance = ${formatSmsNumber(openingBalance)}\n`;
+
+                // List each source of received cash
+                Object.keys(receiveBySource).forEach(source => {
+                    text += `Cash Rec From ((${source})) = ${formatSmsNumber(receiveBySource[source])}\n`;
+                });
+
+                // Total Cash = Opening + Receives
+                const totalCash = openingBalance + totalReceive;
+                text += `Total Cash = ${formatSmsNumber(totalCash)}\n`;
+                text += `Total Payment= ${formatSmsNumber(totalPay)}\n`;
+                text += `Balance Cash= ${formatSmsNumber(closingBalance)}\n`;
+            } else {
+                text += 'Error loading Zakat data\n';
+            }
+        } catch (e) {
+            console.error('Error fetching Zakat data:', e);
+            text += 'Error loading Zakat data\n';
+        }
     } else {
         text += `Content for ${type} is not yet configured.\n`;
     }

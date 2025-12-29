@@ -211,9 +211,18 @@ async function saveUser() {
     document.querySelectorAll('.branch-cb:checked').forEach(cb => branches.push(cb.value));
 
     const department = document.getElementById('userDepartment').value;
+    const zakat = document.getElementById('userZakat')?.value || '';
+    const userType = document.getElementById('userType')?.value || '';
+    const saleDeleteLimit = document.getElementById('userSaleDeleteLimit')?.value || '';
 
     if (!name || !email || !groupId) {
         alert('Please fill at least Name, Email (Login Id), and Group');
+        return;
+    }
+
+    // Password is required for new users
+    if (!id && !password) {
+        alert('Password is required for new users');
         return;
     }
 
@@ -239,7 +248,10 @@ async function saveUser() {
         isActive,
         permissions,
         branch: branches, // Now an array
-        department
+        department,
+        zakat,
+        userType,
+        saleDeleteLimit
     };
 
     if (password) data.password = password;
@@ -247,6 +259,8 @@ async function saveUser() {
     try {
         const url = id ? `/api/v1/users/${id}` : '/api/v1/users';
         const method = id ? 'PUT' : 'POST';
+
+        console.log('Sending user data:', data);
 
         const response = await fetch(url, {
             method,
@@ -258,6 +272,8 @@ async function saveUser() {
         });
 
         const result = await response.json();
+        console.log('Server response:', result);
+
         if (result.success) {
             alert('User saved successfully');
             resetForm();

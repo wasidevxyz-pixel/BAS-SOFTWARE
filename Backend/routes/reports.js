@@ -44,7 +44,7 @@ const {
   getLedgerSummary,
   exportLedgerReport
 } = require('../controllers/ledgerController');
-const { getBankLedgerReport, getBranchBankBalance, getBranchBankBalances } = require('../controllers/bankLedgerController');
+const { getBankLedgerReport, getBranchBankBalance, getBranchBankBalances, getSummaryOpeningBalance } = require('../controllers/bankLedgerController');
 const { protect, accountsAccess } = require('../middleware/auth');
 
 // Bank Ledger Report
@@ -60,6 +60,9 @@ router
   .route('/bank-ledger/branch-bank-balances')
   .get(protect, accountsAccess, getBranchBankBalances);
 
+router
+  .route('/bank-ledger/summary-opening-balance')
+  .get(protect, accountsAccess, getSummaryOpeningBalance);
 
 
 // Profit & Loss Reports

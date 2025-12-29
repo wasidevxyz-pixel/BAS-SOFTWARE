@@ -179,7 +179,8 @@ class SidebarNavigation {
                     { label: 'Branch Departments', link: '/branch-departments.html', permission: 'branch_departments' },
                     { label: 'Daily Cash', link: '/daily-cash.html', permission: 'daily_cash' },
                     { label: 'Cash Counter', link: '/cash-counter.html', permission: 'cash_counter' },
-                    { label: 'Closing Sheet', link: '/closing-sheet.html', permission: 'closing_sheet' }
+                    { label: 'Closing Sheet', link: '/closing-sheet.html', permission: 'closing_sheet' },
+                    { label: 'Zakat Entry', link: '/zakat.html', permission: 'zakat_entry' }
                 ]
             },
             {

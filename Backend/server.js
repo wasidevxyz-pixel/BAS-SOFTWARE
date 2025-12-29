@@ -69,6 +69,7 @@ const supplierTaxCPRRoutes = require('./routes/supplierTaxCPRs');
 const groupRoutes = require('./routes/groups');
 const backupRoutes = require('./routes/backup');
 const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
+const zakatRoutes = require('./routes/zakats');
 
 
 
@@ -293,6 +294,7 @@ app.use('/api/v1/supplier-tax-cprs', supplierTaxCPRRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/backup', backupRoutes);
 app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
+app.use('/api/v1/zakats', zakatRoutes);
 
 
 
@@ -478,6 +480,12 @@ app.get('/exemption-invoices.html', (req, res) => {
 });
 app.get('/exemption-invoices-report.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'exemption-invoices-report.html'));
+});
+app.get('/zakat.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'zakat.html'));
+});
+app.get('/print-zakat-report.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'print-zakat-report.html'));
 });
 
 

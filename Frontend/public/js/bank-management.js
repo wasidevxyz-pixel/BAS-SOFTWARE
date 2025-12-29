@@ -1049,6 +1049,21 @@ async function searchBankSummary() {
     try {
         const token = localStorage.getItem('token');
 
+        // Fetch Opening Balance from API
+        let openingBalanceUrl = `/api/v1/reports/bank-ledger/summary-opening-balance?startDate=${fromDate}`;
+        if (branch) openingBalanceUrl += `&branch=${encodeURIComponent(branch)}`;
+        if (selectedBanks.length > 0) openingBalanceUrl += `&bankIds=${selectedBanks.join(',')}`;
+
+        console.log('Opening Balance URL:', openingBalanceUrl);
+
+        const openingBalanceResp = await fetch(openingBalanceUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const openingBalanceData = await openingBalanceResp.json();
+        console.log('Opening Balance Response:', openingBalanceData);
+        const openingBalance = openingBalanceData.success ? (openingBalanceData.openingBalance || 0) : 0;
+        console.log('Opening Balance:', openingBalance);
+
         // 1. Fetch Daily Cash (Batch Transfers)
         let dcUrl = `/api/v1/daily-cash?startDate=${fromDate}&endDate=${toDate}&mode=Bank&hasBank=true`;
         if (branch) dcUrl += `&branch=${branch}`;
@@ -1137,7 +1152,7 @@ async function searchBankSummary() {
             // Sort by Date Ascending
             combinedData.sort((a, b) => a.sortDate - b.sortDate);
 
-            renderBankSummary(combinedData);
+            renderBankSummary(combinedData, openingBalance);
         } else {
             alert('Failed to fetch summary data');
         }
@@ -1147,7 +1162,7 @@ async function searchBankSummary() {
     }
 }
 
-function renderBankSummary(data) {
+function renderBankSummary(data, openingBalance = 0) {
     const tbody = document.getElementById('bankSummaryBody');
     tbody.innerHTML = '';
 
@@ -1157,8 +1172,23 @@ function renderBankSummary(data) {
     let totalBatchTransfer = 0;
     let totalDeposit = 0;
 
-    // Use Opening Balance 0 for now as in the user screenshot
-    let runningBalance = 0;
+    // Start with Opening Balance
+    let runningBalance = openingBalance;
+
+    // Add Opening Balance row at the top
+    const openingRow = document.createElement('tr');
+    openingRow.className = 'table-secondary fw-bold';
+    openingRow.innerHTML = `
+        <td colspan="5">Opening Balance</td>
+        <td class="text-end">-</td>
+        <td class="text-end">-</td>
+        <td class="text-end">-</td>
+        <td class="text-end">-</td>
+        <td class="text-end">-</td>
+        <td class="text-end fw-bold">${openingBalance.toLocaleString()}</td>
+        <td>-</td>
+    `;
+    tbody.appendChild(openingRow);
 
     data.forEach(item => {
         totalBTBWithdraw += item.btbWithdraw;
@@ -1204,8 +1234,8 @@ function renderBankSummary(data) {
     document.getElementById('bs-deposit-total').textContent = totalDeposit.toLocaleString();
     document.getElementById('bs-final-balance').textContent = runningBalance.toLocaleString();
 
-    // Update KPIs
-    document.getElementById('bs-opening-balance').textContent = '0';
+    // Update KPIs with Opening Balance
+    document.getElementById('bs-opening-balance').textContent = openingBalance.toLocaleString();
     document.getElementById('bs-deposits').textContent = totalDeposit.toLocaleString();
     document.getElementById('bs-batch-received').textContent = totalBatchTransfer.toLocaleString();
     document.getElementById('bs-withdrawal').textContent = totalWithdraw.toLocaleString();
