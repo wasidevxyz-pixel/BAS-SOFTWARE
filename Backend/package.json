@@ -1,7 +1,7 @@
 {
   "name": "Bas-software",
-  "version": "1.2.1",
-  "description": "",
+  "version": "1.2.2",
+  "description": "an accounting software management system made with node.js and express.js  devloped by mr bilal and mr wasi",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "itxxwasi",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
