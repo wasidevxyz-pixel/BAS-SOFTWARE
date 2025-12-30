@@ -1270,6 +1270,7 @@ function printBankSummary() {
 async function updateBTBBalances() {
     const fromBankId = document.getElementById('btb-from-bank').value;
     const toBankId = document.getElementById('btb-to-bank').value;
+    const branch = document.getElementById('btb-branch').value;
     const amount = parseFloat(document.getElementById('btb-amount').value) || 0;
 
     const fromPreEl = document.getElementById('btb-from-pre');
@@ -1279,20 +1280,32 @@ async function updateBTBBalances() {
 
     try {
         const token = localStorage.getItem('token');
-        const resp = await fetch('/api/v1/bank-transactions/summary', {
+        let url = '/api/v1/bank-transactions/summary';
+        if (branch) url += `?branch=${encodeURIComponent(branch)}`;
+
+        const resp = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
 
-        if (data.success && data.data.bankBalances) {
-            const balances = data.data.bankBalances;
-
+        if (data.success) {
             // Need to get bank names from IDs
             const fromBankName = document.getElementById('btb-from-bank').options[document.getElementById('btb-from-bank').selectedIndex]?.text;
             const toBankName = document.getElementById('btb-to-bank').options[document.getElementById('btb-to-bank').selectedIndex]?.text;
 
-            const fromPre = balances[fromBankName] || 0;
-            const toPre = balances[toBankName] || 0;
+            // Calculate balance from summary (Deposit - Withdrawal)
+            // summary format: "BankName_deposit": { totalAmount: ... }
+            const getBalance = (bankName) => {
+                if (!bankName) return 0;
+                const depositKey = `${bankName}_deposit`;
+                const withdrawKey = `${bankName}_withdrawal`;
+                const deposits = data.data.summary[depositKey]?.totalAmount || 0;
+                const withdrawals = data.data.summary[withdrawKey]?.totalAmount || 0;
+                return deposits - withdrawals;
+            };
+
+            const fromPre = getBalance(fromBankName);
+            const toPre = getBalance(toBankName);
 
             fromPreEl.textContent = fromPre.toLocaleString();
             fromNewEl.textContent = (fromPre - amount).toLocaleString();

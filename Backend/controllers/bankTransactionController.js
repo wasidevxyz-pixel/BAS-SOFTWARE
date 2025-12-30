@@ -408,7 +408,7 @@ exports.deleteBankTransaction = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/bank-transactions/summary
 // @access  Private (accounts access)
 exports.getBankBookSummary = asyncHandler(async (req, res) => {
-  const { startDate, endDate, bankName } = req.query;
+  const { startDate, endDate, bankName, branch } = req.query;
 
   // Build date filter
   let dateFilter = {};
@@ -419,9 +419,12 @@ exports.getBankBookSummary = asyncHandler(async (req, res) => {
   }
 
   // Build bank filter
-  let bankFilter = dateFilter;
+  let bankFilter = { ...dateFilter };
   if (bankName) {
     bankFilter.bankName = bankName;
+  }
+  if (branch) {
+    bankFilter.branch = branch;
   }
 
   // Get bank ledgers
