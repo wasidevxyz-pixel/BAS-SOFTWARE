@@ -7,11 +7,17 @@
     <title>Sub-Department-Wise Report - Bilal Accounting System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
         body {
             background: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
         }
 
         .main-container {
@@ -21,9 +27,10 @@
         }
 
         .page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #2c3e50;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e4c8c;
             margin-bottom: 5px;
         }
 
@@ -76,7 +83,7 @@
         }
 
         .btn-generate {
-            background: #17a2b8;
+            background: #014d35;
             color: white;
             border: none;
             padding: 9px 20px;
@@ -140,235 +147,342 @@
         }
 
         .custom-table th {
-            background-color: #343a40;
-            color: white;
+            background: #000000 !important;
+            color: white !important;
+            color: #ffffff !important;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.8rem;
-            padding: 12px;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 12px 15px;
+            border: 1px solid #333 !important;
+        }
+
+        .custom-table th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        .custom-table th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+
+        /* Alternating Row Colors */
+        .custom-table tbody tr {
+            transition: background-color 0.2s ease, transform 0.15s ease;
+        }
+
+        .custom-table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        .custom-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #e8f4fd !important;
+            transform: scale(1.002);
         }
 
         .custom-table td {
             font-size: 0.9rem;
-            padding: 10px 12px;
+            padding: 14px 15px;
             vertical-align: middle;
+            border: none;
+            border-bottom: 1px solid #e9ecef;
+            color: #2c3e50;
         }
 
+        /* First column (Branch) styling */
+        .custom-table td:first-child {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        /* Second column (Sub-Department) styling */
+        .custom-table td:nth-child(2) {
+            font-weight: 600;
+            color: #2c5ba9;
+        }
+
+        /* Numeric columns */
+        .custom-table td.text-end {
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            font-weight: 500;
+        }
+
+        /* Net Sale column highlighting */
+        .custom-table td:nth-child(5) {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        /* Footer/Total Row Styling */
+        .total-row>td {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+            font-weight: 600;
+            padding: 12px 15px;
+            border: 1px solid #333 !important;
+            font-size: 0.9rem;
+        }
+
+        .total-row>td:first-child {
+            border-radius: 0 0 0 12px;
+        }
+
+        .total-row>td:last-child {
+            border-radius: 0 0 12px 0;
+        }
+
+        .total-row>td.text-end {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        /* Group Header Styling */
+        .group-header td {
+            text-align: center !important;
+            background: #014d35 !important;
+            background: #014d35 !important;
+            font-weight: 600;
+            color: white !important;
+            padding: 12px 15px;
+            border: 1px solid #333 !important;
+            font-size: 0.9rem;
+        }
+
+        /* Subtotal Row Styling */
+        .subtotal-row td {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+            font-weight: 800 !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        /* Empty State Enhancement */
         .empty-state {
-            padding: 40px;
+            padding: 80px 40px;
             text-align: center;
             color: #6c757d;
         }
 
         .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #dee2e6;
-        }
-
-        .total-row>td {
-            background-color: #fff3cd !important;
-            /* Light yellow for Grand Total */
-            font-weight: 700;
-            font-size: 1.05rem;
-            color: #664d03;
-            border-top: 2px solid #ffecb5;
-        }
-
-        .summary-card .value {
-            font-size: 1.5rem !important;
-            /* Adjusted font size for mobile */
-        }
-
-        .custom-table table {
-            border-collapse: separate;
-            border-spacing: 0 15px;
-            /* Spacing between cards */
-        }
-
-        .custom-table,
-        .custom-table thead,
-        .custom-table tfoot th,
-        .custom-table tfoot td {
-            display: block;
-            width: 100%;
-        }
-
-        .custom-table thead {
-            display: none;
-        }
-
-        /* TBODY acts as the Card Container */
-        .custom-table tbody.dept-group {
-            display: block;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 4rem;
             margin-bottom: 20px;
-            overflow: hidden;
-            border: 1px solid #e1e5eb;
-            padding-bottom: 5px;
+            color: #adb5bd;
+            opacity: 0.6;
         }
 
-        /* Group Header Styles inside the card */
-        .custom-table tbody tr.group-header {
-            display: block;
-            background-color: #f8f9fa !important;
-            border-bottom: 2px solid #e9ecef;
+
+        /* =====================================================
+           MOBILE STYLES (max-width: 768px)
+           ===================================================== */
+        @media (max-width: 768px) {
+
+            .custom-table,
+            .custom-table thead,
+            .custom-table tfoot th,
+            .custom-table tfoot td {
+                display: block;
+                width: 100%;
+            }
+
+            .custom-table thead {
+                display: none;
+            }
+
+            /* TBODY acts as the Card Container */
+            .custom-table tbody.dept-group {
+                display: block;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                overflow: hidden;
+                border: 1px solid #e1e5eb;
+                padding-bottom: 5px;
+            }
+
+            /* Group Header Styles inside the card */
+            .custom-table tbody tr.group-header {
+                text-align: center !important;
+                text-align: center !important;
+                display: block;
+                background-color: #f8f9fa !important;
+                border-bottom: 2px solid #e9ecef;
+            }
+
+            .custom-table tbody tr.group-header td {
+                text-align: center !important;
+                text-align: center !important;
+                background: #014d35 !important;
+                display: block;
+                padding: 12px 15px;
+                font-size: 1rem;
+                color: #2c5ba9 !important;
+                text-align: left;
+                width: 100% !important;
+            }
+
+            /* Content Rows Styles */
+            .custom-table tbody tr.dept-row {
+                display: flex;
+                flex-wrap: wrap;
+                border-bottom: 1px solid #f1f1f1;
+                padding: 10px 15px;
+                background: white;
+            }
+
+            .custom-table tbody tr.dept-row:last-child {
+                border-bottom: none;
+            }
+
+            /* Data Cells */
+            .custom-table tbody tr.dept-row td {
+                display: block;
+                width: 100%;
+                /* Default full width */
+                padding: 4px 0;
+                text-align: left !important;
+                font-size: 0.9rem;
+                border: none;
+                position: relative;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            /* Hide Branch Name in individual rows since it's in header */
+            .custom-table tbody tr.dept-row td[data-label="Branch"] {
+                display: none;
+            }
+
+            /* Sub-Dept Name - Make it prominent */
+            .custom-table tbody tr.dept-row td[data-label="Sub-Department"] {
+                width: 100%;
+                font-weight: 700;
+                margin-bottom: 5px;
+                border-bottom: 1px dashed #eee;
+                padding-bottom: 8px;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Sub-Department"]::before {
+                display: none;
+                /* No label needed */
+            }
+
+            /* Other Cells - Key Value Pairs */
+            .custom-table tbody tr.dept-row td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                font-size: 0.8rem;
+                color: #6c757d;
+                text-transform: uppercase;
+                margin-right: 10px;
+            }
+
+            /* Two columns for metrics */
+            .custom-table tbody tr.dept-row td[data-label="Discount"],
+            .custom-table tbody tr.dept-row td[data-label="Disc %"],
+            .custom-table tbody tr.dept-row td[data-label="Net Sale"],
+            .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+                width: 50%;
+                /* 2 items per row visual */
+                display: inline-flex;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Discount"],
+            .custom-table tbody tr.dept-row td[data-label="Net Sale"] {
+                padding-right: 5px;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Disc %"],
+            .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+                padding-left: 5px;
+            }
+
+            /* Subtotal Row Styles */
+            .custom-table tbody tr.subtotal-row {
+                display: flex;
+                flex-wrap: wrap;
+                background-color: #f8d7da !important;
+                padding: 10px 15px;
+                margin-top: 5px;
+                border-top: 1px solid #90caf9;
+            }
+
+            .custom-table tbody tr.subtotal-row td {
+                display: block;
+                width: 50%;
+                font-size: 0.85rem;
+                padding: 2px 0;
+                border: none;
+                text-align: right;
+                background: transparent !important;
+            }
+
+            .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"] {
+                width: 100%;
+                text-align: left;
+                font-weight: 800 !important;
+                color: #721c24;
+                margin-bottom: 5px;
+            }
+
+            .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"]::before {
+                display: none;
+            }
+
+            .custom-table tbody tr.subtotal-row td::before {
+                content: attr(data-label) ": ";
+                font-weight: 600;
+            }
+
+            /* Grand footer */
+            .custom-table tfoot {
+                margin-top: 20px;
+                background: transparent;
+            }
+
+            .custom-table tfoot tr {
+                background: #fff3cd;
+                border: 1px solid #ffeeba;
+                border-radius: 8px;
+                display: block;
+                padding: 15px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .custom-table tfoot td {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                border: none;
+                padding: 5px 0;
+                font-size: 1rem;
+            }
+
+            .custom-table tfoot td:nth-child(2)::before {
+                content: "Total ";
+            }
+
+            /* Label for total */
         }
 
-        .custom-table tbody tr.group-header td {
-            display: block;
-            padding: 12px 15px;
-            font-size: 1rem;
-            color: #2c5ba9 !important;
-            text-align: left;
-            width: 100% !important;
-        }
-
-        /* Content Rows Styles */
-        .custom-table tbody tr.dept-row {
-            display: flex;
-            flex-wrap: wrap;
-            border-bottom: 1px solid #f1f1f1;
-            padding: 10px 15px;
-            background: white;
-        }
-
-        .custom-table tbody tr.dept-row:last-child {
-            border-bottom: none;
-        }
-
-        /* Data Cells */
-        .custom-table tbody tr.dept-row td {
-            display: block;
-            width: 100%;
-            /* Default full width */
-            padding: 4px 0;
-            text-align: left !important;
-            font-size: 0.9rem;
-            border: none;
-            position: relative;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Hide Branch Name in individual rows since it's in header */
-        .custom-table tbody tr.dept-row td[data-label="Branch"] {
-            display: none;
-        }
-
-        /* Sub-Dept Name - Make it prominent */
-        .custom-table tbody tr.dept-row td[data-label="Sub-Department"] {
-            width: 100%;
-            font-weight: 700;
-            margin-bottom: 5px;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 8px;
-        }
-
-        .custom-table tbody tr.dept-row td[data-label="Sub-Department"]::before {
-            display: none;
-            /* No label needed */
-        }
-
-        /* Other Cells - Key Value Pairs */
-        .custom-table tbody tr.dept-row td::before {
-            content: attr(data-label);
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            margin-right: 10px;
-        }
-
-        /* Two columns for metrics */
-        .custom-table tbody tr.dept-row td[data-label="Discount"],
-        .custom-table tbody tr.dept-row td[data-label="Disc %"],
-        .custom-table tbody tr.dept-row td[data-label="Net Sale"],
-        .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
-            width: 50%;
-            /* 2 items per row visual */
-            display: inline-flex;
-        }
-
-        .custom-table tbody tr.dept-row td[data-label="Discount"],
-        .custom-table tbody tr.dept-row td[data-label="Net Sale"] {
-            padding-right: 5px;
-        }
-
-        .custom-table tbody tr.dept-row td[data-label="Disc %"],
-        .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
-            padding-left: 5px;
-        }
-
-        /* Subtotal Row Styles */
-        .custom-table tbody tr.subtotal-row {
-            display: flex;
-            flex-wrap: wrap;
-            background-color: #e3f2fd !important;
-            padding: 10px 15px;
-            margin-top: 5px;
-            border-top: 1px solid #90caf9;
-        }
-
-        .custom-table tbody tr.subtotal-row td {
-            display: block;
-            width: 50%;
-            font-size: 0.85rem;
-            padding: 2px 0;
-            border: none;
-            text-align: right;
-            background: transparent !important;
-        }
-
-        .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"] {
-            width: 100%;
-            text-align: left;
-            font-weight: 800;
-            color: #1565c0;
-            margin-bottom: 5px;
-        }
-
-        .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"]::before {
-            display: none;
-        }
-
-        .custom-table tbody tr.subtotal-row td::before {
-            content: attr(data-label) ": ";
-            font-weight: 600;
-        }
-
-        /* Grand footer */
-        .custom-table tfoot {
-            margin-top: 20px;
-            background: transparent;
-        }
-
-        .custom-table tfoot tr {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            border-radius: 8px;
-            display: block;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .custom-table tfoot td {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            border: none;
-            padding: 5px 0;
-            font-size: 1rem;
-        }
-
-        .custom-table tfoot td:nth-child(2)::before {
-            content: "Total ";
-        }
-
-        /* Label for total */
+        /* Forced Header Styles */
+        tr.group-header,
+        tr.group-header td,
+        tr.dept-header,
+        tr.dept-header td,
+        tr.branch-header,
+        tr.branch-header td {
+            text-align: center !important;
+            text-align: center !important;
+            background-color: #014d35 !important;
+            color: white !important;
+            font-weight: 700 !important;
+            border: 1px solid #333 !important;
         }
     </style>
 </head>

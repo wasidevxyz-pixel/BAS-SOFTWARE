@@ -7,11 +7,17 @@
     <title>Sales Report - Bilal Accounting System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
         body {
             background: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
         }
 
         .main-container {
@@ -21,16 +27,19 @@
         }
 
         .page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #2c3e50;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e4c8c;
             margin-bottom: 5px;
         }
 
         .page-subtitle {
-            font-size: 0.875rem;
-            color: #7f8c8d;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #6c757d;
             margin-bottom: 20px;
+            font-weight: 500;
         }
 
         .report-card {
@@ -74,7 +83,7 @@
         }
 
         .btn-generate {
-            background: linear-gradient(135deg, #17a2b8, #138496);
+            background: #014d35;
             color: white;
             border: none;
             padding: 10px 25px;
@@ -118,7 +127,7 @@
         }
 
         .summary-card.teal {
-            background: linear-gradient(135deg, #17a2b8, #138496);
+            background: #014d35;
         }
 
         .summary-card.red {
@@ -190,7 +199,8 @@
         }
 
         .data-table thead th {
-            background: #000 !important;
+            background: #000000 !important;
+            color: white !important;
             color: white !important;
             padding: 12px 15px;
             font-weight: 700;
@@ -216,16 +226,19 @@
         }
 
         .branch-header {
-            background: linear-gradient(135deg, #17a2b8, #138496) !important;
+            text-align: center !important;
+            background: #014d35 !important;
             color: white !important;
             font-weight: 600 !important;
             font-size: 0.9rem !important;
         }
 
         .branch-header td {
+            text-align: center !important;
+            background: #014d35 !important;
             padding: 10px 15px !important;
             color: white !important;
-            border: none !important;
+            border: 1px solid #333 !important;
             text-align: center !important;
             /* Center Align Branch Name */
             font-size: 1.1rem !important;
@@ -242,20 +255,18 @@
         }
 
         .branch-total-row {
-            background: #2c5ba9 !important;
+            background: #f8d7da !important;
             /* Dark Blue */
-            color: white !important;
+            color: #721c24 !important;
             font-weight: 700;
         }
 
-        .branch-total-row td {
-            color: white !important;
+        .branch-total-row td,
+        .branch-total-row td:first-child {
+            background: #f8d7da !important;
+            color: #721c24 !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            /* Borders */
-            border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-            font-weight: 800 !important;
-            /* Bold Amounts */
+            font-weight: 700 !important;
         }
 
         /* Category Name Cell Styling */
@@ -277,396 +288,53 @@
         }
 
         .total-row td {
-            background-color: #000 !important;
-            color: #fff !important;
-            border: 1px solid #333 !important;
-            padding: 15px !important;
+            background: #f8d7da !important;
+            color: #721c24 !important;
             font-weight: 700;
+            border: 1px solid #dee2e6;
         }
 
-        @media (max-width: 992px) {
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .data-table tr.branch-total-row td {
+            color: #721c24 !important;
+            font-weight: 700;
+            font-weight: 700;
+            /* Light Red */
+            color: #c0392b !important;
+            /* Dark Red */
+            font-weight: 700 !important;
+            text-shadow: none !important;
         }
 
-        @media (max-width: 576px) {
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            /* Summary Card Compact Fix */
-            .summary-card {
-                border-radius: 12px;
-                padding: 10px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                text-align: center;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                min-height: 80px;
-            }
-
-            .summary-card .label {
-                font-size: 0.8rem;
-                color: #ffffff !important;
-                /* White Font */
-                font-weight: 700 !important;
-                /* Bold */
-                text-transform: uppercase;
-                margin-bottom: 4px;
-                opacity: 0.9;
-            }
-
-            .summary-card .value {
-                font-size: 1.1rem !important;
-                font-weight: 800 !important;
-                /* Extra Bold */
-                color: #ffffff !important;
-                /* White Font */
-                word-break: break-all;
-                line-height: 1.2;
-            }
-
-            .summary-card .icon-box {
-                margin-bottom: 5px;
-                font-size: 1.2rem;
-                /* Smaller Icon */
-            }
+        .data-table td[data-label="Total Sales"]::before {
+            color: #c0392b !important;
+            opacity: 0.8;
         }
 
-
-        @media print {
-            * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            body {
-                background: white !important;
-                margin: 0;
-                padding: 20px;
-            }
-
-            .page-header,
-            .filters-section,
-            .btn-print,
-            .card-header-custom,
-            .page-title,
-            .page-subtitle {
-                display: none !important;
-            }
-
-            .main-container {
-                padding: 0 !important;
-                max-width: 100% !important;
-            }
-
-            .report-card {
-                box-shadow: none !important;
-                border: none !important;
-            }
-
-            /* Print Header */
-            .print-header {
-                display: block !important;
-                text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 3px solid #17a2b8;
-            }
-
-            .print-header h2 {
-                color: #17a2b8;
-                font-size: 24px;
-                font-weight: 700;
-                margin: 0 0 5px 0;
-            }
-
-            .print-header h4 {
-                font-size: 14px;
-                color: #666;
-                margin: 5px 0;
-                font-weight: normal;
-            }
-
-            .print-header p {
-                font-size: 11px;
-                color: #999;
-                margin: 2px 0;
-            }
-
-            /* Summary Cards */
-            .summary-cards {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
-                margin-bottom: 25px;
-                page-break-inside: avoid;
-                background: white !important;
-            }
-
-            .summary-card {
-                padding: 15px !important;
-                border-radius: 8px;
-                text-align: center;
-                color: white !important;
-            }
-
-            .summary-card.green {
-                background: linear-gradient(135deg, #28a745, #20c997) !important;
-            }
-
-            .summary-card.teal {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-            }
-
-            .summary-card.red {
-                background: linear-gradient(135deg, #dc3545, #c82333) !important;
-            }
-
-            .summary-card.dark {
-                background: linear-gradient(135deg, #6c757d, #5a6268) !important;
-            }
-
-            .summary-card .label,
-            .summary-card .value {
-                color: white !important;
-            }
-
-            .summary-card .label {
-                font-size: 10px;
-            }
-
-            .summary-card .value {
-                font-size: 20px;
-            }
-
-            /* Report Detail Header */
-            .report-detail-header h6 {
-                font-size: 14px;
-                color: #17a2b8;
-                margin-bottom: 10px;
-            }
-
-            /* Table Styles */
-            .data-table thead th {
-                background: #000 !important;
-                color: white !important;
-                font-size: 10px;
-            }
-
-            .data-table tbody td {
-                font-size: 11px;
-                padding: 8px 12px;
-            }
-
-            .branch-header {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-                page-break-after: avoid;
-            }
-
-            .branch-header td {
-                color: white !important;
-                background: transparent !important;
-            }
-
-            .category-row:nth-child(even) {
-                background: #f8f9fa !important;
-            }
-
-            .branch-total-row {
-                background: #e9ecef !important;
-            }
-
-            .margin-badge {
-                background: #28a745 !important;
-                color: white !important;
-            }
-
-            .total-row {
-                background: #343a40 !important;
-            }
-
-            .total-row td {
-                color: white !important;
-            }
+        /* Exception: Branch Total Sales should follow Blue Theme */
+        .data-table tr.branch-total-row td[data-label="Total Sales"] {
+            background-color: transparent !important;
+            color: #721c24 !important;
+            font-weight: 800 !important;
         }
 
-        @media (max-width: 768px) {
+        .data-table tr.branch-total-row td[data-label="Total Sales"]::before {
+            color: #721c24 !important;
+        }
 
-            .data-table,
-            .data-table tbody,
-            .data-table tr,
-            .data-table td {
-                display: block;
-                width: 100%;
-            }
+        .data-table tr.total-row {
+            background-color: #f8d7da !important;
+        }
 
-            .data-table thead {
-                display: none;
-            }
+        .data-table tr.total-row td {
+            color: #721c24 !important;
+            font-weight: 700;
+            font-weight: 700;
+            color: #198754 !important;
+            border-bottom: 1px solid #495057;
+        }
 
-            .data-table tr {
-                margin-bottom: 0;
-                /* Remove per-row margin, handle in card */
-                border: none;
-                border-bottom: 1px solid #f1f3f5;
-                border-radius: 0;
-                box-shadow: none;
-                background: white;
-            }
-
-            /* CARD DESIGN: Branch Section */
-            .data-table tbody.branch-section {
-                display: block;
-                background: white;
-                border-radius: 16px;
-                /* Modern Rounding */
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-                /* Premium Shadow */
-                margin-bottom: 25px;
-                border: 1px solid rgba(0, 0, 0, 0.05);
-                overflow: hidden;
-                transition: transform 0.2s;
-            }
-
-            /* Branch Header in Card */
-            .data-table tbody.branch-section tr.branch-header {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            }
-
-            /* Grand Total Card - Blue Theme */
-            .data-table tfoot {
-                display: block;
-                background: #3498db !important;
-                /* User preferred Blue */
-                border-radius: 16px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-                padding: 5px;
-                margin-top: 30px;
-                color: white;
-            }
-
-            .data-table tfoot tr {
-                background: transparent !important;
-                border: none !important;
-            }
-
-            .data-table td {
-                text-align: right !important;
-                padding-left: 50% !important;
-                padding-right: 15px !important;
-                position: relative;
-                border-bottom: 1px solid #f1f1f1;
-                font-size: 0.9rem;
-                height: auto !important;
-                min-height: 40px;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-            }
-
-            .data-table td::before {
-                content: attr(data-label);
-                position: absolute;
-                left: 15px;
-                width: 40%;
-                white-space: nowrap;
-                font-weight: 700;
-                text-align: left;
-                color: #6c757d;
-                font-size: 0.8rem;
-                text-transform: uppercase;
-                top: 50%;
-                transform: translateY(-50%);
-            }
-
-            /* Branch Header Special Handling */
-            .data-table tr.branch-header {
-                background: transparent;
-                border: none;
-                box-shadow: none;
-                margin-bottom: 5px;
-            }
-
-            .data-table tr.branch-header td {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-                color: white !important;
-                border-radius: 8px;
-                justify-content: center;
-                /* Center Flex Content */
-                padding-left: 15px !important;
-            }
-
-            .data-table tr.branch-header td::before {
-                display: none;
-            }
-
-            /* Branch Total Special Handling */
-            .data-table tr.branch-total-row {
-                background-color: #3498db !important;
-                /* Light Blue */
-                border: 1px solid #2980b9;
-                color: white !important;
-            }
-
-            .data-table tr.branch-total-row td {
-                background-color: transparent !important;
-                color: white !important;
-                /* White Text */
-                font-weight: 800 !important;
-                /* Bold */
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-            }
-
-            .data-table tr.branch-total-row td::before {
-                color: white !important;
-                font-weight: 800 !important;
-                opacity: 0.9;
-            }
-
-            /* Highlight Total Sales Generally (All Rows) */
-            .data-table td[data-label="Total Sales"] {
-                background-color: #ffecec !important;
-                /* Light Red */
-                color: #c0392b !important;
-                /* Dark Red */
-                font-weight: 700 !important;
-                text-shadow: none !important;
-            }
-
-            .data-table td[data-label="Total Sales"]::before {
-                color: #c0392b !important;
-                opacity: 0.8;
-            }
-
-            /* Exception: Branch Total Sales should follow Blue Theme */
-            .data-table tr.branch-total-row td[data-label="Total Sales"] {
-                background-color: transparent !important;
-                color: white !important;
-                font-weight: 800 !important;
-            }
-
-            .data-table tr.branch-total-row td[data-label="Total Sales"]::before {
-                color: white !important;
-            }
-
-            .data-table tr.total-row {
-                background-color: #343a40 !important;
-            }
-
-            .data-table tr.total-row td {
-                background-color: #343a40 !important;
-                color: white !important;
-                border-bottom: 1px solid #495057;
-            }
-
-            .data-table tr.total-row td::before {
-                color: #adb5bd;
-            }
+        .data-table tr.total-row td::before {
+            color: #adb5bd;
         }
     </style>
 </head>

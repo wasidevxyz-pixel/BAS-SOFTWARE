@@ -23,6 +23,11 @@ exports.getVouchers = asyncHandler(async (req, res, next) => {
         if (req.query.endDate) query.date.$lte = new Date(req.query.endDate);
     }
 
+    // Filter by branch
+    if (req.query.branch && req.query.branch !== 'all') {
+        query.branch = req.query.branch;
+    }
+
     const total = await Voucher.countDocuments(query);
     const vouchers = await Voucher.find(query)
         .populate('createdBy', 'name')

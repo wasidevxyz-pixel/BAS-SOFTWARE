@@ -7,11 +7,17 @@
     <title>Sales Comparison Report - Bilal Accounting System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
         body {
             background: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
         }
 
         .main-container {
@@ -21,16 +27,19 @@
         }
 
         .page-title {
-            font-size: 1.5rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
             font-weight: 600;
-            color: #2c3e50;
+            color: #1e4c8c;
             margin-bottom: 5px;
         }
 
         .page-subtitle {
-            font-size: 0.875rem;
-            color: #7f8c8d;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #6c757d;
             margin-bottom: 20px;
+            font-weight: 500;
         }
 
         .report-card {
@@ -41,13 +50,14 @@
         }
 
         .card-header-custom {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            background: #014d35;
             color: white;
-            padding: 12px 20px;
+            padding: 8px 20px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
         }
 
@@ -74,11 +84,11 @@
         }
 
         .btn-generate {
-            background: linear-gradient(135deg, #17a2b8, #138496);
+            background: #014d35;
             color: white;
             border: none;
             padding: 10px 25px;
-            font-weight: 700;
+            font-weight: 600;
             border-radius: 6px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
@@ -118,7 +128,7 @@
         }
 
         .summary-card.teal {
-            background: linear-gradient(135deg, #17a2b8, #138496);
+            background: #014d35;
         }
 
         .summary-card.red {
@@ -138,7 +148,7 @@
 
         .summary-card .value {
             font-size: 1.75rem;
-            font-weight: 700;
+            font-weight: 600;
         }
 
         .report-detail-section {
@@ -187,10 +197,11 @@
         }
 
         .data-table thead th {
-            background: #000 !important;
+            background: #000000 !important;
+            color: white !important;
             color: white !important;
             padding: 12px 15px;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
             font-size: 0.8rem;
             border: 1px solid #333 !important;
@@ -224,11 +235,11 @@
         }
 
         .category-title-bar {
-            background: linear-gradient(135deg, #17a2b8, #138496);
+            background: #014d35;
             color: white;
-            padding: 12px 20px;
-            font-weight: 700;
-            font-size: 1rem;
+            padding: 8px 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -239,392 +250,14 @@
         }
 
         .category-header {
-            /* Legacy support or removal */
-            display: none;
-        }
-
-        .category-total-row {
-            background: #e9ecef !important;
+            background: #014d35;
             font-weight: 600;
-        }
-
-        .category-total-row td {
-            background-color: #343a40 !important;
-            color: white !important;
-            font-weight: 700;
-            border-top: 2px solid #dee2e6 !important;
-            border-bottom: 2px solid #dee2e6 !important;
-            padding: 12px 15px !important;
-        }
-
-        .rank-cell {
-            font-weight: 700;
-            color: #333;
-            text-align: center;
-            border-left: 3px solid #17a2b8;
-        }
-
-        .margin-badge {
-            background: #28a745;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .data-row td {
-            vertical-align: middle;
-        }
-
-        .total-row td {
-            background-color: #000 !important;
-            color: #fff !important;
-            border: 1px solid #333 !important;
-            padding: 15px !important;
-            font-weight: 700;
-        }
-
-        @media (max-width: 992px) {
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-                padding: 15px;
-                gap: 12px;
-            }
-
-            .summary-card .value {
-                font-size: 1.5rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-                padding: 10px;
-                gap: 8px;
-            }
-
-            .summary-card {
-                padding: 15px 10px;
-            }
-
-            .summary-card .value {
-                font-size: 1.25rem;
-                font-weight: 800 !important;
-                color: #ffffff !important;
-                word-break: break-all;
-            }
-
-            .summary-card .label {
-                font-size: 0.7rem;
-                font-weight: 700 !important;
-                color: #ffffff !important;
-                opacity: 0.9;
-            }
-        }
-
-        @media print {
-            * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            body {
-                background: white !important;
-                margin: 0;
-                padding: 20px;
-            }
-
-            .page-header,
-            .filters-section,
-            .btn-print,
-            .card-header-custom,
-            .page-title,
-            .page-subtitle,
-            .mb-3 {
-                display: none !important;
-            }
-
-            .main-container {
-                padding: 0 !important;
-                max-width: 100% !important;
-            }
-
-            .report-card {
-                box-shadow: none !important;
-                border: none !important;
-            }
-
-            /* Print Header */
-            .print-header {
-                display: block !important;
-                text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 3px solid #17a2b8;
-            }
-
-            .print-header h2 {
-                color: #17a2b8;
-                font-size: 24px;
-                font-weight: 700;
-                margin: 0 0 5px 0;
-            }
-
-            .print-header h4 {
-                font-size: 14px;
-                color: #666;
-                margin: 5px 0;
-                font-weight: normal;
-            }
-
-            .print-header p {
-                font-size: 11px;
-                color: #999;
-                margin: 2px 0;
-            }
-
-            /* Summary Cards */
-            .summary-cards {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
-                margin-bottom: 25px;
-                page-break-inside: avoid;
-                background: white !important;
-            }
-
-            .summary-card {
-                padding: 15px !important;
-                border-radius: 8px;
-                text-align: center;
-                color: white !important;
-            }
-
-            .summary-card.green {
-                background: linear-gradient(135deg, #28a745, #20c997) !important;
-            }
-
-            .summary-card.teal {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-            }
-
-            .summary-card.red {
-                background: linear-gradient(135deg, #dc3545, #c82333) !important;
-            }
-
-            .summary-card.dark {
-                background: linear-gradient(135deg, #6c757d, #5a6268) !important;
-            }
-
-            .summary-card .label,
-            .summary-card .value {
-                color: white !important;
-            }
-
-            .summary-card .label {
-                font-size: 10px;
-            }
-
-            .summary-card .value {
-                font-size: 20px;
-            }
-
-            /* Table Styles */
-            .data-table thead th {
-                background: #000 !important;
-                color: white !important;
-                font-size: 10px;
-            }
-
-            .data-table tbody td {
-                font-size: 11px;
-                padding: 8px 12px;
-            }
-
-            .category-title-bar {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                page-break-after: avoid;
-            }
-
-            .category-header {
-                display: none !important;
-            }
-
-            .category-total-row td {
-                background-color: #343a40 !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .margin-badge {
-                background: #28a745 !important;
-                color: white !important;
-            }
         }
 
         @media (max-width: 768px) {
-            .main-container {
-                padding: 10px !important;
-            }
-
-            /* 1. TOP SUMMARY CARDS (GRADIENTS STYLE LIKE PAYMENT REPORT) */
-            .summary-cards {
-                grid-template-columns: 1fr 1fr !important;
-                padding: 15px !important;
-                gap: 12px !important;
-                background: white !important;
-            }
-
-            .summary-card {
-                padding: 20px !important;
-                border-radius: 8px !important;
-                text-align: center !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-                color: white !important;
-            }
-
-            .summary-card.green,
-            .summary-card.teal {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-            }
-
-            .summary-card.red,
-            .summary-card.dark {
-                background: linear-gradient(135deg, #fd7e14, #f8961e) !important;
-            }
-
-            .summary-card .label {
-                font-size: 0.75rem !important;
-                font-weight: 700 !important;
-                text-transform: uppercase !important;
-                margin-bottom: 8px !important;
-                opacity: 0.9 !important;
-            }
-
-            .summary-card .value {
-                font-size: 1.4rem !important;
-                font-weight: 800 !important;
-            }
-
-            /* 2. CATEGORY CARD CONTAINER */
-            .category-section {
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                margin-bottom: 25px;
-                overflow: hidden;
-                border: 1px solid #e1e5eb;
-                padding-bottom: 5px;
-            }
-
-            .category-title-bar {
-                background: linear-gradient(135deg, #17a2b8, #138496) !important;
-                color: white !important;
-                padding: 12px 20px !important;
-                font-weight: 700 !important;
-                font-size: 1rem !important;
-                text-transform: uppercase;
-                display: flex !important;
-                justify-content: center !important;
-                text-align: center !important;
-            }
-
-            /* 3. LIST LAYOUT FOR DATA */
-            .data-table,
-            .data-table tbody {
-                display: block;
-                width: 100%;
-            }
-
-            .data-table thead {
-                display: none;
-            }
-
-            /* 3. DATA ROWS (UNIFIED CARD STACK) */
-            .data-table tr:not(.category-total-row):not(.total-row) {
-                display: flex;
-                flex-wrap: wrap;
-                border-bottom: 2px solid #edf2f7;
-                /* Clear separator between branches */
-                padding: 15px 12px;
-                background: white;
-            }
-
-            .data-table tr:not(.category-total-row):not(.total-row):last-child {
-                border-bottom: none;
-            }
-
-            .data-table td {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                width: 100%;
-                padding: 4px 0;
-                font-size: 0.9rem;
-                border: none !important;
-            }
-
-            .data-table td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                font-size: 0.8rem;
-                color: #6c757d;
-                text-transform: uppercase;
-                margin-right: 10px;
-            }
-
-            /* Rank Badge */
-            .rank-cell {
-                width: auto !important;
-                display: inline-flex !important;
-                background: #f8f9fa;
-                color: #7f8c8d;
-                font-size: 0.7rem;
-                font-weight: 800;
-                padding: 1px 8px;
-                border-radius: 4px;
-                margin-bottom: 6px;
-                border: 1px solid #e9ecef;
-            }
-
-            .rank-cell::before {
-                content: "RANK #";
-            }
-
-            /* Branch Sub-Header (Inside the Card) */
-            .data-table td:nth-child(2) {
-                width: 100% !important;
-                font-weight: 800 !important;
-                font-size: 0.95rem !important;
-                color: #1e4c8c !important;
-                margin-bottom: 10px !important;
-                padding: 8px !important;
-                text-align: center !important;
-                display: block !important;
-                background-color: #f1f8ff !important;
-                border-radius: 4px !important;
-                border: 1px solid #d0e3f0 !important;
-                justify-content: center !important;
-            }
-
-            .data-table td:nth-child(2)::before {
-                display: none;
-            }
-
-            /* Professional Horizontal Sale Row (DATA ROWS) */
-            .data-table tr:not(.category-total-row):not(.total-row) td[data-label="Total Sales"] {
-                width: 100% !important;
-                display: flex !important;
-                flex-direction: row !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                background-color: #f8faff !important;
+            .category-total-row td {
+                color: #721c24 !important;
+                font-weight: 700;
                 border-bottom: 2px solid #edf2f7 !important;
                 padding: 12px 15px !important;
                 font-weight: 800 !important;
@@ -672,14 +305,14 @@
 
             /* Category Subtotal (Blue Theme) */
             .category-total-row {
-                background: #2c5ba9 !important;
+                background: #f8d7da !important;
                 /* Payment Report Blue */
                 display: flex !important;
                 flex-wrap: wrap !important;
                 padding: 10px !important;
                 margin-top: 15px !important;
                 border-radius: 12px !important;
-                color: white !important;
+                color: #198754 !important;
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             }
 
@@ -691,7 +324,7 @@
                 flex-wrap: wrap !important;
                 padding: 15px !important;
                 margin-top: 30px !important;
-                border: none !important;
+                border: 1px solid #333 !important;
                 border-radius: 8px !important;
                 color: white !important;
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -706,7 +339,7 @@
                 padding: 12px 5px !important;
                 background: transparent !important;
                 /* Force transparent inside card */
-                border: none !important;
+                border: 1px solid #333 !important;
                 color: white !important;
                 text-align: center !important;
                 box-sizing: border-box !important;
@@ -808,13 +441,6 @@
                 text-transform: uppercase !important;
                 letter-spacing: 0.5px !important;
             }
-
-            .category-total-row td strong,
-            .total-row td strong {
-                color: white !important;
-                font-size: 1.2rem !important;
-                display: block !important;
-            }
         }
     </style>
     <!-- ... (rest of head/body start omitted, handled by tool context) ... -->
@@ -825,7 +451,7 @@
     <!-- Page Header -->
     <div class="page-header px-3">
         <div style="flex: 1; display: flex; align-items: center;">
-            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 0.85rem;"></i>
             <i class="fas fa-chart-bar me-2"></i> Sales Reports
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
@@ -854,7 +480,7 @@
             </div>
             <div class="text-end">
                 <div class="report-title"
-                    style="font-size: 1.5rem; color: #17a2b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">
+                    style="font-size: 1.5rem; color: #17a2b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
                     SALES COMPARISON REPORT</div>
             </div>
         </div>
@@ -1284,7 +910,7 @@
                 html += `
                     <div class="category-section">
                         <div class="category-title-bar">
-                            <i class="fas fa-folder me-2"></i>${categoryName}
+                            ${categoryName}
                         </div>
                         <table class="table data-table mb-0">
                             <thead>
@@ -1318,7 +944,7 @@
                 // Category Total Row
                 html += `
                             <tr class="category-total-row">
-                                <td data-label="Category Total" style="text-align: center;"><i class="fas fa-calculator me-2"></i><strong>Category Total:</strong></td>
+                                <td colspan="2" data-label="Total" style="text-align: center;"><strong>Total</strong></td>
                                 <td data-label="Total Sales" style="text-align: center;"><strong>${formatCurrency(categoryTotalSales)}</strong></td>
                                 <td data-label="Total Cost" style="text-align: center;"><strong>${formatCurrency(categoryTotalCost)}</strong></td>
                                 <td data-label="Total Profit" style="text-align: center;"><strong>${formatCurrency(categoryTotalProfit)}</strong></td>
@@ -1347,7 +973,7 @@
             let summaryHtml = `
                 <div class="category-section mt-5">
                     <div class="card-header-custom" style="border-radius: 0;">
-                        <i class="fas fa-chart-bar me-2"></i>BRANCH-WISE SUMMARY (ALL CATEGORIES)
+                        BRANCH-WISE SUMMARY (ALL CATEGORIES)
                     </div>
                     <table class="table data-table mb-0">
                         <thead>

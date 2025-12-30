@@ -311,8 +311,8 @@ function renderReport(data) {
 
         // Group Header Row
         let groupHtml = `
-            <tr class="table-light group-header">
-                <td colspan="6" class="fw-bold text-uppercase" style="background-color: #f0f7ff; color: #0056b3;">
+            <tr class="group-header">
+                <td colspan="6" class="fw-bold text-uppercase" >
                     <i class="fas fa-folder-open me-2"></i> ${firstItem.branch} | ${firstItem.parentDept}
                 </td>
             </tr>
@@ -354,7 +354,7 @@ function renderReport(data) {
         const avgDiscPer = totalGross !== 0 ? (subDisc / totalGross) * 100 : 0;
 
         groupHtml += `
-            <tr class="table-info subtotal-row" style="background-color: #e3f2fd; font-weight: 600; border-top: 2px solid #90caf9;">
+            <tr class="subtotal-row">
                 <td colspan="2" data-label="Sub-Total" class="text-end">SUB-TOTAL:</td>
                 <td data-label="Discount" class="text-end">${formatCurrency(subDisc)}</td>
                 <td data-label="Disc %" class="text-end"><span class="badge bg-secondary">${avgDiscPer.toFixed(2)}%</span></td>
