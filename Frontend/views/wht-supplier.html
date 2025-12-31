@@ -71,16 +71,28 @@
             background-color: #0d6efd !important;
             color: white;
             font-size: 12px;
-            text-align: center;
             white-space: nowrap;
             padding: 8px;
+            border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
         }
 
         .data-table td {
             font-size: 12px;
             vertical-align: middle;
             padding: 5px;
-            text-align: center;
+        }
+
+        .text-end {
+            text-align: right !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-start {
+            text-align: left !important;
         }
 
         .data-table tr:nth-child(even) {
@@ -185,16 +197,8 @@
                                 <select id="branch" class="form-select" required></select>
                             </div>
                             <div class="form-group">
-                                <label>Address</label>
-                                <input type="text" id="address" class="form-control">
-                            </div>
-                            <div class="form-group">
                                 <label>PhoneNo</label>
                                 <input type="text" id="phoneNo" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="email" class="form-control">
                             </div>
                             <div class="form-group">
                                 <label>STRN</label>
@@ -298,24 +302,22 @@
                     <table class="table table-bordered data-table" id="supplierTable">
                         <thead>
                             <tr>
-                                <th>Sr. No.</th>
-                                <th>Supplier Name</th>
-                                <th>Category</th>
-                                <th>Sub Category</th>
-                                <th>Phone No</th>
-                                <th>Mobile No</th>
-                                <th>NTN</th>
-                                <th>STRN</th>
-                                <th>Email</th>
-                                <th>WHT Type</th>
-                                <th>WHT Per</th>
-                                <th>ADV Tax Per</th>
-                                <th>Address</th>
-                                <th>Active</th>
-                                <th>City Name</th>
-                                <th>Branch Name</th>
-                                <th>Finished</th>
-                                <th>Actions</th>
+                                <th style="width: 50px;" class="text-center">Sr. No.</th>
+                                <th style="width: 250px;" class="text-start">Supplier Name</th>
+                                <th class="text-center">Category</th>
+                                <th class="text-center">Sub Category</th>
+                                <th class="text-center">Phone No</th>
+                                <th class="text-center">Mobile No</th>
+                                <th class="text-center">NTN</th>
+                                <th class="text-center">STRN</th>
+                                <th style="width: 80px;" class="text-center">WHT Type</th>
+                                <th class="text-end">WHT Per</th>
+                                <th class="text-end">ADV Tax Per</th>
+                                <th class="text-center">Active</th>
+                                <th class="text-center">City Name</th>
+                                <th class="text-center">Branch Name</th>
+                                <th class="text-center">Finished</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="supplierTableBody">

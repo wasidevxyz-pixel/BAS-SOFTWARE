@@ -1233,6 +1233,22 @@ function printSheet(type) {
     } else if (type === 'dayWisePrint') {
         printIncomeStatement(true);
     } else {
+        // Populate Print Header
+        const branch = document.getElementById('branch').value || 'All Branches';
+        const date = document.getElementById('date').value;
+        const companyName = "BAS SOFTWARE"; // Could be dynamic if needed
+
+        document.getElementById('print-branch-name').textContent = branch;
+        document.getElementById('print-date').textContent = date;
+        document.getElementById('print-company-name').textContent = companyName;
+
+        let title = "Closing Sheet";
+        if (type === 'opening') title = "Department Opening Balance";
+        if (type === 'closing01') title = "Closing 01 - Summary";
+        if (type === 'closing02') title = "Closing 02 - Reconciliation";
+
+        document.getElementById('print-report-title').textContent = title;
+
         // Use browser's native print dialog
         window.print();
     }

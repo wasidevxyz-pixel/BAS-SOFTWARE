@@ -116,23 +116,21 @@ function renderSupplierTable(suppliers) {
         const canDelete = user?.role === 'admin' || user?.rights?.delete_wht_supplier;
 
         tr.innerHTML = `
-            <td>${index + 1}</td>
+            <td class="text-center">${index + 1}</td>
             <td class="text-start fw-bold">${sup.name}</td>
-            <td>${sup.category ? sup.category.name : '-'}</td>
-            <td>${sup.subCategory || '-'}</td>
-            <td>${sup.phoneNo || '-'}</td>
-            <td>${sup.mobileNo || '-'}</td>
-            <td>${sup.ntn || '-'}</td>
-            <td>${sup.strn || '-'}</td>
-            <td>${sup.email || '-'}</td>
-            <td>${sup.whtType || '-'}</td>
-            <td>${sup.whtPer || 0}%</td>
-            <td>${sup.advTaxPer || 0}%</td>
-            <td>${sup.address || '-'}</td>
-            <td class="${sup.isActive ? 'text-success fw-bold' : 'text-danger'}">${sup.isActive ? 'Active' : 'In-Active'}</td>
-            <td>${sup.city || '-'}</td>
-            <td>${sup.branch ? sup.branch.name : '-'}</td>
-            <td>No</td>
+            <td class="text-center">${sup.category ? sup.category.name : '-'}</td>
+            <td class="text-center">${sup.subCategory || '-'}</td>
+            <td class="text-center">${sup.phoneNo || '-'}</td>
+            <td class="text-center">${sup.mobileNo || '-'}</td>
+            <td class="text-center">${sup.ntn || '-'}</td>
+            <td class="text-center">${sup.strn || '-'}</td>
+            <td class="text-center">${sup.whtType || '-'}</td>
+            <td class="text-end">${sup.whtPer || 0}%</td>
+            <td class="text-end">${sup.advTaxPer || 0}%</td>
+            <td class="text-center ${sup.isActive ? 'text-success fw-bold' : 'text-danger'}">${sup.isActive ? 'Active' : 'In-Active'}</td>
+            <td class="text-center">${sup.city || '-'}</td>
+            <td class="text-center">${sup.branch ? sup.branch.name : '-'}</td>
+            <td class="text-center">No</td>
             <td>
                 <div class="d-flex gap-1 justify-content-center">
                     <button class="btn btn-edit btn-sm" onclick="editSupplier('${sup._id}')">Edit</button>
@@ -151,11 +149,9 @@ async function handleFormSubmit(e) {
     const formData = {
         branch: document.getElementById('branch').value,
         name: document.getElementById('name').value,
-        address: document.getElementById('address').value,
         city: document.getElementById('city').value,
         phoneNo: document.getElementById('phoneNo').value,
         mobileNo: document.getElementById('mobileNo').value,
-        email: document.getElementById('email').value,
         ntn: document.getElementById('ntn').value,
         strn: document.getElementById('strn').value,
         category: document.getElementById('category').value || undefined,
@@ -201,11 +197,9 @@ window.editSupplier = function (id) {
     document.getElementById('supplierId').value = sup._id;
     document.getElementById('branch').value = sup.branch?._id || sup.branch || ''; // Handle populated or not
     document.getElementById('name').value = sup.name || '';
-    document.getElementById('address').value = sup.address || '';
     document.getElementById('city').value = sup.city || 'RWP';
     document.getElementById('phoneNo').value = sup.phoneNo || '';
     document.getElementById('mobileNo').value = sup.mobileNo || '';
-    document.getElementById('email').value = sup.email || '';
     document.getElementById('ntn').value = sup.ntn || '';
     document.getElementById('strn').value = sup.strn || '';
     document.getElementById('category').value = sup.category?._id || sup.category || '';
