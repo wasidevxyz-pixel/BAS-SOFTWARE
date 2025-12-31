@@ -579,7 +579,7 @@ async function loadSavedData() {
     const branch = document.getElementById('branchSelect').value;
     const date = document.getElementById('filterDate').value;
 
-    let url = '/api/v1/supplier-taxes?limit=1000';
+    let url = '/api/v1/supplier-taxes?limit=10000';
     if (branch) url += `&branch=${branch}`;
     if (date) url += `&date=${date}`;
 

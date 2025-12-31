@@ -81,13 +81,14 @@ async function loadCategories() {
 async function loadSuppliers() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/suppliers?limit=1000', {
+        const res = await fetch('/api/v1/suppliers?limit=10000', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.success) {
             allSuppliers = data.data;
             renderSupplierTable(allSuppliers);
+            handleSearch(); // Ensure totals and filtering are applied
         }
     } catch (err) {
         console.error('Error loading suppliers:', err);
@@ -99,6 +100,12 @@ async function loadSuppliers() {
 function renderSupplierTable(suppliers) {
     const tbody = document.getElementById('supplierTableBody');
     tbody.innerHTML = '';
+
+    // Update count in heading
+    const title = document.querySelector('.list-container h6');
+    if (title) {
+        title.innerHTML = `Supplier List <span class="badge bg-primary ms-2">${suppliers.length} Records</span>`;
+    }
 
     suppliers.forEach((sup, index) => {
         const tr = document.createElement('tr');
@@ -253,6 +260,10 @@ window.clearForm = function () {
     document.getElementById('supplierId').value = '';
     document.getElementById('saveBtn').textContent = 'Save';
     document.getElementById('deleteBtn').style.display = 'none';
+
+    // Also reset the branch filter to show all suppliers
+    document.getElementById('branch').value = '';
+    handleSearch();
 }
 
 function handleSearch() {
