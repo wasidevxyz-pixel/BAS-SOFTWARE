@@ -122,7 +122,8 @@
             margin-bottom: 15px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         /* Tree Styles */
@@ -149,6 +150,33 @@
 
         .form-check-input {
             margin-top: 0.25em;
+        }
+
+        /* Responsive Improvements */
+        @media (max-width: 768px) {
+            .top-form {
+                gap: 10px;
+            }
+
+            .top-form>div:first-child {
+                width: 100%;
+            }
+
+            .top-form input[type="text"] {
+                width: 100% !important;
+            }
+
+            /* Reset the margin on the Active checkbox container */
+            .top-form>div.ms-4 {
+                margin-left: 0 !important;
+                margin-bottom: 10px;
+            }
+
+            /* Make save button full width on mobile for easier tapping */
+            .btn-bas-save {
+                width: 100%;
+                margin-left: 0 !important;
+            }
         }
     </style>
 </head>

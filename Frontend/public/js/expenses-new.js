@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Initialize expenses page
-function initExpensesPage() {
+async function initExpensesPage() {
     // Set today's date
     const today = new Date().toISOString().split('T')[0];
     const expenseDateEl = document.getElementById('expenseDate');
@@ -29,9 +29,9 @@ function initExpensesPage() {
     if (filterToDateEl) filterToDateEl.value = today;
 
     // Load data
+    await loadBranches(); // Wait for branches to load first
     loadExpenseHeads();
     loadCashInHand();
-    loadBranches();
     loadExpenses();
 
     // Event listeners
@@ -58,6 +58,14 @@ function setupEventListeners() {
     const amountEl = document.getElementById('amount');
     if (amountEl) {
         amountEl.addEventListener('input', updateCashDisplay);
+    }
+
+    // Branch change - reload heads
+    const branchEl = document.getElementById('branch');
+    if (branchEl) {
+        branchEl.addEventListener('change', function () {
+            loadExpenseHeads(document.getElementById('payType').value);
+        });
     }
 
     // Keyboard shortcuts
@@ -106,67 +114,42 @@ function handlePayTypeChange() {
 }
 
 // Load Expense Heads from API (with fallback to hardcoded)
+// Load Expense Heads from API (with fallback removed)
 async function loadExpenseHeads(type = 'expense') {
     try {
         const headEl = document.getElementById('head');
         if (!headEl) return;
 
         const token = localStorage.getItem('token');
+        const branch = document.getElementById('branch')?.value || 'Shop';
 
-        // Try to load from API first
-        try {
-            const response = await fetch(`/api/v1/expense-heads?parentId=null&type=${type}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.data && data.data.length > 0) {
-                    headEl.innerHTML = '<option value="">-- Select Head --</option>';
-                    data.data.forEach(head => {
-                        const option = document.createElement('option');
-                        option.value = head.name;
-                        option.setAttribute('data-id', head._id);
-                        option.textContent = head.name;
-                        headEl.appendChild(option);
-                    });
-                    expenseHeads = data.data;
-                    return;
-                }
-            }
-        } catch (apiError) {
-            console.log('API not available, using fallback heads');
-        }
-
-        // Fallback to hardcoded heads
-        const expenseHeadsList = [
-            'Salary', 'Rent', 'Utilities', 'Transportation', 'Office Supplies',
-            'Maintenance', 'Marketing', 'Food & Beverages', 'Miscellaneous',
-            'Internet & Phone', 'Insurance', 'Bank Charges', 'Professional Fees'
-        ];
-
-        const receiptHeadsList = [
-            'Sales Revenue', 'Cash Received', 'Bank Deposit', 'Loan Received',
-            'Investment', 'Interest Received', 'Other Income', 'Refund Received'
-        ];
-
-        const heads = type === 'receipt' ? receiptHeadsList : expenseHeadsList;
-
-        headEl.innerHTML = '<option value="">-- Select Head --</option>';
-        heads.forEach(head => {
-            const option = document.createElement('option');
-            option.value = head;
-            option.textContent = head;
-            headEl.appendChild(option);
+        const response = await fetch(`/api/v1/expense-heads?parentId=null&type=${type}&branch=${encodeURIComponent(branch)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        expenseHeads = heads;
+        if (response.ok) {
+            const data = await response.json();
+            headEl.innerHTML = '<option value="">-- Select Head --</option>';
+
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(head => {
+                    const option = document.createElement('option');
+                    option.value = head.name;
+                    option.setAttribute('data-id', head._id);
+                    option.textContent = head.name;
+                    headEl.appendChild(option);
+                });
+                expenseHeads = data.data;
+            } else {
+                expenseHeads = [];
+            }
+        }
     } catch (error) {
         console.error('Error loading heads:', error);
     }
 }
 
-// Load Sub Heads based on selected Head (from API with fallback)
+// Load Sub Heads based on selected Head (from API with fallback removed)
 async function loadSubHeads(headName) {
     try {
         const subHeadEl = document.getElementById('subHead');
@@ -179,62 +162,32 @@ async function loadSubHeads(headName) {
 
         // Try to find the head ID from expenseHeads array
         let headId = null;
-        if (Array.isArray(expenseHeads) && expenseHeads.length > 0 && expenseHeads[0]._id) {
+        if (Array.isArray(expenseHeads) && expenseHeads.length > 0) {
             const headObj = expenseHeads.find(h => h.name === headName);
             if (headObj) headId = headObj._id;
         }
 
-        // Try to load from API first
         if (headId) {
-            try {
-                const response = await fetch(`/api/v1/expense-heads?parentId=${headId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+            const branch = document.getElementById('branch')?.value || 'Shop';
+            const response = await fetch(`/api/v1/expense-heads?parentId=${headId}&branch=${encodeURIComponent(branch)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.data && data.data.length > 0) {
-                        subHeadEl.innerHTML = '<option value="">-- Select Sub Head --</option>';
-                        data.data.forEach(sub => {
-                            const option = document.createElement('option');
-                            option.value = sub.name;
-                            option.setAttribute('data-id', sub._id);
-                            option.textContent = sub.name;
-                            subHeadEl.appendChild(option);
-                        });
-                        return;
-                    }
+            if (response.ok) {
+                const data = await response.json();
+                subHeadEl.innerHTML = '<option value="">-- Select Sub Head --</option>';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(sub => {
+                        const option = document.createElement('option');
+                        option.value = sub.name;
+                        option.setAttribute('data-id', sub._id);
+                        option.textContent = sub.name;
+                        subHeadEl.appendChild(option);
+                    });
                 }
-            } catch (apiError) {
-                console.log('API not available, using fallback sub-heads');
             }
         }
-
-        // Fallback to hardcoded sub-heads
-        const subHeadsMap = {
-            'Salary': ['Staff Salary', 'Manager Salary', 'Bonus', 'Overtime'],
-            'Rent': ['Shop Rent', 'Warehouse Rent', 'Office Rent'],
-            'Utilities': ['Electricity', 'Water', 'Gas', 'Waste Disposal'],
-            'Transportation': ['Fuel', 'Vehicle Maintenance', 'Delivery Charges', 'Courier'],
-            'Office Supplies': ['Stationery', 'Printing', 'Furniture', 'Equipment'],
-            'Maintenance': ['Building Repair', 'Equipment Repair', 'Cleaning'],
-            'Marketing': ['Advertising', 'Promotional', 'Sponsorship', 'Social Media'],
-            'Food & Beverages': ['Staff Meals', 'Tea/Coffee', 'Entertainment'],
-            'Miscellaneous': ['Charity', 'Gifts', 'Tips', 'Other'],
-            'Sales Revenue': ['Cash Sales', 'Credit Sales', 'Online Sales'],
-            'Cash Received': ['Customer Payment', 'Advance Received', 'Deposit'],
-            'Other Income': ['Commission', 'Rental Income', 'Service Charges']
-        };
-
-        const subs = subHeadsMap[headName] || [];
-
-        subHeadEl.innerHTML = '<option value="">-- Select Sub Head --</option>';
-        subs.forEach(sub => {
-            const option = document.createElement('option');
-            option.value = sub;
-            option.textContent = sub;
-            subHeadEl.appendChild(option);
-        });
     } catch (error) {
         console.error('Error loading sub heads:', error);
     }
@@ -677,6 +630,9 @@ function openHeadsModal() {
     if (!headsModal) {
         headsModal = new bootstrap.Modal(document.getElementById('headsModal'));
     }
+    const branch = document.getElementById('branch').value || 'Shop';
+    document.getElementById('headsModalLabel').innerHTML = `<i class="fas fa-list"></i> Manage Expense Heads <span class="badge bg-warning text-dark ms-2">${branch}</span>`;
+
     headsModal.show();
     loadHeadsList();
     loadParentHeadDropdown();
@@ -689,7 +645,12 @@ async function loadHeadsList() {
         if (!tbody) return;
 
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/expense-heads/hierarchy', {
+        const branch = document.getElementById('branch')?.value || 'Shop';
+
+        // Show branch info in modal title or somewhere if possible, for now just use it
+        console.log('Loading heads for branch:', branch);
+
+        const response = await fetch(`/api/v1/expense-heads/hierarchy?branch=${encodeURIComponent(branch)}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -749,7 +710,9 @@ function addNewHead() {
     document.getElementById('headNameInput').value = '';
     document.getElementById('headTypeSelect').value = 'both';
     document.getElementById('parentHeadGroup').style.display = 'none';
-    document.getElementById('headFormModalLabel').innerHTML = '<i class="fas fa-plus"></i> Add New Head';
+
+    const branch = document.getElementById('branch').value || 'Shop';
+    document.getElementById('headFormModalLabel').innerHTML = `<i class="fas fa-plus"></i> Add New Head <span class="badge bg-light text-dark ms-2">${branch}</span>`;
 
     if (!headFormModal) {
         headFormModal = new bootstrap.Modal(document.getElementById('headFormModal'));
@@ -765,7 +728,9 @@ function addNewSubHead(parentId, parentName) {
     document.getElementById('headTypeSelect').value = 'both';
     document.getElementById('parentHeadGroup').style.display = 'block';
     document.getElementById('parentHeadName').value = parentName;
-    document.getElementById('headFormModalLabel').innerHTML = '<i class="fas fa-plus"></i> Add Sub Head';
+
+    const branch = document.getElementById('branch').value || 'Shop';
+    document.getElementById('headFormModalLabel').innerHTML = `<i class="fas fa-plus"></i> Add Sub Head <span class="badge bg-light text-dark ms-2">${branch}</span>`;
 
     if (!headFormModal) {
         headFormModal = new bootstrap.Modal(document.getElementById('headFormModal'));
@@ -824,10 +789,13 @@ async function saveHead() {
         }
 
         const token = localStorage.getItem('token');
+        const branch = document.getElementById('branch')?.value || 'Shop';
+
         const formData = {
             name: name,
             type: type,
-            parentId: parentId || null
+            parentId: parentId || null,
+            branch: branch
         };
 
         const isUpdate = headId && headId.trim() !== '';
@@ -922,7 +890,9 @@ async function loadParentHeadDropdown() {
         if (!selectEl) return;
 
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/expense-heads?parentId=null', {
+        const branch = document.getElementById('branch')?.value || 'Shop';
+
+        const response = await fetch(`/api/v1/expense-heads?parentId=null&branch=${encodeURIComponent(branch)}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -956,6 +926,8 @@ async function quickAddHead() {
 
     try {
         const token = localStorage.getItem('token');
+        const branch = document.getElementById('branch')?.value || 'Shop';
+
         const response = await fetch('/api/v1/expense-heads', {
             method: 'POST',
             headers: {
@@ -965,7 +937,8 @@ async function quickAddHead() {
             body: JSON.stringify({
                 name: name,
                 type: 'both',
-                parentId: null
+                parentId: null,
+                branch: branch
             })
         });
 
@@ -1008,6 +981,8 @@ async function quickAddSubHead() {
 
     try {
         const token = localStorage.getItem('token');
+        const branch = document.getElementById('branch')?.value || 'Shop';
+
         const response = await fetch('/api/v1/expense-heads', {
             method: 'POST',
             headers: {
@@ -1017,7 +992,8 @@ async function quickAddSubHead() {
             body: JSON.stringify({
                 name: name,
                 type: 'both',
-                parentId: parentId
+                parentId: parentId,
+                branch: branch
             })
         });
 

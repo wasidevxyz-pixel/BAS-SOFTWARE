@@ -23,6 +23,11 @@ const expenseHeadSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    branch: {
+        type: String,
+        required: true,
+        default: 'Shop'
     }
 }, {
     timestamps: true
@@ -32,6 +37,7 @@ const expenseHeadSchema = new mongoose.Schema({
 expenseHeadSchema.index({ parentId: 1 });
 expenseHeadSchema.index({ type: 1 });
 expenseHeadSchema.index({ isActive: 1 });
+expenseHeadSchema.index({ branch: 1 });
 
 // Virtual to get sub-heads
 expenseHeadSchema.virtual('subHeads', {

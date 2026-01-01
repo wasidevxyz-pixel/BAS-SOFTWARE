@@ -6,9 +6,14 @@ const ErrorResponse = require('../utils/errorResponse');
 // @route   GET /api/v1/expense-heads
 // @access  Private
 const getExpenseHeads = asyncHandler(async (req, res, next) => {
-    const { parentId, type, includeSubHeads } = req.query;
+    const { parentId, type, includeSubHeads, branch } = req.query;
 
     let query = { isActive: true };
+
+    // Filter by branch
+    if (branch) {
+        query.branch = branch;
+    }
 
     // If parentId is specified, get sub-heads for that parent
     if (parentId === 'null' || parentId === '') {
@@ -59,14 +64,15 @@ const getExpenseHead = asyncHandler(async (req, res, next) => {
 const createExpenseHead = asyncHandler(async (req, res, next) => {
     req.body.createdBy = req.user.id;
 
-    // Check if head with same name already exists under same parent
+    // Check if head with same name already exists under same parent AND branch
     const existing = await ExpenseHead.findOne({
         name: req.body.name,
-        parentId: req.body.parentId || null
+        parentId: req.body.parentId || null,
+        branch: req.body.branch || 'Shop'
     });
 
     if (existing) {
-        return next(new ErrorResponse('A head with this name already exists', 400));
+        return next(new ErrorResponse('A head with this name already exists in this branch', 400));
     }
 
     const head = await ExpenseHead.create(req.body);
@@ -92,6 +98,7 @@ const updateExpenseHead = asyncHandler(async (req, res, next) => {
         const existing = await ExpenseHead.findOne({
             name: req.body.name,
             parentId: head.parentId,
+            branch: head.branch, // Check in same branch
             _id: { $ne: req.params.id }
         });
 
@@ -139,9 +146,13 @@ const deleteExpenseHead = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/expense-heads/hierarchy
 // @access  Private
 const getHeadsHierarchy = asyncHandler(async (req, res, next) => {
-    const { type } = req.query;
+    const { type, branch } = req.query;
 
     let query = { parentId: null, isActive: true };
+
+    if (branch) {
+        query.branch = branch;
+    }
 
     if (type && type !== 'all') {
         query.$or = [
