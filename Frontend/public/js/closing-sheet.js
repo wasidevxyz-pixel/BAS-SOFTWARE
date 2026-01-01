@@ -1149,7 +1149,7 @@ c02Inputs.forEach(id => {
 });
 
 
-async function saveSheet() {
+async function saveSheet(customSuccessMsg = null) {
     const branch = document.getElementById('branch').value;
     const date = document.getElementById('date').value;
 
@@ -1220,7 +1220,7 @@ async function saveSheet() {
         }
 
         if (data.success) {
-            showNotification('Saved successfully');
+            showNotification(customSuccessMsg || 'Saved successfully');
         } else {
             console.error('Save Error Data:', data);
             showNotification('Error: ' + (data.message || 'Unknown Error'), true);
@@ -2033,7 +2033,7 @@ function calcModalTotal() {
     if (tFootCost) tFootCost.value = totalCost;
 }
 
-function saveDepartmentSalesModal() {
+async function saveDepartmentSalesModal() {
     const currentDeptId = document.getElementById('closing02Dept').value;
     if (!currentDeptId) {
         alert('Error: No active department found');
@@ -2083,7 +2083,12 @@ function saveDepartmentSalesModal() {
     // 4. Close Modal
     const el = document.getElementById('departmentSalesModal');
     const modal = bootstrap.Modal.getInstance(el);
-    modal.hide();
+    if (modal) modal.hide();
+
+    // 5. Auto Save to Database (User Request)
+    // Wait for DOM to settle
+    await new Promise(r => setTimeout(r, 100));
+    await saveSheet('Warehouse Sale Saved Successfully!');
 }
 
 function showNotification(message, isError = false) {
@@ -2632,7 +2637,9 @@ async function generateSMSPreview() {
                 totalNetCash += netTotal;
 
                 const displayVal = formatSmsNumber(netTotal); // Use clean format
-                text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
+                if (!dName.includes('CASH REC FROM COUNTER')) {
+                    text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
+                }
             });
 
             text += `Total Net Cash: ${formatSmsNumber(totalNetCash)}\n`;
@@ -2803,7 +2810,9 @@ async function generateSMSPreview() {
 
                 // Format negative for display if needed or just use standard
                 const displayVal = formatSmsNumber(netTotal);
-                text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
+                if (!dName.includes('CASH REC FROM COUNTER')) {
+                    text += `${toTitleCase(dept.name)} Cash: ${displayVal}\n`;
+                }
             });
 
             text += `Total Net Cash: ${formatSmsNumber(totalNetCash)}\n`;
@@ -2976,7 +2985,9 @@ function getCashActivityContent(departments, branch, date, skipHeader = false) {
 
             // Display: DeptName Cash : value
             const displayVal = formatNeg(netTotal);
-            text += `${d.name} Cash : ${displayVal}\n`;
+            if (!dName.includes('CASH REC FROM COUNTER')) {
+                text += `${d.name} Cash : ${displayVal}\n`;
+            }
         });
     }
 

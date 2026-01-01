@@ -10,6 +10,14 @@ async function loadBankPayments() {
 
     const branch = document.querySelector('#bank-payments .branch-select')?.value;
 
+    if (!branch) {
+        const tbody = document.getElementById('bankPaymentsBody');
+        if (tbody) tbody.innerHTML = '';
+        const total = document.getElementById('bp-grid-total');
+        if (total) total.textContent = '0.00';
+        return;
+    }
+
     // Default: If no dates at all, set Cheque Date to today automatically for the search
     if (!invFrom && !invTo && !chqFrom && !chqTo) {
         const today = new Date().toISOString().split('T')[0];
@@ -39,7 +47,14 @@ async function loadBankPayments() {
         const data = await response.json();
 
         if (data.success) {
-            renderBankPaymentGrid(data.data);
+            let transactions = data.data;
+
+            // Client-side filtering: Backend currently returns all branches, so we filter here.
+            if (branch) {
+                transactions = transactions.filter(t => (t.branch || '') === branch);
+            }
+
+            renderBankPaymentGrid(transactions);
         } else {
             alert('Failed to load bank payments');
         }
@@ -504,6 +519,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBankPayment();
             }
         }
+    });
+
+    // Add Date Listeners
+    ['bp-inv-from', 'bp-inv-to', 'bp-chq-from', 'bp-chq-to'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', loadBankPayments);
     });
 
     // Auto load current date data on init

@@ -57,6 +57,12 @@ let currentValidBranches = [];
 async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        let user = null;
+        if (userStr) {
+            try { user = JSON.parse(userStr); } catch (e) { console.error(e); }
+        }
+
         const response = await fetch('/api/v1/stores', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -64,18 +70,14 @@ async function loadBranches() {
         if (data.success) {
             const select = document.getElementById('branch');
 
-            // Get Logged In User for Filtering
-            const user = JSON.parse(localStorage.getItem('user')) || {};
-            const userBranch = user.branch;
+            // Filter stores based on user permissions
+            currentValidBranches = data.data;
 
-            // Filter stores
-            currentValidBranches = data.data.filter(store => {
-                const uBranch = String(userBranch || '').trim().toLowerCase();
-                if (!uBranch || uBranch.includes('all branches')) return true;
-
-                const sName = (store.name || '').trim().toLowerCase();
-                return uBranch.includes(sName);
-            });
+            if (user && user.role !== 'admin' && user.branch && Array.isArray(user.branch) && user.branch.length > 0) {
+                currentValidBranches = currentValidBranches.filter(b => user.branch.includes(b._id) || user.branch.includes(b.name));
+            } else if (user && user.role !== 'admin' && user.branch && typeof user.branch === 'string') {
+                currentValidBranches = currentValidBranches.filter(b => b._id === user.branch || b.name === user.branch);
+            }
 
             // Clear and Populate
             select.innerHTML = '';
@@ -96,6 +98,11 @@ async function loadBranches() {
             if (currentValidBranches.length === 1) {
                 select.value = currentValidBranches[0].name;
                 // Trigger loadDepartments explicitly if needed, though main flow calls it
+                // We should trigger change to ensure departments load
+                select.dispatchEvent(new Event('change'));
+            } else if (currentValidBranches.length === 0) {
+                // Handle case where user has no access?
+                select.innerHTML = '<option value="">No Access</option>';
             }
         }
     } catch (e) {
@@ -260,79 +267,7 @@ function updateTotal() {
     document.getElementById('totalAmount').value = total.toFixed(2);
 }
 
-async function saveSale() {
-    const rows = document.querySelectorAll('#salesTableBody tr');
-    if (rows.length === 0) return;
-
-    const date = document.getElementById('date').value;
-    const branch = document.getElementById('branch').value;
-    const mode = document.getElementById('mode').value;
-    const department = document.getElementById('department').value;
-    const cashCounter = document.getElementById('cashCounter').value;
-    const isBank = mode === 'Bank';
-
-    if (!department) { alert('Select Department'); return; }
-
-    const payloadArray = [];
-
-    // Bank Details (Common for all rows in this batch)
-    let bankDetails = {};
-    if (isBank) {
-        bankDetails.bank = document.getElementById('bankSelect').value;
-        bankDetails.deductedAmount = parseFloat(document.getElementById('deductedAmount').value) || 0;
-        bankDetails.isDeduction = document.getElementById('deductionCheck').checked;
-        if (!bankDetails.bank) { alert('Select Bank'); return; }
-    } else {
-        bankDetails = { bank: null, deductedAmount: 0, isDeduction: false };
-    }
-
-    // Build Payload Array
-    rows.forEach(tr => {
-        const invoiceNo = tr.querySelector('.invoice-input').value.trim();
-        const sales = parseFloat(tr.querySelector('.sales-input').value) || 0;
-
-        // Save row if Invoice No is present OR Sales > 0
-        if (invoiceNo && sales > 0) {
-            const item = {
-                date,
-                branch,
-                mode,
-                department,
-                cashCounter,
-                invoiceNo,
-                sales,
-                totalAmount: sales,
-                ...bankDetails
-            };
-            payloadArray.push(item);
-        }
-    });
-
-    if (payloadArray.length === 0) {
-        alert('Please enter at least one valid sale (Invoice No & Amount > 0).');
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/cash-sales', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payloadArray) // Sending Array
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('Saved successfully: ' + (data.count || 1) + ' records.');
-            clearForm();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    } catch (e) { console.error(e); }
-}
+// Duplicate saveSale removed
 
 function clearForm() {
     document.getElementById('salesTableBody').innerHTML = '';
@@ -421,8 +356,16 @@ async function fetchCashSalesList() {
         tbody.innerHTML = '';
 
         if (data.success && data.data) {
-            currentList = data.data; // Store for editing
-            data.data.forEach(item => {
+            let records = data.data;
+
+            // Frontend Security: Filter records to only show allowed branches
+            if (typeof currentValidBranches !== 'undefined' && currentValidBranches.length > 0) {
+                const allowedNames = currentValidBranches.map(b => b.name);
+                records = records.filter(item => allowedNames.includes(item.branch));
+            }
+
+            currentList = records; // Store for editing
+            records.forEach(item => {
                 const tr = document.createElement('tr');
 
                 // 1. Action Column
@@ -629,7 +572,11 @@ function printSale() {
 }
 
 // Updated Save Function
+// Updated Save Function
 async function saveSale() {
+    const saveBtn = document.querySelector('button[onclick="saveSale()"]');
+    if (saveBtn && saveBtn.disabled) return; // Prevent multiple clicks
+
     const rows = document.querySelectorAll('#salesTableBody tr');
     if (rows.length === 0) return;
 
@@ -653,51 +600,63 @@ async function saveSale() {
         bankDetails = { bank: null, deductedAmount: 0, isDeduction: false };
     }
 
-    // Gather Data
+    // Gather Data & Aggregate
+    let totalSales = 0;
+    let accumulatedInvoiceNos = [];
+    let validRowsCount = 0;
+
     rows.forEach(tr => {
         const invoiceInput = tr.querySelector('.invoice-input');
         const invoiceNo = invoiceInput ? invoiceInput.value.trim() : '';
         const sales = parseFloat(tr.querySelector('.sales-input').value) || 0;
 
-        // Validation:
-        // If isBank, we don't need Invoice No. we need sales > 0.
-        // If Cash, we need Invoice No (maybe?) or just sales > 0.
-        // User request "Hide Invoice No Field" suggests it's not used.
         const isValid = isBank ? (sales > 0) : (invoiceNo && sales > 0);
 
         if (isValid) {
-            const item = {
-                date,
-                branch,
-                mode,
-                department,
-                cashCounter: isBank ? 'Bank' : cashCounter, // Default for Bank mode
-                invoiceNo: isBank ? 'Bank Deposit' : invoiceNo,
-                sales,
-                totalAmount: sales,
-                ...bankDetails
-            };
-            payloadArray.push(item);
+            totalSales += sales;
+            if (!isBank) {
+                accumulatedInvoiceNos.push(invoiceNo);
+            }
+            validRowsCount++;
         }
     });
 
-    if (payloadArray.length === 0) {
+    if (validRowsCount === 0 || totalSales <= 0) {
         alert('Please enter at least one valid sale.');
         return;
     }
 
+    // Construct Single Aggregated Item
+    const finalInvoiceNo = isBank ? 'Bank Deposit' : accumulatedInvoiceNos.join(', ');
+
+    const aggregatedItem = {
+        date,
+        branch,
+        mode,
+        department,
+        cashCounter: isBank ? 'Bank' : cashCounter,
+        invoiceNo: finalInvoiceNo,
+        sales: totalSales,
+        totalAmount: totalSales,
+        ...bankDetails
+    };
+
+    payloadArray.push(aggregatedItem);
+
+    // Lock Button
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+
     try {
         const token = localStorage.getItem('token');
+        let success = false;
+        let message = '';
 
         if (editingId) {
-            // Update Mode - Single Item
-            // We take the first valid item from the array (assuming user filtered down to 1)
-            // If they added more rows, we might need to POST those as new and PUT the edited one.
-            // Complex. Simplified: Update the ONE record being edited with the first row data.
-            // Ignore other rows or warn? 
-            // Better: Just take index 0.
+            // Update Mode
             const payload = payloadArray[0];
-
             const response = await fetch(`/api/v1/cash-sales/${editingId}`, {
                 method: 'PUT',
                 headers: {
@@ -707,14 +666,10 @@ async function saveSale() {
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
-            if (data.success) {
-                alert('Updated successfully');
-                clearForm();
-            } else {
-                alert('Error: ' + data.message);
-            }
+            success = data.success;
+            message = success ? 'Updated successfully' : data.message;
         } else {
-            // Create Mode - Array
+            // Create Mode
             const response = await fetch('/api/v1/cash-sales', {
                 method: 'POST',
                 headers: {
@@ -723,16 +678,28 @@ async function saveSale() {
                 },
                 body: JSON.stringify(payloadArray)
             });
-
             const data = await response.json();
-            if (data.success) {
-                alert('Saved successfully: ' + (data.count || 1) + ' records.');
-                clearForm();
-            } else {
-                alert('Error: ' + data.message);
-            }
+            success = data.success;
+            message = success ? ('Saved successfully: ' + (data.count || 1) + ' records.') : data.message;
         }
-    } catch (e) { console.error(e); }
+
+        if (success) {
+            alert(message);
+            clearForm();
+        } else {
+            alert('Error: ' + message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('An error occurred while saving. Please try again.');
+    } finally {
+        // Unlock Button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            // Restore text based on state (editingId is null if cleared, so defaults to Save)
+            saveBtn.innerHTML = editingId ? '<i class="fas fa-save"></i> Update' : '<i class="fas fa-save"></i> Save';
+        }
+    }
 }
 
 // Override clearForm to reset editing state

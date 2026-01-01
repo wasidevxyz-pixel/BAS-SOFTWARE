@@ -158,10 +158,27 @@ let allBanksReference = []; // To store all banks and filter locally
 async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        let user = null;
+        if (userStr) {
+            try { user = JSON.parse(userStr); } catch (e) { console.error('Error parsing user', e); }
+        }
+
         const response = await fetch('/api/v1/stores', { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await response.json();
         if (data.success) {
             allBranches = data.data;
+
+            // Permission Filter
+            // If user is not admin, filter branches
+            if (user && user.role !== 'admin' && user.branch && Array.isArray(user.branch) && user.branch.length > 0) {
+                // user.branch is likely an array of IDs or Names
+                allBranches = allBranches.filter(b => user.branch.includes(b._id) || user.branch.includes(b.name));
+            } else if (user && user.role !== 'admin' && user.branch && typeof user.branch === 'string') {
+                // Handle legacy single branch case
+                allBranches = allBranches.filter(b => b._id === user.branch || b.name === user.branch);
+            }
+
             const selects = document.querySelectorAll('.branch-select');
             selects.forEach(sel => {
                 const currentVal = sel.value;
@@ -172,8 +189,13 @@ async function loadBranches() {
                     opt.textContent = b.name;
                     sel.appendChild(opt);
                 });
+
                 // Default to first if only one available
-                if (allBranches.length === 1) sel.value = allBranches[0].name;
+                // IMPORTANT: If we filtered down to 1 (restricted user), auto-select it.
+                if (allBranches.length === 1) {
+                    sel.value = allBranches[0].name;
+                    sel.dispatchEvent(new Event('change'));
+                }
             });
             // Trigger department load for all scopes
             document.querySelectorAll('.tab-pane').forEach(scope => loadDepartments(scope));

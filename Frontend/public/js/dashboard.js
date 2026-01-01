@@ -12,12 +12,14 @@ function formatCurrency(amount) {
     }).format(amount || 0);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+// Init Logic
+const initDashboard = () => {
+    console.log('Dashboard Initializing...');
+
     // Check auth
     if (window.pageAccess && typeof window.pageAccess.checkAuthentication === 'function') {
         if (!window.pageAccess.checkAuthentication()) return;
     } else {
-        // Fallback or skip if pageAccess not loaded yet (rare)
         console.warn('pageAccess not loaded');
     }
 
@@ -27,9 +29,15 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('userName').textContent = user.name || 'User';
     }
 
-    // Initialize with Month filter
+    // Initialize with Month filter (Force Jan Data)
     setDateFilter('month');
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+    initDashboard();
+}
 
 function setDateFilter(filter) {
     currentDateFilter = filter;
@@ -83,7 +91,46 @@ function applyCustomDateFilter() {
 }
 
 function formatDateForAPI(date) {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+
+
+function updateDashboardHeaders(fromDate, toDate) {
+    // 1. Format Date Text
+    let text = '';
+    const fDate = new Date(fromDate);
+    if (currentDateFilter === 'month') {
+        text = fDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } else if (currentDateFilter === 'today') {
+        text = `Today (${fDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    } else {
+        const tDate = new Date(toDate);
+        text = `${fDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${tDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    // 2. Update Payment Report Subtitle
+    const subtitle = document.getElementById('paymentReportSubtitle');
+    if (subtitle) {
+        subtitle.textContent = text;
+        // Visual feedback
+        subtitle.style.fontWeight = 'bold';
+        subtitle.classList.remove('text-muted');
+        subtitle.classList.add('text-primary');
+    }
+
+    // 3. Update Main Title (Executive Board)
+    const mainTitle = document.querySelector('.dashboard-section-title h3');
+    if (mainTitle) {
+        mainTitle.innerHTML = `<i class="fas fa-chart-pie me-2"></i>Executive Board <span class="fs-6 text-muted ms-2 fw-normal">(${text})</span>`;
+    }
+
+    // 4. Hide conflicting local Payment Period Filter
+    const pf = document.getElementById('paymentPeriodFilter');
+    if (pf && pf.parentElement) pf.parentElement.style.display = 'none';
 }
 
 // Shared State for Dashboard Data
@@ -108,6 +155,7 @@ async function refreshDashboard() {
     globalEnabledStores = [];
 
     // Set Loading Indicators
+    updateDashboardHeaders(currentFromDate, currentToDate); // Update UI Text
     const containerA = document.getElementById('categoryBreakdownContainer');
     const cardsA = document.getElementById('categoryCardsContainer');
     const paymentA = document.getElementById('paymentCategoryBreakdown');
@@ -269,8 +317,15 @@ function processSectionBLogic(sheets, purchases, expenses, branchMap) {
         return branchStats[name];
     };
 
-    // Init Branches
-    globalEnabledStores.forEach(store => getBranchObj(store.name));
+    // Init Branches (Only those in the active map)
+    const activeBranches = new Set(branchMap.values());
+    const storesToInit = activeBranches.size > 0 ?
+        globalEnabledStores.filter(s => activeBranches.has(s.name)) :
+        globalEnabledStores; // Fallback to all if empty (shouldn't happen)
+
+    storesToInit.forEach(store => {
+        getBranchObj(store.name);
+    });
 
     // Sales Data
     sheets.forEach(sheet => {
@@ -294,10 +349,18 @@ function processSectionBLogic(sheets, purchases, expenses, branchMap) {
                     else b.grossSale += (sale + disc);
                 }
             });
+
+            // Aggregate Cost from Warehouse Sales (Plus Button Popup)
+            if (dataObj.warehouseSale && Array.isArray(dataObj.warehouseSale)) {
+                dataObj.warehouseSale.forEach(wItem => {
+                    b.cost += parseFloat(wItem.cost || 0);
+                });
+            }
         }
     });
 
-    // Cost Data (Purchases & Expenses)
+    // Cost Data (Purchases & Expenses) - COMMENTED OUT as per User Request (Cost = Dept Cost Sum from Warehouse)
+    /*
     purchases.forEach(p => {
         const targetBranchName = branchMap.get(normalize(p.branch || 'Head Office'));
         if (targetBranchName) getBranchObj(targetBranchName).cost += (p.grandTotal || 0);
@@ -306,6 +369,7 @@ function processSectionBLogic(sheets, purchases, expenses, branchMap) {
         const targetBranchName = branchMap.get(normalize(e.branch || 'Head Office'));
         if (targetBranchName) getBranchObj(targetBranchName).cost += (e.amount || 0);
     });
+    */
 
     const finalBranchData = Object.values(branchStats).map(b => {
         const profit = b.netSale - b.cost;
