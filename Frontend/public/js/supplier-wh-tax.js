@@ -43,6 +43,7 @@ function setupShortcuts() {
 let branchesMap = {};
 let suppliersMap = {};
 let categoriesMap = {};
+let allCategoriesData = [];
 
 async function loadBranches() {
     try {
@@ -285,18 +286,35 @@ async function loadCategories() {
         });
         const data = await res.json();
         if (data.success) {
-            const select = document.getElementById('categorySelect');
-            const qsSelect = document.getElementById('qsCategory');
+            allCategoriesData = data.data;
             categoriesMap = {};
-            const options = '<option value="">Select Supplier Category</option>' +
-                data.data.map(cat => {
-                    categoriesMap[cat._id] = cat.name;
-                    return `<option value="${cat._id}">${cat.name}</option>`;
-                }).join('');
-            select.innerHTML = options;
-            if (qsSelect) qsSelect.innerHTML = options;
+            data.data.forEach(cat => {
+                categoriesMap[cat._id] = cat.name;
+            });
+            filterCategoriesByBranch();
         }
     } catch (err) { console.error('Error loading categories:', err); }
+}
+
+function filterCategoriesByBranch() {
+    const branchSelect = document.getElementById('branchSelect');
+    const selectedBranchId = branchSelect.value;
+    const categorySelect = document.getElementById('categorySelect');
+    const qsSelect = document.getElementById('qsCategory');
+
+    let filtered = [];
+    if (selectedBranchId && allCategoriesData.length > 0) {
+        filtered = allCategoriesData.filter(cat => {
+            const bId = cat.branch?._id || cat.branch;
+            return !bId || String(bId) === String(selectedBranchId);
+        });
+    }
+
+    const options = '<option value="">Select Supplier Category</option>' +
+        filtered.map(cat => `<option value="${cat._id}">${cat.name}</option>`).join('');
+
+    if (categorySelect) categorySelect.innerHTML = options;
+    if (qsSelect) qsSelect.innerHTML = options;
 }
 
 function setupCalculations() {
@@ -496,6 +514,7 @@ document.getElementById('categorySelect').addEventListener('change', () => {
     loadSavedData();
 });
 document.getElementById('branchSelect').addEventListener('change', loadSavedData);
+document.getElementById('branchSelect').addEventListener('change', filterCategoriesByBranch);
 
 document.getElementById('listSearch').addEventListener('input', function (e) {
     const term = e.target.value.toLowerCase();
