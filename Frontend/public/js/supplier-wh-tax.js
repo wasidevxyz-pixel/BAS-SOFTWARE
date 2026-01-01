@@ -17,15 +17,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Only auto-select if user has exactly one branch (options include placeholder)
     if (branchSelect.options.length === 2) {
         branchSelect.selectedIndex = 1;
+        await loadSavedData();
     } else {
         // If multiple branches (e.g. Admin), default to "Select Branch" (Index 0)
         branchSelect.selectedIndex = 0;
+        // Do NOT load data automatically for admins/multi-branch users
     }
 
     setupCalculations();
     setupAddButton();
     setupShortcuts();
-    await loadSavedData();
 });
 
 function setupShortcuts() {
@@ -577,6 +578,16 @@ async function saveData() {
 
 async function loadSavedData() {
     const branch = document.getElementById('branchSelect').value;
+
+    if (!branch) {
+        loadedRecords = [];
+        renderSavedTable([]);
+        renderGrandSummary([]);
+        const sumCont = document.getElementById('summaryContainer');
+        if (sumCont) sumCont.style.display = 'none';
+        return;
+    }
+
     const date = document.getElementById('filterDate').value;
 
     let url = '/api/v1/supplier-taxes?limit=10000';
