@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"6f666e57f34c438b966b9fb95566cfb7","collectionName":"banktransfers","type":"collection"}

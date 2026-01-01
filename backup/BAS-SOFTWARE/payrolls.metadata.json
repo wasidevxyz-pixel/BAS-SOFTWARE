@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"employee":{"$numberInt":"1"},"monthYear":{"$numberInt":"1"}},"name":"employee_1_monthYear_1","unique":true}],"uuid":"7b64393596bb4af2b514ce21c2c28b3a","collectionName":"payrolls","type":"collection"}

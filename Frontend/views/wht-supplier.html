@@ -13,29 +13,47 @@
     <style>
         .form-container {
             background: #fff;
-            padding: 10px 15px;
-            /* Reduced padding */
+            padding: 5px 15px 10px 15px;
+            /* Reduced top padding to minimize space */
             border-radius: 4px;
             border: 1px solid #ddd;
             margin-bottom: 15px;
+        }
+
+        #supplierForm {
+            margin: 0;
+            padding: 0;
         }
 
         .form-row {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
+            margin-top: 0;
             margin-bottom: 5px;
+            align-items: flex-start;
         }
 
         .form-col {
             flex: 1;
             min-width: 300px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .form-col:first-child {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
         }
 
         .form-group {
             display: flex;
             align-items: center;
             margin-bottom: 8px;
+        }
+
+        .form-group:first-child {
+            margin-top: 0;
         }
 
         .form-group label {
@@ -60,6 +78,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Branch Display Field Styling */
+        #branchDisplay {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        #branchContainer {
+            flex: 1;
         }
 
         /* Responsive Improvements */
@@ -221,16 +251,16 @@
                         <!-- Column 1 -->
                         <div class="form-col">
                             <div class="form-group">
+                                <label>Branch</label>
+                                <div id="branchContainer" style="flex: 1;">
+                                    <select id="branch" class="form-select" required></select>
+                                    <input type="text" id="branchDisplay" class="form-control" readonly
+                                        style="display: none;">
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label>Name</label>
                                 <input type="text" id="name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Branch</label>
-                                <select id="branch" class="form-select" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label>PhoneNo</label>
-                                <input type="text" id="phoneNo" class="form-control">
                             </div>
                             <div class="form-group">
                                 <label>STRN</label>
@@ -257,6 +287,10 @@
                                 <label>Sub Category</label>
                                 <input type="text" id="subCategory" class="form-control">
                             </div>
+                            <div class="form-group">
+                                <label>Address</label>
+                                <input type="text" id="address" class="form-control">
+                            </div>
                         </div>
 
                         <!-- Column 2 -->
@@ -269,6 +303,10 @@
                                     <option value="LHR">LHR</option>
                                     <option value="KHI">KHI</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" class="form-control">
                             </div>
                             <div class="form-group">
                                 <label>MobileNo</label>
@@ -296,12 +334,6 @@
                                 <label>Opening</label>
                                 <input type="number" id="opening" class="form-control" step="0.01" value="0">
                             </div>
-                            <div class="form-group">
-                                <label>Active</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="isActive" checked>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -310,6 +342,10 @@
                         <button type="button" class="btn btn-danger px-4" onclick="clearForm()">Clear</button>
                         <button type="button" class="btn btn-danger px-4" onclick="deleteSupplier()" id="deleteBtn"
                             style="display: none;">Delete</button>
+                        <div class="form-check d-inline-block ms-3" style="vertical-align: middle;">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                            <label class="form-check-label fw-bold" for="isActive">Active</label>
+                        </div>
                     </div>
                 </form>
             </div>

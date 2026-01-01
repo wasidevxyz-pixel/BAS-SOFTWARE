@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"branch":{"$numberInt":"1"},"date":{"$numberInt":"1"}},"name":"branch_1_date_1"}],"uuid":"7d06259f517047298f6e43fc80350d0f","collectionName":"exemptioninvoices","type":"collection"}

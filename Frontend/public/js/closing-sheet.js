@@ -355,7 +355,8 @@ async function loadSheet() {
             let salesAsMainDept = 0;
             if (cashSalesData.length > 0) {
                 const mainSales = cashSalesData.filter(s =>
-                    s.department && (s.department._id === d._id || s.department === d._id)
+                    s.department && (s.department._id === d._id || s.department === d._id) &&
+                    s.mode !== 'Bank' // Exclude bank mode sales
                 );
                 salesAsMainDept = mainSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
             }
@@ -375,7 +376,7 @@ async function loadSheet() {
             let showInList = false;
 
             if (d.combineDepSales) {
-                // Combine Logic: Opening + Sales (Main)
+                // Combine Logic: Opening + Sales (Main) - Bank amounts already excluded from sales
                 netValue = openingAmount + salesAsMainDept;
                 if (netValue >= 0) {
                     calculatedCounterCashTotal += netValue;

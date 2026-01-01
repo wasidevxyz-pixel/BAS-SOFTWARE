@@ -34,15 +34,34 @@ async function loadBranches() {
         const data = await res.json();
         if (data.success) {
             const select = document.getElementById('branch');
-            select.innerHTML = '<option value="">Select Branch</option>';
-            data.data.forEach(store => {
-                const option = document.createElement('option');
-                option.value = store._id;
-                option.textContent = store.name;
-                select.appendChild(option);
-            });
+            const displayInput = document.getElementById('branchDisplay');
+
+            // If user has only one branch, show it as text instead of dropdown
             if (data.data.length === 1) {
-                select.value = data.data[0]._id;
+                // Hide dropdown, show text input
+                select.style.display = 'none';
+                displayInput.style.display = 'block';
+                displayInput.value = data.data[0].name;
+
+                // Set the hidden select value for form submission
+                select.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = data.data[0]._id;
+                option.textContent = data.data[0].name;
+                option.selected = true;
+                select.appendChild(option);
+            } else {
+                // Show dropdown, hide text input
+                select.style.display = 'block';
+                displayInput.style.display = 'none';
+
+                select.innerHTML = '<option value="">Select Branch</option>';
+                data.data.forEach(store => {
+                    const option = document.createElement('option');
+                    option.value = store._id;
+                    option.textContent = store.name;
+                    select.appendChild(option);
+                });
             }
         }
     } catch (err) {
@@ -150,12 +169,13 @@ async function handleFormSubmit(e) {
         branch: document.getElementById('branch').value,
         name: document.getElementById('name').value,
         city: document.getElementById('city').value,
-        phoneNo: document.getElementById('phoneNo').value,
+        email: document.getElementById('email').value,
         mobileNo: document.getElementById('mobileNo').value,
         ntn: document.getElementById('ntn').value,
         strn: document.getElementById('strn').value,
         category: document.getElementById('category').value || undefined,
         subCategory: document.getElementById('subCategory').value,
+        address: document.getElementById('address').value,
         whtType: document.getElementById('whtType').value,
         whtPer: parseFloat(document.getElementById('whtPer').value) || 0,
         advTaxPer: parseFloat(document.getElementById('advTaxPer').value) || 0,
@@ -198,12 +218,13 @@ window.editSupplier = function (id) {
     document.getElementById('branch').value = sup.branch?._id || sup.branch || ''; // Handle populated or not
     document.getElementById('name').value = sup.name || '';
     document.getElementById('city').value = sup.city || 'RWP';
-    document.getElementById('phoneNo').value = sup.phoneNo || '';
+    document.getElementById('email').value = sup.email || '';
     document.getElementById('mobileNo').value = sup.mobileNo || '';
     document.getElementById('ntn').value = sup.ntn || '';
     document.getElementById('strn').value = sup.strn || '';
     document.getElementById('category').value = sup.category?._id || sup.category || '';
     document.getElementById('subCategory').value = sup.subCategory || '';
+    document.getElementById('address').value = sup.address || '';
     document.getElementById('whtType').value = sup.whtType || 'Monthly';
     document.getElementById('whtPer').value = sup.whtPer || 0;
     document.getElementById('advTaxPer').value = sup.advTaxPer || 0;
@@ -250,14 +271,33 @@ window.deleteSupplier = async function (id) {
 }
 
 window.clearForm = function () {
+    // Get the branch info BEFORE resetting
+    const branchSelect = document.getElementById('branch');
+    const branchDisplay = document.getElementById('branchDisplay');
+    const isSingleBranch = branchDisplay && branchDisplay.style.display !== 'none';
+    const savedBranchValue = branchSelect.value;
+    const savedBranchText = branchDisplay ? branchDisplay.value : '';
+
+    // Reset the form
     document.getElementById('supplierForm').reset();
     document.getElementById('supplierId').value = '';
     document.getElementById('saveBtn').textContent = 'Save';
     document.getElementById('deleteBtn').style.display = 'none';
 
-    // Also reset the branch filter to show all suppliers
-    document.getElementById('branch').value = '';
-    handleSearch();
+    // If user has only one branch (text display is visible), restore the branch info
+    if (isSingleBranch) {
+        // Single branch user - restore the branch value and display
+        branchSelect.value = savedBranchValue;
+        branchDisplay.value = savedBranchText;
+        branchDisplay.style.display = 'block';
+        branchSelect.style.display = 'none';
+        // Keep the branch filter active
+        handleSearch();
+    } else {
+        // Multiple branch user - reset the branch filter to show all suppliers
+        branchSelect.value = '';
+        handleSearch();
+    }
 }
 
 function handleSearch() {

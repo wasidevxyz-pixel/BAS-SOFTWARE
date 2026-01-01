@@ -90,11 +90,28 @@ expenseSchema.pre('save', async function () {
   if (!this.isNew || this.expenseNo) return;
 
   try {
-    const count = await this.constructor.countDocuments();
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    this.expenseNo = `EXP-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
+    const prefix = `EXP-${year}${month}-`;
+
+    // Find the last expense number for this month
+    const lastExpense = await this.constructor
+      .findOne({ expenseNo: new RegExp(`^${prefix}`) })
+      .sort({ expenseNo: -1 })
+      .select('expenseNo')
+      .lean();
+
+    let nextNumber = 1;
+    if (lastExpense && lastExpense.expenseNo) {
+      // Extract the number part from the last expense number
+      const lastNumber = parseInt(lastExpense.expenseNo.split('-').pop());
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
+    }
+
+    this.expenseNo = `${prefix}${nextNumber.toString().padStart(4, '0')}`;
   } catch (error) {
     throw error;
   }

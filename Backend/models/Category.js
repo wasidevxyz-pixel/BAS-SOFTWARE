@@ -10,6 +10,10 @@ const CategorySchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Store'
+    },
     categoryType: {
         type: String,
         enum: ['customer', 'supplier', 'item'],
