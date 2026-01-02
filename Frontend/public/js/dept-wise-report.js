@@ -271,8 +271,9 @@ function updateSummary(data) {
 
 function renderReport(data) {
     const table = document.querySelector('.custom-table');
-    // Clear existing tbodies (except the main one if we are replacing it, but here we replace structure)
-    // Note: The HTML has a single tbody id="reportTableBody". We will REMOVE it and append new tbodies.
+    // Hide default main header since we are repeating headers per group
+    const mainThead = table.querySelector('thead');
+    if (mainThead) mainThead.style.display = 'none';
 
     // Find existing tbodies and remove them (to reset)
     const oldTbodies = table.querySelectorAll('tbody');
@@ -307,26 +308,53 @@ function renderReport(data) {
     // Render Groups
     Object.keys(groups).forEach(branchName => {
         const items = groups[branchName];
+
+        // Filter items first to ensure we don't create headers for empty branches
+        const validItems = items.filter(i => {
+            if (i.dept === 'UNKNOWN' && i.net === 0 && i.discount === 0) return false;
+            return true;
+        });
+
+        if (validItems.length === 0) return;
+
         const tbody = document.createElement('tbody');
         tbody.className = 'branch-group';
 
-        // Add rows
-        items.forEach((item, index) => {
+        // 1. Branch Heading Row (Top)
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'branch-header-row';
+        headerRow.innerHTML = `
+            <td colspan="6" class="fw-bold py-2 px-3 text-center" style="background-color: #1565c0 !important; color: white !important;">
+                ${branchName}
+            </td>
+        `;
+        tbody.appendChild(headerRow);
+
+        // 2. Column Header Row (Repeated per branch)
+        const colHeaderRow = document.createElement('tr');
+        colHeaderRow.className = 'text-white';
+        colHeaderRow.style.backgroundColor = '#343a40'; // Dark Grey
+        colHeaderRow.innerHTML = `
+            <th class="py-2 ps-3">Branch</th>
+            <th class="py-2">Department</th>
+            <th class="text-end py-2">Discount</th>
+            <th class="text-end py-2">Disc %</th>
+            <th class="text-end py-2">Net Sale</th>
+            <th class="text-end py-2 pe-3">Daily Average</th>
+        `;
+        tbody.appendChild(colHeaderRow);
+
+        // 3. Data Rows
+        validItems.forEach((item, index) => {
             tDisc += item.discount;
             tNet += item.net;
             tDaily += item.dailyAverage;
 
             const row = document.createElement('tr');
 
-            // Branch Cell: Only show on first row for desktop (rowspan) or handle via CSS
-            // For Mobile "One Card": We want the Branch Name visible. 
-            // We can put Branch Name in the first column of every row, and use CSS to hide duplicates or style the first one as header.
-            // BETTER APPORACH for Mobile Card:
-            // The first row of the tbody acts as the "Header" containing the branch name.
-
             row.innerHTML = `
-                <td data-label="Branch">${item.branch}</td>
-                <td data-label="Department"><span class="badge bg-light text-dark border">${item.dept}</span></td>
+                <td></td> <!-- Empty spacer for Branch Column -->
+                <td data-label="Department"><span class="badge bg-light text-dark border" style="font-size: 0.9em;">${item.dept}</span></td>
                 <td data-label="Discount" class="text-end text-warning-dark" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
                 <td data-label="Disc %" class="text-end"><span class="badge bg-info">${item.discountPer.toFixed(2)}%</span></td>
                 <td data-label="Net Sale" class="text-end fw-bold">${formatCurrency(item.net)}</td>
@@ -335,17 +363,28 @@ function renderReport(data) {
             tbody.appendChild(row);
         });
 
+        // Calculate Branch Totals
+        const bTotalDisc = validItems.reduce((sum, i) => sum + i.discount, 0);
+        const bTotalNet = validItems.reduce((sum, i) => sum + i.net, 0);
+        const bTotalDaily = validItems.reduce((sum, i) => sum + i.dailyAverage, 0);
+
+        const bTotalGross = bTotalNet + bTotalDisc;
+        const bTotalDiscPer = bTotalGross > 0 ? (bTotalDisc / bTotalGross) * 100 : 0;
+
         // Add Branch Total Row
         const branchTotalRow = document.createElement('tr');
         branchTotalRow.className = 'branch-total-row';
+        branchTotalRow.style.borderTop = "2px solid #000";
+        branchTotalRow.style.backgroundColor = "#e8f4f8";
+
+        // Decreased padding via py-1 class
         branchTotalRow.innerHTML = `
-            <td colspan="2" class="text-end fw-bold bg-light">Total ${branchName}:</td>
+            <td colspan="2" class="text-end fw-bold py-1">Total ${branchName}:</td>
             
-            <!-- Mobile Labels for Total Row -->
-            <td data-label="Total Discount" class="text-end fw-bold bg-light">${formatCurrency(items.reduce((sum, i) => sum + i.discount, 0))}</td>
-            <td class="bg-light"></td> <!-- Skip % col -->
-            <td data-label="Total Net Sale" class="text-end fw-bold bg-light text-success">${formatCurrency(items.reduce((sum, i) => sum + i.net, 0))}</td>
-            <td data-label="Total Daily Avg" class="text-end fw-bold bg-light">${formatCurrency(items.reduce((sum, i) => sum + i.dailyAverage, 0))}</td>
+            <td data-label="Total Discount" class="text-end fw-bold text-warning-dark py-1">${formatCurrency(bTotalDisc)}</td>
+            <td data-label="Avg Disc %" class="text-end py-1"><span class="badge bg-secondary">${bTotalDiscPer.toFixed(2)}%</span></td>
+            <td data-label="Total Net Sale" class="text-end fw-bold text-success py-1">${formatCurrency(bTotalNet)}</td>
+            <td data-label="Total Daily Avg" class="text-end fw-bold py-1">${formatCurrency(bTotalDaily)}</td>
         `;
         tbody.appendChild(branchTotalRow);
 

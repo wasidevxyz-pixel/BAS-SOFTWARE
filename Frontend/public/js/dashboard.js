@@ -292,7 +292,7 @@ async function refreshDashboard() {
         }
 
         // Processing and Rendering Section B
-        processSectionBLogic(globalSheets, globalPurchases, globalExpenses, globalBranchMap);
+        processSectionBLogic(globalSheets, globalPurchases, globalExpenses, globalBranchMap, globalDepartmentsMap, cashSales);
 
         // Processing and Rendering Section C
         processAndRenderBranchDeptBreakdown(globalSheets, cashSales, globalBranchMap, globalDepartmentsMap);
@@ -304,7 +304,7 @@ async function refreshDashboard() {
 }
 
 // Extracted Section B logic for cleaner flow
-function processSectionBLogic(sheets, purchases, expenses, branchMap) {
+function processSectionBLogic(sheets, purchases, expenses, branchMap, departmentsMap, cashSales) {
     const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const branchStats = {};
     const getBranchObj = (name) => {
@@ -339,37 +339,47 @@ function processSectionBLogic(sheets, purchases, expenses, branchMap) {
             const dataObj = sheet.closing02.data || sheet.closing02;
             if (!dataObj) return;
 
-            Object.values(dataObj).forEach(val => {
-                if (val && typeof val === 'object' && (val.totalSaleComputer !== undefined || val.netSale !== undefined)) {
+            Object.entries(dataObj).forEach(([deptId, val]) => {
+                if (val && typeof val === 'object') {
+                    // 1. Sales Calculation (Standard)
                     const sale = parseFloat(val.totalSaleComputer || val.grossSale || val.netSale || 0);
                     const disc = parseFloat(val.discountValue || 0);
                     b.netSale += sale;
                     b.discountVal += disc;
+
                     if (val.grossSale) b.grossSale += parseFloat(val.grossSale);
                     else b.grossSale += (sale + disc);
+
+                    // 2. Cost Calculation (From Sales Breakdown - Plus Button)
+                    if (val.salesBreakdown && typeof val.salesBreakdown === 'object') {
+                        Object.values(val.salesBreakdown).forEach(breakdownItem => {
+                            b.cost += parseFloat(breakdownItem.cost || 0);
+                        });
+                    }
                 }
             });
 
-            // Aggregate Cost from Warehouse Sales (Plus Button Popup)
-            if (dataObj.warehouseSale && Array.isArray(dataObj.warehouseSale)) {
-                dataObj.warehouseSale.forEach(wItem => {
-                    b.cost += parseFloat(wItem.cost || 0);
-                });
-            }
+            // Note: Legacy Warehouse Sale popup cost logic removed as per user request to use "Plus button cash Closing_2_Comp_Sale"
         }
     });
 
-    // Cost Data (Purchases & Expenses) - COMMENTED OUT as per User Request (Cost = Dept Cost Sum from Warehouse)
-    /*
-    purchases.forEach(p => {
-        const targetBranchName = branchMap.get(normalize(p.branch || 'Head Office'));
-        if (targetBranchName) getBranchObj(targetBranchName).cost += (p.grandTotal || 0);
-    });
-    expenses.forEach(e => {
-        const targetBranchName = branchMap.get(normalize(e.branch || 'Head Office'));
-        if (targetBranchName) getBranchObj(targetBranchName).cost += (e.amount || 0);
-    });
-    */
+    // Sales Data from Cash Sales API (Optics / Counter Sales)
+    if (cashSales && Array.isArray(cashSales)) {
+        cashSales.forEach(s => {
+            // if (s.mode === 'Bank') return; // User requested to INCLUDE Bank value as well
+
+
+            const targetBranchName = branchMap.get(normalize(s.branch));
+            if (!targetBranchName) return;
+
+            const b = getBranchObj(targetBranchName);
+            const amount = parseFloat(s.totalAmount || 0);
+
+            // Add to totals
+            b.netSale += amount;
+            b.grossSale += amount;
+        });
+    }
 
     const finalBranchData = Object.values(branchStats).map(b => {
         const profit = b.netSale - b.cost;

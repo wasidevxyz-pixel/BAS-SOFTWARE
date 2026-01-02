@@ -292,8 +292,11 @@ exports.getDepartmentDetails = async (req, res) => {
 
         // Fetch all departments
         const Department = require('../models/Department');
+        const mongoose = require('mongoose');
+        const validDeptIds = Array.from(allDeptIds).filter(id => mongoose.isValidObjectId(id));
+
         const departments = await Department.find({
-            _id: { $in: Array.from(allDeptIds) }
+            _id: { $in: validDeptIds }
         }).lean();
 
         // Create a map of department ID to name

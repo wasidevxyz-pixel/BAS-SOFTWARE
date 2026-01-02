@@ -1664,8 +1664,10 @@ async function generateReport(reportType) {
             const csJson = await csResp.json();
             const cashSales = csJson.data || [];
 
-            // User Request: All Cash Counter Sales should be summed into OPTICS department
-            const totalCounterSales = cashSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+            // User Request: All Cash Counter Sales should be summed into OPTICS department, exclude Bank mode
+            const totalCounterSales = cashSales
+                .filter(s => s.mode !== 'Bank')
+                .reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 
             // Pre-calculate Total % Cash Rec (Deduction Sum) for PERCENTAGE CASH Department
             let totalPercentageCashSum = 0;

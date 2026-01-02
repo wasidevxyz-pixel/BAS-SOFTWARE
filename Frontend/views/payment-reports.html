@@ -188,6 +188,12 @@
             width: 19%;
         }
 
+        .data-table thead th {
+            text-align: center;
+            vertical-align: middle;
+            padding: 12px 15px;
+        }
+
         .data-table thead th:nth-child(2) {
             text-align: left;
         }
@@ -214,7 +220,6 @@
         .total-row td {
             background: #f8d7da !important;
             color: #721c24 !important;
-            font-weight: 700;
             font-weight: 700 !important;
             text-align: center !important;
             padding: 15px 10px !important;
@@ -322,6 +327,50 @@
             body {
                 background: white !important;
             }
+        }
+
+        /* Grand Total Section */
+        .grand-total-section {
+            margin-top: 30px;
+            margin-bottom: 50px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .grand-total-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e4c8c;
+            color: white;
+        }
+
+        .grand-total-table td {
+            padding: 20px 15px;
+            vertical-align: middle;
+        }
+
+        .grand-total-label {
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .grand-total-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .grand-total-sublabel {
+            display: block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #b3d7ff !important;
         }
     </style>
 </head>

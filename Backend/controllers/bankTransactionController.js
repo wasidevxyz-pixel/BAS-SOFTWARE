@@ -10,7 +10,12 @@ const Ledger = require('../models/Ledger');
 // @access  Private (accounts access)
 exports.getBankTransactions = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+
+  let limit = parseInt(req.query.limit);
+  if (isNaN(limit)) {
+    limit = 10;
+  }
+
   const skip = (page - 1) * limit;
 
   // Build query
@@ -18,6 +23,14 @@ exports.getBankTransactions = asyncHandler(async (req, res) => {
 
   if (req.query.bankName) {
     query.bankName = req.query.bankName;
+  }
+
+  if (req.query.branch) {
+    query.branch = req.query.branch;
+  }
+
+  if (req.query.department) {
+    query.department = req.query.department;
   }
 
   if (req.query.type) {

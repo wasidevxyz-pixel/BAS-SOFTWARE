@@ -493,7 +493,7 @@ async function searchBankDetails() {
             if (branch) url += `&branch=${branch}`;
         } else {
             // Bank Payment (Bank Transactions) - Exclude bank_transfer entries (those show in Bank To Bank tab)
-            url = `/api/v1/bank-transactions?startDate=${fromDate}&endDate=${toDate}&excludeRefType=bank_transfer`;
+            url = `/api/v1/bank-transactions?startDate=${fromDate}&endDate=${toDate}&excludeRefType=bank_transfer&limit=0`;
             if (branch) url += `&branch=${branch}`;
         }
 
@@ -1090,8 +1090,8 @@ async function searchBankSummary() {
         let dcUrl = `/api/v1/daily-cash?startDate=${fromDate}&endDate=${toDate}&mode=Bank&hasBank=true`;
         if (branch) dcUrl += `&branch=${branch}`;
 
-        // 2. Fetch Bank Transactions (Deposits/Withdrawals)
-        let btUrl = `/api/v1/bank-transactions?startDate=${fromDate}&endDate=${toDate}`;
+        // 2. Fetch Bank Transactions (Deposits/Withdrawals) check
+        let btUrl = `/api/v1/bank-transactions?startDate=${fromDate}&endDate=${toDate}&limit=0`;
         if (branch) btUrl += `&branch=${branch}`;
 
         const [dcResp, btResp] = await Promise.all([

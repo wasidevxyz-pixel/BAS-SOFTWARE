@@ -403,32 +403,38 @@ exports.getSummaryOpeningBalance = asyncHandler(async (req, res) => {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
 
-    console.log('=== BANK SUMMARY OPENING BALANCE ===');
-    console.log('Start Date:', start);
-    console.log('Branch:', branch);
+    // Determine target Bank IDs and Names
+    let targetBankIds = [];
+    let targetBankNames = [];
 
-    let openingBalance = 0;
-
-    // Build branch filter for DailyCash - must have bank assigned (hasBank=true)
-    // Use $lt start date to get all entries BEFORE the start date
-    const dayBefore = new Date(start);
-    dayBefore.setDate(dayBefore.getDate() - 1);
-    dayBefore.setHours(23, 59, 59, 999);
-
-    let dcMatchFilter = {
-        mode: 'Bank',
-        bank: { $exists: true, $ne: null },
-        date: { $lte: dayBefore }
-    };
-    if (branch) {
-        dcMatchFilter.branch = branch;
+    if (bankIds) {
+        targetBankIds = bankIds.split(',');
+    } else if (branch) {
+        // If no specific banks selected but branch is, get all banks for this branch
+        const banks = await Bank.find({ branch }).select('_id bankName');
+        targetBankIds = banks.map(b => b._id.toString());
+        targetBankNames = banks.map(b => b.bankName);
+    } else {
+        // Fallback: If no branch/bank filter (rare for summary), might be hazardous. 
+        // But let's assume filtering by at least branch is standard. 
+        // If strictly required, we'd fetch ALL banks.
     }
 
-    console.log('DailyCash Query:', JSON.stringify(dcMatchFilter));
+    // Populate names if we only had IDs (for BankTransaction/Transfer string matching)
+    if (targetBankIds.length > 0 && targetBankNames.length === 0) {
+        const banks = await Bank.find({ _id: { $in: targetBankIds } }).select('bankName');
+        targetBankNames = banks.map(b => b.bankName);
+    }
 
-    // Get all DailyCash entries and apply same deduction formula as Bank Summary frontend
+    // 1. Daily Cash (Batch Transfers) - BEFORE Start Date
+    const dcMatchFilter = {
+        mode: 'Bank',
+        bank: { $in: targetBankIds },
+        date: { $lt: start }
+    };
+    // Include unverified as per user request (no isVerified: true check)
+
     const dcEntries = await DailyCash.find(dcMatchFilter).lean();
-
     let dcTotal = 0;
     dcEntries.forEach(item => {
         const ratePerc = item.deductedAmount || 0;
@@ -438,19 +444,65 @@ exports.getSummaryOpeningBalance = asyncHandler(async (req, res) => {
         dcTotal += netAmount;
     });
 
-    console.log('DailyCash entries count:', dcEntries.length);
-    console.log('DailyCash net total after deductions:', dcTotal);
-    openingBalance = dcTotal;
+    // 2. Bank Transactions (Withdrawals/Deposits) - BEFORE Start Date
+    // Exclude 'bank_transfer' types as they are handled in step 3
+    const btQuery = {
+        date: { $lt: start },
+        $or: [
+            { bank: { $in: targetBankIds } },
+            { bankName: { $in: targetBankNames } }
+        ],
+        $and: [
+            { refType: { $ne: 'bank_transfer' } },
+            { narration: { $not: /^Bank Transfer/i } } // Legacy check
+        ]
+    };
 
-    // NOTE: Only using DailyCash, same as Bank Summary table display
-    // BankTransactions are NOT included to match the Bank Summary closing balance
+    const btEntries = await BankTransaction.find(btQuery).select('amount type transactionType').lean();
 
-    console.log('TOTAL Opening Balance:', openingBalance);
-    console.log('=====================================');
+    let btTotal = 0;
+    btEntries.forEach(bt => {
+        const type = (bt.transactionType || bt.type || '').toLowerCase();
+        if (type === 'deposit' || type === 'received') {
+            btTotal += bt.amount || 0;
+        } else {
+            // Withdrawal / Paid
+            btTotal -= bt.amount || 0;
+        }
+    });
+
+    // 3. Bank Transfers - BEFORE Start Date
+    // If we are the 'fromBank', it's a withdrawal (-). If 'toBank', it's a deposit (+).
+    // We only care if the OTHER side is NOT in our selected list? 
+    // No, if transfer is From Bank A to Bank B, and both are selected:
+    // Bank A: -100, Bank B: +100. Net change 0. Correct.
+    // If only Bank A selected: -100. Correct.
+
+    const btbFrom = await BankTransfer.aggregate([
+        { $match: { fromBank: { $in: targetBankIds }, date: { $lt: start } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const btbTo = await BankTransfer.aggregate([
+        { $match: { toBank: { $in: targetBankIds }, date: { $lt: start } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const totalFrom = btbFrom[0]?.total || 0;
+    const totalTo = btbTo[0]?.total || 0;
+    const btbTotal = totalTo - totalFrom;
+
+    // Final Aggregation
+    const openingBalance = dcTotal + btTotal + btbTotal;
 
     res.status(200).json({
         success: true,
-        openingBalance: openingBalance
+        openingBalance: openingBalance,
+        debug: {
+            dc: dcTotal,
+            bt: btTotal,
+            btb: btbTotal
+        }
     });
 });
 
