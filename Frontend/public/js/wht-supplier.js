@@ -83,7 +83,12 @@ async function loadCategories() {
             const select = document.getElementById('category');
             select.innerHTML = '<option value="">Select Supplier Category</option>';
 
+            const seenNames = new Set();
             allCategories.forEach(cat => {
+                // Skip if duplicate name
+                if (seenNames.has(cat.name.trim())) return;
+                seenNames.add(cat.name.trim());
+
                 const opt = document.createElement('option');
                 opt.value = cat._id;
                 opt.textContent = cat.name;

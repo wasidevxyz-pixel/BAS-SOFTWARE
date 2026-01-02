@@ -53,6 +53,13 @@ function setDateFilter(filter) {
         case 'today':
             fromDate = new Date(today);
             toDate = new Date(today);
+            console.log('Filter Today:', fromDate);
+            break;
+        case 'yesterday':
+            fromDate = new Date(today);
+            fromDate.setDate(today.getDate() - 1);
+            toDate = new Date(fromDate);
+            console.log('Filter Yesterday:', fromDate);
             break;
         case 'week':
             // Start of week (Monday)
@@ -107,6 +114,8 @@ function updateDashboardHeaders(fromDate, toDate) {
         text = fDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     } else if (currentDateFilter === 'today') {
         text = `Today (${fDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    } else if (currentDateFilter === 'yesterday') {
+        text = `Yesterday (${fDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
     } else {
         const tDate = new Date(toDate);
         text = `${fDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${tDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;

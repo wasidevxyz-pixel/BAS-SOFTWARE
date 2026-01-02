@@ -17,10 +17,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Only auto-select if user has exactly one branch (options include placeholder)
     if (branchSelect.options.length === 2) {
         branchSelect.selectedIndex = 1;
+        filterCategoriesByBranch(); // Ensure categories are filtered for the auto-selected branch
         await loadSavedData();
     } else {
         // If multiple branches (e.g. Admin), default to "Select Branch" (Index 0)
         branchSelect.selectedIndex = 0;
+        filterCategoriesByBranch(); // Initialize with global categories if any
         // Do NOT load data automatically for admins/multi-branch users
     }
 
@@ -138,8 +140,32 @@ function setupSearch() {
                 const s = suppliersMap[id];
 
                 // Category Filtering: If a category is selected, only show suppliers from that category
-                if (selectedCategoryId && String(s.categoryId) !== String(selectedCategoryId)) {
-                    return null;
+                // Category Filtering: If a category is selected, only show suppliers from that category
+                if (selectedCategoryId) {
+                    let isMatch = false;
+                    // 1. Try ID Match
+                    if (s.categoryId && String(s.categoryId) === String(selectedCategoryId)) {
+                        isMatch = true;
+                    }
+                    // 2. Try Name Match (Fallback)
+                    else {
+                        // Get the text of the selected option
+                        // Note: Because we removed duplicate names from dropdown, multiple IDs might map to same name? 
+                        // Actually, we are using the ID of the selected option. 
+                        // But wait, if we only showed unique names, we might have selected an ID that doesn't match this specific supplier's ID 
+                        // but matches the Name which is shared.
+
+                        const catOption = document.querySelector(`#categorySelect option[value="${selectedCategoryId}"]`);
+                        if (catOption && s.categoryName) {
+                            const selectedName = catOption.text.trim().toLowerCase();
+                            const supplierCatName = s.categoryName.trim().toLowerCase();
+                            if (selectedName === supplierCatName) {
+                                isMatch = true;
+                            }
+                        }
+                    }
+
+                    if (!isMatch) return null;
                 }
 
                 // --- Branch Filtering ---
@@ -199,10 +225,19 @@ function setupSearch() {
                     }
                 }
 
+                let categoryToken = '';
+                if (s.categoryName) {
+                    // Get first 3 letters and uppercase
+                    const abbr = s.categoryName.trim().substring(0, 3).toUpperCase();
+                    if (abbr) {
+                        categoryToken = `(${abbr})`;
+                    }
+                }
+
                 return `
                 <div class="search-result-item" onclick="selectSupplier('${id}')">
                     <div class="fw-bold">
-                        ${s.name} <span class="text-muted fw-normal small">${subCatDisplay}</span>
+                        ${s.name} <span class="text-primary small fw-bold">${categoryToken}</span> <span class="text-muted fw-normal small">${subCatDisplay}</span>
                     </div>
                 </div>
             `;
@@ -303,15 +338,30 @@ function filterCategoriesByBranch() {
     const qsSelect = document.getElementById('qsCategory');
 
     let filtered = [];
-    if (selectedBranchId && allCategoriesData.length > 0) {
+    if (allCategoriesData.length > 0) {
         filtered = allCategoriesData.filter(cat => {
             const bId = cat.branch?._id || cat.branch;
+            // If no branch is selected, show only global categories
+            if (!selectedBranchId) return !bId;
+            // If branch is selected, show global + matching
             return !bId || String(bId) === String(selectedBranchId);
         });
     }
 
+    // Remove duplicates by name
+    const uniqueCategories = [];
+    const seenNames = new Set();
+
+    filtered.forEach(cat => {
+        const name = cat.name.trim();
+        if (!seenNames.has(name)) {
+            seenNames.add(name);
+            uniqueCategories.push(cat);
+        }
+    });
+
     const options = '<option value="">Select Supplier Category</option>' +
-        filtered.map(cat => `<option value="${cat._id}">${cat.name}</option>`).join('');
+        uniqueCategories.map(cat => `<option value="${cat._id}">${cat.name}</option>`).join('');
 
     if (categorySelect) categorySelect.innerHTML = options;
     if (qsSelect) qsSelect.innerHTML = options;
@@ -666,10 +716,10 @@ function renderSavedTable(records) {
                     }
                 }
 
-                // Filter by category if selected
-                if (filterCatId && String(entryCatId) !== String(filterCatId)) {
-                    return;
-                }
+                // Filter by category if selected - REMOVED per user request
+                // if (filterCatId && String(entryCatId) !== String(filterCatId)) {
+                //     return;
+                // }
 
                 flatRows.push({
                     parentId: rec._id,
