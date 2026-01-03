@@ -1,12 +1,12 @@
-const Category = require('../models/Category');
+const PartyCategory = require('../models/PartyCategory');
 
 // @desc    Get all customer categories
 // @route   GET /api/v1/customer-categories
 // @access  Private
 exports.getCustomerCategories = async (req, res) => {
     try {
-        const categories = await Category.find({
-            categoryType: 'customer',
+        const categories = await PartyCategory.find({
+            type: 'customer',
             isActive: true
         }).sort('name');
 
@@ -29,9 +29,9 @@ exports.getCustomerCategories = async (req, res) => {
 // @access  Private
 exports.getCustomerCategory = async (req, res) => {
     try {
-        const category = await Category.findOne({
+        const category = await PartyCategory.findOne({
             _id: req.params.id,
-            categoryType: 'customer'
+            type: 'customer'
         });
 
         if (!category) {
@@ -59,11 +59,11 @@ exports.getCustomerCategory = async (req, res) => {
 // @access  Private
 exports.createCustomerCategory = async (req, res) => {
     try {
-        // Force categoryType to 'customer' - user doesn't need to specify
-        req.body.categoryType = 'customer';
+        // Force type to 'customer'
+        req.body.type = 'customer';
         req.body.createdBy = req.user.id;
 
-        const category = await Category.create(req.body);
+        const category = await PartyCategory.create(req.body);
 
         res.status(201).json({
             success: true,
@@ -91,11 +91,11 @@ exports.createCustomerCategory = async (req, res) => {
 // @access  Private
 exports.updateCustomerCategory = async (req, res) => {
     try {
-        // Prevent changing categoryType
-        delete req.body.categoryType;
+        // Prevent changing type
+        delete req.body.type;
 
-        const category = await Category.findOneAndUpdate(
-            { _id: req.params.id, categoryType: 'customer' },
+        const category = await PartyCategory.findOneAndUpdate(
+            { _id: req.params.id, type: 'customer' },
             req.body,
             { new: true, runValidators: true }
         );
@@ -125,9 +125,9 @@ exports.updateCustomerCategory = async (req, res) => {
 // @access  Private
 exports.deleteCustomerCategory = async (req, res) => {
     try {
-        const category = await Category.findOne({
+        const category = await PartyCategory.findOne({
             _id: req.params.id,
-            categoryType: 'customer'
+            type: 'customer'
         });
 
         if (!category) {

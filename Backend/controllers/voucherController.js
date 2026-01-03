@@ -28,6 +28,11 @@ exports.getVouchers = asyncHandler(async (req, res, next) => {
         query.branch = req.query.branch;
     }
 
+    // Filter by Supplier (looks in entries.account)
+    if (req.query.supplier && req.query.supplier !== 'all') {
+        query['entries.account'] = req.query.supplier;
+    }
+
     const total = await Voucher.countDocuments(query);
     const vouchers = await Voucher.find(query)
         .populate('createdBy', 'name')
@@ -135,9 +140,30 @@ exports.deleteVoucher = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getNextVoucherNumber = asyncHandler(async (req, res, next) => {
     const type = req.params.type;
-    const count = await Voucher.countDocuments({ voucherType: type });
     const prefix = type.toUpperCase();
-    const nextNo = `${prefix}-${String(count + 1).padStart(2, '0')}`;
+
+    // Aggregation to find the latest voucher number robustly
+    // We sort by _id descending which generally correlates with insertion time
+    // AND we fallback to voucherNo sorting
+    const lastVoucher = await Voucher.findOne({ voucherType: type })
+        .sort({ _id: -1 })
+        .select('voucherNo');
+
+    let nextNum = 1;
+    if (lastVoucher && lastVoucher.voucherNo) {
+        // Expected format: PRE-XX...
+        // We split by '-' and take the last part
+        const parts = lastVoucher.voucherNo.split('-');
+        const lastPart = parts[parts.length - 1];
+        const num = parseInt(lastPart);
+
+        if (!isNaN(num)) {
+            nextNum = num + 1;
+        }
+    }
+
+    // Generate new number with padding (at least 2 digits, but accommodates more)
+    const nextNo = `${prefix}-${String(nextNum).padStart(2, '0')}`;
 
     res.status(200).json({
         success: true,

@@ -15,8 +15,33 @@
     <!-- Desktop Style -->
     <link href="/css/desktop-style.css" rel="stylesheet">
     <style>
-        /* Mobile Specific Overrides */
-        @media (max-width: 768px) {
+        /* Responsive fixes for narrow screens (even in desktop mode) */
+        @media (max-width: 900px) {
+            body {
+                overflow-x: hidden;
+                padding-left: 0 !important;
+            }
+
+            .desktop-container {
+                padding-left: 0 !important;
+                width: 100% !important;
+                overflow-x: hidden;
+                margin-left: 0 !important;
+            }
+
+            .content-wrapper {
+                padding: 10px !important;
+                width: 100% !important;
+                overflow-x: hidden;
+                margin-left: 0 !important;
+            }
+
+            .form-section {
+                padding: 10px !important;
+                width: 100% !important;
+                overflow-x: hidden;
+            }
+
             .page-header {
                 flex-direction: column;
                 align-items: stretch !important;
@@ -39,13 +64,23 @@
             .form-row {
                 flex-wrap: wrap;
                 gap: 10px;
+                width: 100% !important;
             }
 
             .form-field {
                 min-width: 100% !important;
                 width: 100% !important;
+                max-width: 100% !important;
                 margin-right: 0 !important;
                 margin-bottom: 10px;
+                flex: 1 1 100% !important;
+            }
+
+            .form-field input,
+            .form-field select,
+            .form-field textarea {
+                width: 100% !important;
+                max-width: 100% !important;
             }
 
             .input-group {
@@ -60,6 +95,9 @@
                 padding: 5px;
                 left: 0 !important;
                 width: 100%;
+                position: fixed;
+                bottom: 0;
+                z-index: 1000;
             }
 
             .action-bar button {
@@ -71,6 +109,7 @@
             .search-bar {
                 flex-direction: column;
                 align-items: stretch;
+                width: 100% !important;
             }
 
             .search-bar input,
@@ -78,6 +117,26 @@
                 width: 100% !important;
                 max-width: 100% !important;
                 margin-bottom: 10px;
+            }
+
+            .table-container {
+                width: 100% !important;
+                overflow-x: auto;
+                margin-bottom: 60px;
+                /* Space for fixed action bar */
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+            }
+        }
+
+        /* Additional fix for very narrow viewports (actual mobile width) */
+        @media (max-width: 480px) {
+            .desktop-container {
+                max-width: 100vw !important;
+            }
+
+            .form-section {
+                max-width: 100vw !important;
             }
         }
     </style>
@@ -234,6 +293,9 @@
             <!-- Search Bar -->
             <div class="search-bar">
                 <input type="text" class="search-input" id="searchInput" placeholder="Search parties...">
+                <select class="form-select" id="branchFilter" style="max-width: 200px;">
+                    <option value="">All Branches</option>
+                </select>
                 <select class="form-select" id="partyTypeFilter" style="max-width: 200px;">
                     <option value="">All Types</option>
                     <option value="customer">Customers</option>
@@ -257,6 +319,7 @@
                         <tr>
                             <th>Edit</th>
                             <th>Code</th>
+                            <th>Branch</th>
                             <th>Customer Name</th>
                             <th>Type</th>
                             <th>Phone</th>
@@ -299,8 +362,35 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>
-    <script src="/js/desktop-ui.js?v=7"></script>
-    <script src="/js/parties.js?v=7"></script>
+    <script src="/js/desktop-ui.js?v=101"></script>
+    <script src="/js/parties.js?v=102"></script>
+
+    <!-- Mobile Fix: Remove body padding on narrow windows -->
+    <script>
+        function fixMobilePadding() {
+            // Apply fix when window is narrow (even on desktop)
+            if (window.innerWidth <= 900) {
+                document.body.style.paddingLeft = '0';
+                document.body.style.marginLeft = '0';
+
+                // Also fix containers
+                const containers = document.querySelectorAll('.desktop-container, .content-wrapper, .form-section');
+                containers.forEach(el => {
+                    el.style.paddingLeft = '10px';
+                    el.style.marginLeft = '0';
+                });
+            }
+        }
+
+        // Run on load
+        fixMobilePadding();
+
+        // Run on resize
+        window.addEventListener('resize', fixMobilePadding);
+
+        // Run periodically to override any JS that might add padding
+        setInterval(fixMobilePadding, 100);
+    </script>
 </body>
 
 </html>

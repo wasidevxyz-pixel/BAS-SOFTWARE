@@ -1,12 +1,12 @@
-const Category = require('../models/Category');
+const PartyCategory = require('../models/PartyCategory');
 
 // @desc    Get all supplier categories
 // @route   GET /api/v1/supplier-categories
 // @access  Private
 exports.getSupplierCategories = async (req, res) => {
     try {
-        const categories = await Category.find({
-            categoryType: 'supplier',
+        const categories = await PartyCategory.find({
+            type: 'supplier',
             isActive: true
         }).sort('name');
 
@@ -29,9 +29,9 @@ exports.getSupplierCategories = async (req, res) => {
 // @access  Private
 exports.getSupplierCategory = async (req, res) => {
     try {
-        const category = await Category.findOne({
+        const category = await PartyCategory.findOne({
             _id: req.params.id,
-            categoryType: 'supplier'
+            type: 'supplier'
         });
 
         if (!category) {
@@ -59,11 +59,11 @@ exports.getSupplierCategory = async (req, res) => {
 // @access  Private
 exports.createSupplierCategory = async (req, res) => {
     try {
-        // Force categoryType to 'supplier' - user doesn't need to specify
-        req.body.categoryType = 'supplier';
+        // Force type to 'supplier'
+        req.body.type = 'supplier';
         req.body.createdBy = req.user.id;
 
-        const category = await Category.create(req.body);
+        const category = await PartyCategory.create(req.body);
 
         res.status(201).json({
             success: true,
@@ -91,11 +91,11 @@ exports.createSupplierCategory = async (req, res) => {
 // @access  Private
 exports.updateSupplierCategory = async (req, res) => {
     try {
-        // Prevent changing categoryType
-        delete req.body.categoryType;
+        // Prevent changing type
+        delete req.body.type;
 
-        const category = await Category.findOneAndUpdate(
-            { _id: req.params.id, categoryType: 'supplier' },
+        const category = await PartyCategory.findOneAndUpdate(
+            { _id: req.params.id, type: 'supplier' },
             req.body,
             { new: true, runValidators: true }
         );
@@ -125,9 +125,9 @@ exports.updateSupplierCategory = async (req, res) => {
 // @access  Private
 exports.deleteSupplierCategory = async (req, res) => {
     try {
-        const category = await Category.findOne({
+        const category = await PartyCategory.findOne({
             _id: req.params.id,
-            categoryType: 'supplier'
+            type: 'supplier'
         });
 
         if (!category) {

@@ -65,6 +65,7 @@ function setupEventListeners() {
     if (branchEl) {
         branchEl.addEventListener('change', function () {
             loadExpenseHeads(document.getElementById('payType').value);
+            loadExpenses(); // Reload list for selected branch
         });
     }
 
@@ -289,6 +290,10 @@ async function loadExpenses() {
 
         // Filter by type (expense or receipt) based on selected mode
         queryParams += `&type=${payType}`;
+
+        // Filter by Branch if selected
+        const branchVal = document.getElementById('branch')?.value;
+        if (branchVal) queryParams += `&branch=${encodeURIComponent(branchVal)}`;
 
         const response = await fetch(`/api/v1/expenses${queryParams}`, {
             headers: { 'Authorization': `Bearer ${token}` }

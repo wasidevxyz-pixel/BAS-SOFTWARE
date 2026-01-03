@@ -777,24 +777,53 @@ body {
 
     .desktop-container {
         padding: var(--spacing-sm);
+        padding-left: 0 !important;
+        margin-left: 0 !important;
     }
 
     .form-section {
         padding: var(--spacing-sm);
     }
 
+    /* Force all form fields to full width on mobile */
+    .form-field,
+    .form-field.w-100,
+    .form-field.w-150,
+    .form-field.w-200,
+    .form-field.w-250,
+    .form-field.w-300,
+    .form-field.flex-1,
+    .form-field.flex-2,
+    .form-field.flex-3 {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+
     .action-bar {
         padding: 10px 15px;
         flex-wrap: wrap;
+        left: 0 !important;
     }
 
     .action-bar.with-sidebar {
-        left: 0;
+        left: 0 !important;
     }
 
     .btn {
         padding: 6px 12px;
         font-size: var(--font-sm);
+    }
+
+    /* Ensure body doesn't have left padding for sidebar on mobile */
+    body.sidebar-full,
+    body.sidebar-mini {
+        padding-left: 0 !important;
     }
 }
 

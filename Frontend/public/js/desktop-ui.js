@@ -1012,3 +1012,6 @@ window.DesktopUI = {
     editQuickAddItem,
     deleteQuickAddItem
 };
+
+
+function updateStatistics() { console.log('Legacy updateStatistics suppressed'); }

@@ -59,7 +59,7 @@ const partySchema = new mongoose.Schema({
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category'
+    ref: 'PartyCategory'
   },
   openingBalance: {
     type: Number,

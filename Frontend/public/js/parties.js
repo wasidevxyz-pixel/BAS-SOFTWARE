@@ -20,36 +20,75 @@ document.addEventListener('DOMContentLoaded', function () {
 async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/stores', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const userStr = localStorage.getItem('user');
+        let user = null;
+        if (userStr) {
+            try { user = JSON.parse(userStr); } catch (e) { console.error('Error parsing user', e); }
+        }
 
+        const response = await fetch('/api/v1/stores', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
         if (data.success) {
+            let allBranches = data.data; // Changed to `let` for reassignment
+
+            // Permission Filter
+            // If user is not admin, filter branches
+            if (user && user.role !== 'admin' && user.branch && Array.isArray(user.branch) && user.branch.length > 0) {
+                // user.branch is likely an array of IDs or Names
+                allBranches = allBranches.filter(b => user.branch.includes(b._id) || user.branch.includes(b.name));
+            } else if (user && user.role !== 'admin' && user.branch && typeof user.branch === 'string') {
+                // Handle legacy single branch case
+                allBranches = allBranches.filter(b => b._id === user.branch || b.name === user.branch);
+            }
+
+            // Populate form branch dropdown (assuming 'branch' is the ID for the form's branch select)
             const branchSelect = document.getElementById('branch');
             if (branchSelect) {
-                const user = JSON.parse(localStorage.getItem('user')) || {};
-                const userBranch = user.branch;
+                const currentVal = branchSelect.value;
+                branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                allBranches.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.name;
+                    opt.textContent = b.name;
+                    branchSelect.appendChild(opt);
+                });
+                if (allBranches.length === 1) {
+                    branchSelect.value = allBranches[0].name;
+                    branchSelect.dispatchEvent(new Event('change'));
+                } else if (currentVal) {
+                    branchSelect.value = currentVal;
+                }
+            }
 
-                const validStores = data.data.filter(store => {
-                    const uBranch = String(userBranch || '').trim().toLowerCase();
-                    if (!uBranch || uBranch.includes('all branches')) return true;
-                    return uBranch.includes((store.name || '').trim().toLowerCase());
+            const selects = document.querySelectorAll('.branch-select');
+            selects.forEach(sel => {
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Select Branch</option>'; // Or PWD-1 as default if needed
+                allBranches.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.name;
+                    opt.textContent = b.name;
+                    sel.appendChild(opt);
                 });
 
-                branchSelect.innerHTML = '';
-
-                if (validStores.length > 1) {
-                    branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                // Default to first if only one available
+                // IMPORTANT: If we filtered down to 1 (restricted user), auto-select it.
+                if (allBranches.length === 1) {
+                    sel.value = allBranches[0].name;
+                    sel.dispatchEvent(new Event('change'));
                 }
+            });
 
-                validStores.forEach(store => {
-                    branchSelect.innerHTML += `<option value="${store.name}">${store.name}</option>`;
+            // Also populate branch filter dropdown
+            const branchFilter = document.getElementById('branchFilter');
+            if (branchFilter) {
+                branchFilter.innerHTML = '<option value="">All Branches</option>';
+                allBranches.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.name;
+                    opt.textContent = b.name;
+                    branchFilter.appendChild(opt);
                 });
-
-                if (validStores.length === 1) {
-                    branchSelect.value = validStores[0].name;
-                }
             }
         }
     } catch (error) {
@@ -78,6 +117,7 @@ function initPartiesPage() {
 
     // Event listeners
     document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+    document.getElementById('branchFilter').addEventListener('change', loadParties);
     document.getElementById('partyTypeFilter').addEventListener('change', loadParties);
     document.getElementById('balanceFilter').addEventListener('change', loadParties);
 
@@ -196,13 +236,17 @@ async function loadCategories(partyType = '') {
             // Store currently selected value
             const currentValue = categorySelect.value;
 
-            categorySelect.innerHTML = '<option value="">-- Select Category --</option>';
+            // Build options HTML string
+            let optionsHTML = '<option value="">-- Select Category --</option>';
 
             if (data.data) {
                 data.data.forEach(cat => {
-                    categorySelect.innerHTML += `<option value="${cat._id}">${cat.name}</option>`;
+                    optionsHTML += `<option value="${cat._id}">${cat.name}</option>`;
                 });
             }
+
+            // Set innerHTML once to avoid duplicates
+            categorySelect.innerHTML = optionsHTML;
 
             // Enable the category dropdown
             categorySelect.disabled = false;
@@ -236,12 +280,14 @@ async function loadParties(page = 1, limit = 10) {
 
         const token = localStorage.getItem('token');
         const search = document.getElementById('searchInput').value;
+        const branch = document.getElementById('branchFilter').value;
         const type = document.getElementById('partyTypeFilter').value;
         const balanceFilter = document.getElementById('balanceFilter').value;
 
         // Build query parameters
         let queryParams = `?page=${page}&limit=${limit}`;
         if (search) queryParams += `&search=${search}`;
+        if (branch) queryParams += `&branch=${branch}`;
         if (type) queryParams += `&partyType=${type}`;
         if (balanceFilter === 'positive') queryParams += `&currentBalance[gt]=0`;
         if (balanceFilter === 'negative') queryParams += `&currentBalance[lt]=0`;
@@ -257,6 +303,9 @@ async function loadParties(page = 1, limit = 10) {
             const data = await response.json();
             displayParties(data.data);
             updatePagination(data.pagination);
+
+            // Update sidebar statistics
+            updateStatistics(branch); // Pass current branch filter
         } else {
             throw new Error('Failed to load parties');
         }
@@ -285,6 +334,7 @@ function displayParties(parties) {
                 </button>
             </td>
             <td>${party.code || '-'}</td>
+            <td>${party.branch || '-'}</td>
             <td>${party.name}</td>
             <td><span class="badge badge-${party.partyType === 'customer' ? 'success' : 'info'}">${party.partyType}</span></td>
             <td>${party.phone || '-'}</td>
@@ -484,6 +534,7 @@ function handleSearch() {
 // Reset filters
 function resetFilters() {
     document.getElementById('searchInput').value = '';
+    document.getElementById('branchFilter').value = '';
     document.getElementById('partyTypeFilter').value = '';
     document.getElementById('balanceFilter').value = '';
     loadParties(1, currentLimit);

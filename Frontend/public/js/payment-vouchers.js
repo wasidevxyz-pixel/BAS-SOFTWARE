@@ -133,6 +133,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const branchId = e.target.value;
         await loadCategories(branchId);
     });
+
+    // Branch-wise Supplier Filtering
+    document.getElementById('branchSelect')?.addEventListener('change', async (e) => {
+        const branchName = e.target.options[e.target.selectedIndex].text;
+        await loadSuppliers(branchName);
+    });
 });
 
 async function loadCategories(branchId = '') {
@@ -153,6 +159,37 @@ async function loadCategories(branchId = '') {
                 opt.value = c.name;
                 opt.textContent = c.name;
                 select.appendChild(opt);
+            });
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function loadSuppliers(branchName = '') {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/v1/parties?partyType=supplier&limit=1000', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Filter suppliers by branch if branch is selected
+            let filteredSuppliers = data.data;
+            if (branchName) {
+                filteredSuppliers = data.data.filter(s => s.branch === branchName);
+            }
+
+            suppliers = filteredSuppliers;
+            const selects = ['supplierSelect', 'listSupplierFilter'];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = '<option value="">Select Supplier</option>';
+                filteredSuppliers.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.name;
+                    opt.textContent = s.name;
+                    el.appendChild(opt);
+                });
             });
         }
     } catch (err) { console.error(err); }
@@ -182,25 +219,8 @@ async function loadInitialData() {
             });
         }
 
-        // 2. Load Suppliers
-        const supRes = await fetch('/api/v1/parties?partyType=supplier&limit=1000', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const supData = await supRes.json();
-        if (supData.success) {
-            suppliers = supData.data;
-            const selects = ['supplierSelect', 'listSupplierFilter'];
-            selects.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                suppliers.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.name; // We use name as the account identifier for vouchers
-                    opt.textContent = s.name;
-                    el.appendChild(opt);
-                });
-            });
-        }
+        // 2. Load Suppliers (initially load all, will filter on branch selection)
+        await loadSuppliers();
 
         // 3. Load Customer Categories
         const catRes = await fetch('/api/v1/customer-categories?limit=500', {
@@ -250,8 +270,11 @@ async function generateNextVoucherNo() {
         });
         const data = await res.json();
         if (data.success) {
-            document.getElementById('voucherNo').value = data.data;
-            document.getElementById('catVoucherNo').value = data.data; // They might share same sequence
+            const vInput = document.getElementById('voucherNo');
+            if (vInput) vInput.value = data.data;
+
+            const catInput = document.getElementById('catVoucherNo');
+            if (catInput) catInput.value = data.data;
         }
     } catch (err) {
         console.error(err);
@@ -313,34 +336,83 @@ async function handleCategoryVoucherSave(e) {
 }
 
 async function saveVoucher(payload) {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/vouchers', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) {
-            alert('Voucher Saved Successfully!');
-            resetForm('supplierVoucherForm');
-            resetForm('categoryVoucherForm');
-            await generateNextVoucherNo();
-            await fetchVoucherList();
+    let attempts = 0;
+    const maxAttempts = 3;
 
-            if (confirm('Do you want to print this voucher?')) {
-                printSingle(data.data._id);
+    while (attempts < maxAttempts) {
+        try {
+            attempts++;
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/v1/vouchers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                alert('Voucher Saved Successfully!');
+                await window.resetForm('supplierVoucherForm');
+                await window.resetForm('categoryVoucherForm');
+                await fetchVoucherList();
+
+                if (confirm('Do you want to print this voucher?')) {
+                    printSingle(data.data._id);
+                }
+                return; // Success, exit function
             }
-        } else {
+
+            // Check for duplicate key error (E11000)
+            if (data.message && (data.message.includes('E11000') || data.message.includes('duplicate'))) {
+                console.warn(`Duplicate voucher number ${payload.voucherNo} detected. Retrying with new number (Attempt ${attempts})...`);
+
+                // Generate a fresh number for the current voucher type (CPV or BPV)
+                let newNo = await generateVoucherNumber(payload.voucherType);
+
+                // Guard against stale backend logic returning same number
+                if (newNo === payload.voucherNo) {
+                    const parts = newNo.split('-');
+                    if (parts.length > 1) {
+                        const num = parseInt(parts[parts.length - 1]);
+                        if (!isNaN(num)) {
+                            // Force increment
+                            const prefix = parts[0]; // simplistic assumption, but works for CPV-01
+                            newNo = `${parts.slice(0, -1).join('-')}-${String(num + 1).padStart(2, '0')}`;
+                        }
+                    }
+                }
+
+                if (newNo) {
+                    // Update Payload
+                    payload.voucherNo = newNo;
+
+                    // Update UI to reflect the change (so user knows number changed)
+                    if (document.getElementById('voucherNo')) document.getElementById('voucherNo').value = newNo;
+                    if (document.getElementById('catVoucherNo')) document.getElementById('catVoucherNo').value = newNo;
+
+                    // Continue loop to retry
+                    continue;
+                } else {
+                    alert('Failed to generate a new voucher number. Please try again.');
+                    return;
+                }
+            }
+
+            // Other errors
             alert('Error: ' + data.message);
+            return;
+
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save voucher during network request');
+            return;
         }
-    } catch (err) {
-        console.error(err);
-        alert('Failed to save voucher');
     }
+
+    alert('Failed to save voucher after multiple attempts due to high traffic. Please try again.');
 }
 
 async function fetchVoucherList() {
@@ -348,11 +420,25 @@ async function fetchVoucherList() {
         const token = localStorage.getItem('token');
         const fromDate = document.getElementById('listFromDate')?.value || '';
         const toDate = document.getElementById('listToDate')?.value || '';
-        const branch = document.getElementById('listBranchFilter')?.value || '';
+
+        // Fix: Filter by Branch Name (Text) not ID (Value) because DB stores Name
+        const branchEl = document.getElementById('listBranchFilter');
+        let branch = '';
+        if (branchEl && branchEl.value) {
+            branch = branchEl.options[branchEl.selectedIndex].text;
+        }
+
         const supplier = document.getElementById('listSupplierFilter')?.value || '';
 
         let url = `/api/v1/vouchers?limit=100&sort=-date&startDate=${fromDate}&endDate=${toDate}`;
-        // Note: Backend might not filter by branch/supplier directly in the query, we might need to filter client-side or use a better API
+
+        if (branch) {
+            url += `&branch=${encodeURIComponent(branch)}`;
+        }
+
+        if (supplier) {
+            url += `&supplier=${encodeURIComponent(supplier)}`;
+        }
 
         const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -514,4 +600,24 @@ window.editVoucher = function (id) {
     // For now simplistic filling
     alert('Edit mode activated - showing data as reference.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Helper function to generate a fresh voucher number (CPV/BPV)
+// Explicitly needed for the retry mechanism in saveVoucher
+async function generateVoucherNumber(type) {
+    try {
+        const token = localStorage.getItem('token');
+        // Type should be CPV, BPV, etc.
+        const res = await fetch(`/api/v1/vouchers/next-number/${type}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            return data.data;
+        }
+        return null;
+    } catch (err) {
+        console.error('Error in generateVoucherNumber:', err);
+        return null;
+    }
 }
