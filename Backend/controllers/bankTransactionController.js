@@ -15,6 +15,12 @@ exports.getBankTransactions = asyncHandler(async (req, res) => {
   if (isNaN(limit)) {
     limit = 10;
   }
+  // FIX: If limit is 0, we want ALL documents. Mongoose might treat limit(0) as no limit, but explicit helps.
+  // Also handle skip. If limit is 0 (all), skip should probably be ignored or 0.
+  if (limit === 0) {
+    // Set to a very large number effectively means "All"
+    limit = 10000000;
+  }
 
   const skip = (page - 1) * limit;
 
@@ -61,8 +67,35 @@ exports.getBankTransactions = asyncHandler(async (req, res) => {
     }
   }
 
-  // Cheque Date Range
-  if (req.query.startChqDate || req.query.endChqDate) {
+  // Cheque Date Range OR Effective Date Logic
+  if (req.query.useEffectiveDate === 'true' && (req.query.startChqDate || req.query.endChqDate)) {
+    // Hybrid Filter: Match if (ChequeDate in Range) OR (ChequeDate Missing AND Date in Range)
+    const orConditions = [];
+    const start = req.query.startChqDate ? new Date(req.query.startChqDate) : new Date(0);
+    const end = req.query.endChqDate ? new Date(req.query.endChqDate) : new Date(8640000000000000);
+    end.setHours(23, 59, 59, 999);
+
+    // Condition 1: ChequeDate exists and is in range
+    orConditions.push({
+      chequeDate: { $gte: start, $lte: end }
+    });
+
+    // Condition 2: ChequeDate does NOT exist (null or undefined), and Date is in range
+    orConditions.push({
+      $and: [
+        { $or: [{ chequeDate: null }, { chequeDate: { $exists: false } }] },
+        { date: { $gte: start, $lte: end } }
+      ]
+    });
+
+    query.$or = orConditions;
+
+    // Clear standard date filters to avoid conflicts if they were set above
+    delete query.date;
+    delete query.chequeDate;
+
+  } else if (req.query.startChqDate || req.query.endChqDate) {
+    // Standard strict Cheque Date filter
     query.chequeDate = {};
     if (req.query.startChqDate) query.chequeDate.$gte = new Date(req.query.startChqDate);
     if (req.query.endChqDate) {
@@ -277,7 +310,8 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
       invoiceDate,
       chequeDate,
       branch,
-      department
+      department,
+      bank // Add bank to the initial destructuring
     } = req.body;
 
     // Sanitize ObjectId fields
@@ -292,20 +326,37 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
       narration = remarks;
     }
 
+    // Fix: If bank ID provided (changing bank), resolve new Name/Account
+    let updateFields = {
+      amount,
+      type,
+      narration,
+      partyId,
+      invoiceNo,
+      invoiceDate,
+      chequeDate,
+      branch,
+      department
+    };
+
+    // If changing bank, we must update bankName and bankAccount
+    if (bank) {
+      const bankDoc = await Bank.findById(bank);
+      if (bankDoc) {
+        updateFields.bankName = bankDoc.bankName;
+        updateFields.bankAccount = bankDoc.accountNumber || 'N/A';
+      }
+    }
+
+    // Fix: Ensure 'date' field (used for sorting) matches chequeDate if provided
+    if (chequeDate) {
+      updateFields.date = chequeDate;
+    }
+
     // Update transaction
     const updatedTransaction = await BankTransaction.findByIdAndUpdate(
       req.params.id,
-      {
-        amount,
-        type,
-        narration,
-        partyId,
-        invoiceNo,
-        invoiceDate,
-        chequeDate,
-        branch,
-        department
-      },
+      updateFields,
       { new: true, runValidators: true }
     );
 

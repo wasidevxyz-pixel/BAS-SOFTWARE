@@ -170,7 +170,7 @@ class SidebarNavigation {
                 id: 'bank-mgmt', icon: 'fa-university', label: 'Bank Management', permission: 'bank_mgmt',
                 children: [
                     { label: 'Banks', link: '/banks.html', permission: 'banks' },
-                    { label: 'Bank Management', link: '/bank-management.html', permission: 'bank_management' }
+                    { label: 'Bank Management', link: '/bank-management.html', permission: 'bank_management' },
                 ]
             },
             {

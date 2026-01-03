@@ -547,36 +547,10 @@
                     </div>
                     <div class="filter-group">
                         <label>Banks</label>
-                        <!-- Custom Multi-Select Dropdown -->
-                        <div class="dropdown" id="bd-bank-container">
-                            <button
-                                class="btn btn-sm btn-outline-secondary dropdown-toggle text-start d-flex justify-content-between align-items-center bg-white"
-                                type="button" id="bdBankDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
-                                style="width: 180px; border-color: #dee2e6; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                <span>Select Banks</span>
-                            </button>
-                            <ul class="dropdown-menu p-2 shadow stop-propagation" aria-labelledby="bdBankDropdownBtn"
-                                style="width: 250px; max-height: 400px; overflow-y: auto; z-index: 5000;">
-                                <li>
-                                    <input type="text" class="form-control form-control-sm mb-2" id="bdBankSearch"
-                                        placeholder="Search..." onkeyup="filterBankDropdownItems(this, 'bank-detail')">
-                                </li>
-                                <li>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="checkAllBanks"
-                                            onchange="toggleAllBanks(this, 'bank-detail')">
-                                        <label class="form-check-label fw-bold small" for="checkAllBanks">Select
-                                            All</label>
-                                    </div>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider my-1">
-                                </li>
-                                <div id="bdBankList">
-                                    <!-- Populated by JS -->
-                                </div>
-                            </ul>
-                        </div>
+                        <select id="bd-bank-select" class="form-select form-select-sm bank-select"
+                            style="width: 150px;">
+                            <option value="">All Banks</option>
+                        </select>
                     </div>
                 </div>
 
@@ -758,158 +732,201 @@
                 </div>
             </div>
 
-            <!-- TAB 3: BANK SUMMARY -->
+            <!-- TAB 3: BANK SUMMARY (PROFESSIONAL) -->
             <div class="tab-pane fade h-100" id="bank-summary">
-                <!-- Filters -->
-                <div class="filter-row mb-2">
+                <style>
+                    /* Reuse Pro Styles */
+                    .kpi-card {
+                        color: white !important;
+                        padding: 10px;
+                        border-radius: 6px;
+                        font-weight: bold;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 10px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }
+
+                    .bg-kpi-green {
+                        background: linear-gradient(45deg, #28a745, #218838) !important;
+                    }
+
+                    .bg-kpi-red {
+                        background: linear-gradient(45deg, #dc3545, #c82333) !important;
+                    }
+
+                    .bg-kpi-blue {
+                        background: linear-gradient(45deg, #0d6efd, #0b5ed7) !important;
+                    }
+
+                    .bg-kpi-dark {
+                        background: linear-gradient(45deg, #343a40, #212529) !important;
+                        color: #0f0 !important;
+                    }
+
+                    .row-deposit {
+                        background-color: #d4edda;
+                    }
+
+                    .row-withdrawal {
+                        background-color: #f8d7da;
+                    }
+
+                    .row-transfer {
+                        background-color: #fff3cd;
+                    }
+
+                    /* Print Specific for Tab Content */
+                    @media print {
+                        body * {
+                            visibility: hidden;
+                        }
+
+                        #bank-summary,
+                        #bank-summary * {
+                            visibility: visible;
+                        }
+
+                        #bank-summary {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                        }
+
+                        .no-print {
+                            display: none !important;
+                        }
+
+                        .kpi-card {
+                            background: none !important;
+                            border: 1px solid #000;
+                            color: #000 !important;
+                        }
+
+                        table th {
+                            background-color: #eee !important;
+                            color: #000 !important;
+                        }
+                    }
+                </style>
+
+                <!-- Filter Bar (Pro) -->
+                <div
+                    class="filter-bar border rounded bg-light p-2 mb-3 d-flex flex-wrap gap-2 align-items-end no-print">
                     <div class="filter-group">
-                        <label>From</label>
-                        <input type="date" id="bs-from-date" class="form-control form-control-sm from-date">
+                        <label class="form-label small fw-bold mb-0">From Date</label>
+                        <input type="date" id="pro-from-date" class="form-control form-control-sm">
                     </div>
                     <div class="filter-group">
-                        <label>To</label>
-                        <input type="date" id="bs-to-date" class="form-control form-control-sm to-date">
+                        <label class="form-label small fw-bold mb-0">To Date</label>
+                        <input type="date" id="pro-to-date" class="form-control form-control-sm">
                     </div>
                     <div class="filter-group">
-                        <label>Branch</label>
-                        <select id="bs-branch" class="form-select form-select-sm branch-select"></select>
+                        <label class="form-label small fw-bold mb-0">Branch</label>
+                        <select id="pro-branch" class="form-select form-select-sm" style="width: 150px;"
+                            onchange="loadProBanks()">
+                            <option value="">All Branches</option>
+                        </select>
                     </div>
                     <div class="filter-group">
-                        <label>Department</label>
-                        <select id="bs-dept" class="form-select form-select-sm dept-select"></select>
+                        <label class="form-label small fw-bold mb-0">Bank</label>
+                        <select id="pro-bank-select" class="form-select form-select-sm" style="width: 150px;">
+                            <option value="">All Banks</option>
+                        </select>
+
                     </div>
                     <div class="filter-group">
-                        <label>Banks</label>
-                        <!-- Custom Multi-Select Dropdown for Bank Summary -->
-                        <div class="dropdown" id="bs-bank-container">
-                            <button
-                                class="btn btn-sm btn-outline-secondary dropdown-toggle text-start d-flex justify-content-between align-items-center bg-white"
-                                type="button" id="bsBankDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
-                                style="width: 180px; border-color: #dee2e6; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                <span>Select Banks</span>
-                            </button>
-                            <ul class="dropdown-menu p-2 shadow stop-propagation" aria-labelledby="bsBankDropdownBtn"
-                                style="width: 250px; max-height: 400px; overflow-y: auto; z-index: 5000;">
-                                <li>
-                                    <input type="text" class="form-control form-control-sm mb-2" id="bsBankSearch"
-                                        placeholder="Search..." onkeyup="filterBankDropdownItems(this, 'bank-summary')">
-                                </li>
-                                <li>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="checkAllBanksSummary"
-                                            onchange="toggleAllBanks(this, 'bank-summary')">
-                                        <label class="form-check-label fw-bold small" for="checkAllBanksSummary">Select
-                                            All</label>
-                                    </div>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider my-1">
-                                </li>
-                                <div id="bsBankList">
-                                    <!-- Populated by JS -->
-                                </div>
-                            </ul>
+                        <label class="form-label small fw-bold mb-0">Department</label>
+                        <select id="pro-dept" class="form-select form-select-sm" style="width: 150px;">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="form-label small fw-bold mb-0">Transaction Type</label>
+                        <select id="pro-type" class="form-select form-select-sm" style="width: 150px;">
+                            <option value="All Types">All Types</option>
+                            <option value="Batch Transfer">Batch Transfer (Daily Cash)</option>
+                            <option value="Deposit">Deposit</option>
+                            <option value="Withdrawal">Withdrawal</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="filter-group flex-grow-1">
+                        <label class="form-label small fw-bold mb-0">Global Search</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="pro-search" class="form-control" placeholder="Search..."
+                                onkeyup="filterProTable()">
                         </div>
                     </div>
-                    <div class="filter-group ms-auto">
-                        <label>From</label>
-                        <input type="time" id="bs-from-time" class="form-control form-control-sm" value="12:00">
-                    </div>
                     <div class="filter-group">
-                        <label>To</label>
-                        <input type="time" id="bs-to-time" class="form-control form-control-sm" value="11:59">
+                        <button class="btn btn-primary btn-sm" onclick="fetchProReport()"><i
+                                class="fas fa-sync-alt me-1"></i> Generate</button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.print()"><i
+                                class="fas fa-print me-1"></i> Print</button>
                     </div>
                 </div>
 
-                <!-- Summary Controls -->
-                <div class="d-flex justify-content-end align-items-center mb-2 gap-2">
-                    <button class="btn btn-primary btn-sm" onclick="searchBankSummary()">Search</button>
-                    <button class="btn btn-info btn-sm text-white" onclick="printBankSummary()">Print</button>
-                    <input type="text" id="bs-global-search" class="form-control form-control-sm"
-                        placeholder="Search Summary" onkeyup="filterSummaryGrid()" style="width: 150px;">
-                </div>
-
-                <!-- KPI Boxes -->
+                <!-- KPI Cards (Pro IDs) -->
                 <div class="row g-2 mb-3">
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold">Opening Balance</small>
-                            <div id="bs-opening-balance" class="kpi-card kpi-green">0</div>
+                    <div class="col-md-3">
+                        <div class="kpi-card bg-kpi-green">
+                            <span>Opening Balance</span>
+                            <span id="kpi-opening">0</span>
                         </div>
                     </div>
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold">Deposits</small>
-                            <div id="bs-deposits" class="kpi-card kpi-green">0</div>
+                    <div class="col-md-3">
+                        <div class="kpi-card bg-kpi-blue">
+                            <span>Total Deposits (+)</span>
+                            <span id="kpi-deposit">0</span>
                         </div>
                     </div>
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold">Batch Received</small>
-                            <div id="bs-batch-received" class="kpi-card kpi-green">0</div>
+                    <div class="col-md-3">
+                        <div class="kpi-card bg-kpi-red">
+                            <span>Total Withdrawals (-)</span>
+                            <span id="kpi-withdrawal">0</span>
                         </div>
                     </div>
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold">Withdrawal</small>
-                            <div id="bs-withdrawal" class="kpi-card kpi-green">0</div>
+                    <div class="col-md-3">
+                        <div class="kpi-card bg-kpi-dark">
+                            <span>Closing Balance</span>
+                            <span id="kpi-closing">0</span>
                         </div>
                     </div>
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold text-danger">BTB Withdraw (-)</small>
-                            <div id="bs-btb-withdraw-kpi" class="kpi-card kpi-blue">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md">
-                        <div class="d-flex flex-column">
-                            <small class="fw-bold text-success">BTB Deposit (+)</small>
-                            <div id="bs-btb-deposit-kpi" class="kpi-card kpi-blue">0</div>
-                        </div>
-                    </div>
+                </div>
+
+                <div class="d-none">
+                    <!-- Hidden spacer to consume rest of old structure if needed -->
                     <div class="col-md">
                         <div class="d-flex flex-column">
                             <small class="fw-bold">Closing Balance</small>
-                            <div id="bs-closing-balance" class="kpi-card kpi-dark position-relative">0</div>
+
                         </div>
                     </div>
                 </div>
 
-                <!-- Grid -->
-                <div class="table-responsive" style="height: calc(100% - 150px);">
-                    <table class="table table-bordered table-sm custom-grid">
-                        <thead>
+                <!-- Main Table (Pro Version) -->
+                <div class="table-responsive" style="height: calc(100% - 220px);">
+                    <table class="table table-bordered table-sm table-hover table-custom" id="proTable">
+                        <thead class="table-light sticky-top" style="top: 0; z-index: 5;">
                             <tr>
                                 <th>Date</th>
-                                <th>Batch Transfer Date</th>
-                                <th>Transaction Type</th>
-                                <th>Trans Ref</th>
+                                <th>Effective Date</th>
+                                <th>Bank</th>
+                                <th>Type</th>
+                                <th>Ref / Batch No</th>
                                 <th>Description</th>
-                                <th>BTB Withdraws(-)</th>
-                                <th>BTB Deposit (+)</th>
-                                <th>Withdraws(-)</th>
-                                <th>Batch Transfer</th>
-                                <th>Deposit (+)</th>
-                                <th>Balance</th>
-                                <th>Batch No</th>
+                                <th class="text-end">Debit (Received)</th>
+                                <th class="text-end">Credit (Paid)</th>
+                                <th class="text-end">Balance</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody id="bankSummaryBody">
-                            <!-- More rows will be generated by JS -->
-                            <!-- More rows would be generated by JS -->
+                        <tbody id="proTableBody">
+                            <!-- Data injected here -->
                         </tbody>
-                        <tfoot class="fw-bold">
-                            <tr>
-                                <td colspan="5" class="text-end">Total</td>
-                                <td id="bs-btb-withdraw-total" class="text-end">0</td>
-                                <td id="bs-btb-deposit-total" class="text-end">0</td>
-                                <td id="bs-withdraw-total" class="text-end">0</td>
-                                <td id="bs-batch-transfer-total" class="text-end">0</td>
-                                <td id="bs-deposit-total" class="text-end">0</td>
-                                <td id="bs-final-balance" class="text-end">0</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
 

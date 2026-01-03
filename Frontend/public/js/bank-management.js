@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initial Load - Load Banks FIRST so we can filter departments by them
     await loadAllBanks();
     await loadBranches();
+    await populateBDBank(); // Load grouped banks for Bank Detail tab
     // Set default tab based on URL hash or first tab
     const hash = window.location.hash || '#bank-detail';
     const tabTrigger = document.querySelector(`button[data-bs-target="${hash}"]`);
@@ -290,9 +291,14 @@ async function loadAllBanks() {
 
 function filterBanks(scopeElement) {
     if (!scopeElement) return;
-    // Custom Multi-Select Logic for Bank Detail and Bank Summary Tabs
-    if (scopeElement.id === 'bank-detail' || scopeElement.id === 'bank-summary') {
+    // Custom Multi-Select Logic for Bank Summary Tab only (Bank Detail uses grouped dropdown)
+    if (scopeElement.id === 'bank-summary') {
         populateBankMultiSelect(scopeElement);
+    }
+
+    // Skip Bank Detail tab - it uses grouped dropdown populated by populateBDBank()
+    if (scopeElement.id === 'bank-detail') {
+        return;
     }
 
     // Standard Select Logic for other tabs
@@ -470,8 +476,16 @@ async function searchBankDetails() {
     const toDate = document.getElementById('bd-to-date').value;
     const branch = document.getElementById('bd-branch').value;
     const dept = document.getElementById('bd-dept').value;
-    // Multi-Select: Get all checked values
-    const selectedBanks = Array.from(document.querySelectorAll('#bdBankList .bank-checkbox:checked')).map(cb => cb.value);
+    // Get selected bank group and extract IDs from data-ids attribute
+    let selectedBanks = [];
+    const bankSelect = document.getElementById('bd-bank-select');
+    if (bankSelect && bankSelect.value) {
+        const selectedOpt = bankSelect.options[bankSelect.selectedIndex];
+        if (selectedOpt && selectedOpt.dataset.ids) {
+            // Grouped bank selected (Easypaisa or Branch Bank)
+            selectedBanks = selectedOpt.dataset.ids.split(',');
+        }
+    }
 
     // const bank = document.getElementById('bd-bank').value; // OLD SINGLE SELECT
 
@@ -898,7 +912,7 @@ async function calculatePendingChqAmount(branch) {
         const endDate = new Date(bankDate);
         endDate.setHours(23, 59, 59, 999);
 
-        const response = await fetch(`/api/v1/bank-transactions?endDate=${endDate.toISOString()}&branch=${branch}&type=withdrawal&excludeRefType=bank_transfer`, {
+        const response = await fetch(`/api/v1/bank-transactions?endDate=${endDate.toISOString()}&branch=${branch}&type=withdrawal&excludeRefType=bank_transfer&limit=0`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -915,6 +929,12 @@ async function calculatePendingChqAmount(branch) {
                     if (desc.includes('bank transfer') || desc.startsWith('transfer from') || desc.startsWith('transfer to')) {
                         return false;
                     }
+                    // Exclude specific banks as per user request
+                    const bankName = (t.bankName || t.bank || '').toUpperCase();
+                    if (bankName.includes('EASYPAISA (MED)') || bankName.includes('EASYPAISA (GRO)')) {
+                        return false;
+                    }
+
                     return true;
                 })
                 .reduce((sum, t) => sum + (t.amount || 0), 0);
@@ -1059,6 +1079,7 @@ async function searchBankSummary() {
     const toDate = document.getElementById('bs-to-date').value;
     const branch = document.getElementById('bs-branch').value;
     const dept = document.getElementById('bs-dept').value;
+    const typeFilter = document.getElementById('bs-type').value; // Get Type Filter
 
     // Multi-Select: Get all checked values
     const selectedBanks = Array.from(document.querySelectorAll('#bsBankList .bank-checkbox:checked')).map(cb => cb.value);
@@ -1091,7 +1112,11 @@ async function searchBankSummary() {
         if (branch) dcUrl += `&branch=${branch}`;
 
         // 2. Fetch Bank Transactions (Deposits/Withdrawals) check
-        let btUrl = `/api/v1/bank-transactions?startDate=${fromDate}&endDate=${toDate}&limit=0`;
+        // Use filtered date query if available, but for now stick to main date range
+        // IMPORTANT: We use Date range for query, but prefer ChequeDate for display.
+        // To catch all possible effective dates, we might need a wider query or specific cheque parameters.
+        // Using startChqDate/endChqDate ensures we get items effectively in this range.
+        let btUrl = `/api/v1/bank-transactions?startChqDate=${fromDate}&endChqDate=${toDate}&limit=0&useEffectiveDate=true`;
         if (branch) btUrl += `&branch=${branch}`;
 
         const [dcResp, btResp] = await Promise.all([
@@ -1106,32 +1131,30 @@ async function searchBankSummary() {
             let combinedData = [];
 
             // Process Daily Cash (Batch Transfers)
-            dcData.data.forEach(item => {
-                // Filtering
-                if (dept && item.department && (item.department._id !== dept && item.department !== dept)) return;
-                const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
-                if (selectedBanks.length > 0 && !selectedBanks.includes(itemBankId)) return;
+            // Filter: Only process if type is 'All' or 'Batch Transfer'
+            if (typeFilter === 'all' || typeFilter === 'Batch Transfer') {
+                dcData.data.forEach(item => {
+                    // Filtering
+                    if (dept && item.department && (item.department._id !== dept && item.department !== dept)) return;
+                    const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
+                    if (selectedBanks.length > 0 && !selectedBanks.includes(itemBankId)) return;
 
-                const ratePerc = item.deductedAmount || 0;
-                const grossBase = (item.totalAmount || 0) + ratePerc;
-                const deduction = (grossBase * ratePerc) / 100;
-                const netAmount = Math.round(grossBase - deduction);
-
-                combinedData.push({
-                    date: item.date,
-                    batchTransferDate: item.date, // Use same for now or check if there's a specific field
-                    type: 'Batch Transfer',
-                    ref: item.batchNo || '-',
-                    description: item.remarks || 'Daily Cash Deposit',
-                    btbWithdraw: 0,
-                    btbDeposit: 0,
-                    withdraw: 0,
-                    batchTransfer: netAmount,
-                    deposit: 0,
-                    batchNo: item.batchNo || '-',
-                    sortDate: new Date(item.date).getTime()
+                    combinedData.push({
+                        date: item.date,
+                        batchTransferDate: item.date,
+                        type: 'Batch Transfer',
+                        ref: item.batchNo || '-',
+                        description: `Batch Transfer - ${item.branch ? (item.branch.name || item.branch) : ''}`,
+                        btbWithdraw: 0,
+                        btbDeposit: 0,
+                        withdraw: 0,
+                        batchTransfer: item.totalAmount || 0,
+                        deposit: 0,
+                        batchNo: item.batchNo || '-',
+                        sortDate: new Date(item.date).getTime()
+                    });
                 });
-            });
+            }
 
             // Process Bank Transactions
             btData.data.forEach(item => {
@@ -1140,14 +1163,18 @@ async function searchBankSummary() {
                 const itemBankId = (item.bank && item.bank._id) ? item.bank._id : item.bank;
 
                 if (selectedBanks.length > 0) {
-                    // Match by ID or by Name (BankTransaction model sometimes has bankName but not bank object)
                     const selectedBankNames = allBanksReference
                         .filter(b => selectedBanks.includes(b._id))
                         .map(b => b.bankName);
 
                     const itemBankName = item.bankName || (item.bank && item.bank.bankName) || item.bank;
 
-                    if (!selectedBanks.includes(itemBankId) && !selectedBankNames.includes(itemBankName)) return;
+                    // Fix: Check ID OR Name (Case Insensitive if needed, but strict here)
+                    // If ID matches OR Name matches, we include it.
+                    const idMatch = selectedBanks.includes(itemBankId);
+                    const nameMatch = selectedBankNames.includes(itemBankName);
+
+                    if (!idMatch && !nameMatch) return;
                 }
 
                 const rawType = (item.transactionType || item.type || '').toLowerCase();
@@ -1155,10 +1182,16 @@ async function searchBankSummary() {
                 const narration = (item.narration || item.remarks || '').toLowerCase();
                 const isBTB = item.refType === 'bank_transfer' || narration.includes('bank transfer');
 
+                // Determine Type String
+                let typeStr = isBTB ? 'Bank Transfer' : (isDeposit ? 'Deposit' : 'Withdrawal');
+
+                // Apply Type Filter
+                if (typeFilter !== 'all' && typeFilter !== typeStr) return;
+
                 combinedData.push({
-                    date: item.date,
+                    date: item.chequeDate || item.date,
                     batchTransferDate: '-',
-                    type: isBTB ? 'Bank Transfer' : (isDeposit ? 'Deposit' : 'Withdrawal'),
+                    type: typeStr,
                     ref: item.invoiceNo || '-',
                     description: item.narration || item.remarks || '-',
                     btbWithdraw: (isBTB && !isDeposit) ? (item.amount || 0) : 0,
@@ -1167,7 +1200,7 @@ async function searchBankSummary() {
                     batchTransfer: 0,
                     deposit: (!isBTB && isDeposit) ? (item.amount || 0) : 0,
                     batchNo: '-',
-                    sortDate: new Date(item.date).getTime()
+                    sortDate: new Date(item.chequeDate || item.date).getTime()
                 });
             });
 
@@ -1521,3 +1554,424 @@ function printBankLedger() {
 }
 
 window.printBankLedger = printBankLedger;
+
+// Filter Bank Summary Grid based on single global search and column dropdown
+function filterSummaryGrid() {
+    const input = document.getElementById('bs-global-search');
+    const colSelect = document.getElementById('bs-search-col');
+    const filter = input ? input.value.toLowerCase() : '';
+    const colIndex = colSelect ? colSelect.value : 'all';
+
+    const tbody = document.getElementById('bankSummaryBody');
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        // Skip filtering the "Opening Balance" row
+        if (rows[i].classList.contains('table-secondary') || rows[i].cells[0].innerText.includes('Opening Balance')) {
+            continue;
+        }
+
+        let textContent = '';
+        if (colIndex === 'all') {
+            textContent = rows[i].textContent.toLowerCase();
+        } else {
+            // Target specific cell
+            const cell = rows[i].getElementsByTagName('td')[parseInt(colIndex)];
+            if (cell) {
+                textContent = cell.textContent.toLowerCase();
+            }
+        }
+
+        if (textContent.includes(filter)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+window.filterSummaryGrid = filterSummaryGrid;
+
+
+// --- Tab 3: Bank Summary (Professional) Logic ---
+
+// Variable to store filtered banks for Pro View
+let allBanksPro = [];
+
+async function loadProBanks() {
+    try {
+        const branchSelect = document.getElementById('pro-branch');
+        const branchingVal = branchSelect ? branchSelect.value : '';
+        const token = localStorage.getItem('token');
+
+        let url = '/api/v1/banks';
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+
+        if (data.success) {
+            allBanksPro = data.data;
+            renderProBankList(branchingVal);
+
+            const branchBanks = allBanksPro.filter(b => {
+                if (!branchingVal) return true;
+                if (b.branch && typeof b.branch === 'object') return b.branch.name === branchingVal;
+                return b.branch === branchingVal;
+            });
+
+            const uniqueDeptIds = new Set();
+            branchBanks.forEach(b => {
+                if (b.department) {
+                    // Safe string conversion for ObjectId or String
+                    const idStr = (typeof b.department === 'object' && b.department._id) ? String(b.department._id) : String(b.department);
+                    uniqueDeptIds.add(idStr);
+                }
+            });
+
+            // Now populate departments filtering by these IDs
+            populateProDepartments(Array.from(uniqueDeptIds));
+        }
+    } catch (e) { console.error('Error loading pro banks', e); }
+}
+
+function renderProBankList(branchName) {
+    const select = document.getElementById('pro-bank-select');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">All Banks</option>';
+
+    // Filter
+    const filtered = allBanksPro.filter(b => {
+        if (!branchName) return true;
+        if (b.branch && typeof b.branch === 'object') return b.branch.name === branchName;
+        return b.branch === branchName;
+    });
+
+    const epIds = [];
+    const bbIds = [];
+
+    filtered.forEach(b => {
+        const name = (b.bankName || '').toUpperCase();
+        if (name.includes('EASYPAISA')) {
+            epIds.push(b._id);
+        } else {
+            bbIds.push(b._id);
+        }
+    });
+
+    if (epIds.length > 0) {
+        const opt = document.createElement('option');
+        opt.value = 'GROUP_EP';
+        opt.textContent = 'Easypaisa';
+        opt.dataset.ids = epIds.join(',');
+        select.appendChild(opt);
+    }
+
+    if (bbIds.length > 0) {
+        const opt = document.createElement('option');
+        opt.value = 'GROUP_BB';
+        opt.textContent = 'Branch Bank';
+        opt.dataset.ids = bbIds.join(',');
+        select.appendChild(opt);
+    }
+}
+
+// Populate Bank Detail Bank Dropdown with Grouped Banks
+async function populateBDBank() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/v1/banks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+
+        if (data.success) {
+            const select = document.getElementById('bd-bank-select');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">All Banks</option>';
+
+            const epIds = [];
+            const bbIds = [];
+
+            data.data.forEach(b => {
+                const name = (b.bankName || '').toUpperCase();
+                if (name.includes('EASYPAISA')) {
+                    epIds.push(b._id);
+                } else {
+                    bbIds.push(b._id);
+                }
+            });
+
+            if (epIds.length > 0) {
+                const opt = document.createElement('option');
+                opt.value = 'GROUP_EP';
+                opt.textContent = 'Easypaisa';
+                opt.dataset.ids = epIds.join(',');
+                select.appendChild(opt);
+            }
+
+            if (bbIds.length > 0) {
+                const opt = document.createElement('option');
+                opt.value = 'GROUP_BB';
+                opt.textContent = 'Branch Bank';
+                opt.dataset.ids = bbIds.join(',');
+                select.appendChild(opt);
+            }
+        }
+    } catch (e) {
+        console.error('Error loading BD banks', e);
+    }
+}
+
+
+// Make functions globally accessible
+window.loadProBanks = loadProBanks;
+window.toggleAllBanksPro = function (source) {
+    const checkboxes = document.querySelectorAll('.bank-checkbox-pro');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateProBankButtonLabel();
+}
+window.updateProBankButtonLabel = updateProBankButtonLabel; // Assign function
+
+function updateProBankButtonLabel() {
+    const checked = document.querySelectorAll('.bank-checkbox-pro:checked');
+    const total = document.querySelectorAll('.bank-checkbox-pro');
+    const btn = document.getElementById('bankDropdownBtn');
+
+    if (!btn) return;
+
+    if (checked.length === 0) {
+        btn.innerText = 'Select Banks (All)';
+    } else if (checked.length === total.length && total.length > 0) {
+        btn.innerText = 'All Banks';
+    } else {
+        btn.innerText = `${checked.length} Selected`;
+    }
+}
+
+// Pro Report Fetcher
+window.fetchProReport = async function () {
+    const fromDate = document.getElementById('pro-from-date').value;
+    const toDate = document.getElementById('pro-to-date').value;
+    const branch = document.getElementById('pro-branch').value;
+    const dept = document.getElementById('pro-dept').value;
+    const type = document.getElementById('pro-type').value;
+
+    // Logic to collect IDs from Select Dropdown
+    let selectedBankIds = [];
+    const bankSelect = document.getElementById('pro-bank-select');
+    if (bankSelect && bankSelect.value) {
+        // If a group is selected, get IDs from dataset
+        const selectedOpt = bankSelect.options[bankSelect.selectedIndex];
+        if (selectedOpt && selectedOpt.dataset.ids) {
+            selectedBankIds = selectedOpt.dataset.ids.split(',');
+        }
+    }
+
+    if (!fromDate || !toDate) {
+        alert('Please select a date range');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        let url = `/api/v1/reports/bank-ledger/pro-summary?startDate=${fromDate}&endDate=${toDate}`;
+        if (branch) url += `&branch=${encodeURIComponent(branch)}`;
+        if (selectedBankIds.length > 0) url += `&bankIds=${selectedBankIds.join(',')}`;
+        if (dept) url += `&department=${dept}`;
+        if (type) url += `&type=${encodeURIComponent(type)}`;
+
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            renderProKPIs(data.data);
+            renderProTable(data.data.transactions, data.data.openingBalance);
+            // Grouped summary removed
+        } else {
+            alert(data.message || 'Error fetching report');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error fetching report');
+    }
+}
+
+function renderProKPIs(data) {
+    const totalDeposit = data.transactions.reduce((sum, t) => sum + (t.deposit || 0), 0);
+    const totalWithdrawal = data.transactions.reduce((sum, t) => sum + (t.withdrawal || 0), 0);
+
+    const kpiOpen = document.getElementById('kpi-opening');
+    if (kpiOpen) kpiOpen.innerText = formatCurrencyPro(data.openingBalance);
+
+    const kpiDep = document.getElementById('kpi-deposit');
+    if (kpiDep) kpiDep.innerText = formatCurrencyPro(totalDeposit);
+
+    const kpiWith = document.getElementById('kpi-withdrawal');
+    if (kpiWith) kpiWith.innerText = formatCurrencyPro(totalWithdrawal);
+
+    const kpiClose = document.getElementById('kpi-closing');
+    if (kpiClose) kpiClose.innerText = formatCurrencyPro(data.closingBalance);
+}
+
+function renderProTable(transactions, openingBalance) {
+    const tbody = document.getElementById('proTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    // Add Opening Balance Row
+    const openRow = document.createElement('tr');
+    openRow.classList.add('table-light', 'fw-bold');
+    openRow.innerHTML = `
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>Opening Balance</td>
+        <td>-</td>
+        <td>Opening Balance Brought Forward</td>
+        <td class="text-end">-</td>
+        <td class="text-end">-</td>
+        <td class="text-end">${formatCurrencyPro(openingBalance)}</td>
+        <td>-</td>
+    `;
+    tbody.appendChild(openRow);
+
+    transactions.forEach(t => {
+        const tr = document.createElement('tr');
+
+        // Color Coding
+        if (t.type === 'Deposit') tr.classList.add('row-deposit');
+        else if (t.type === 'Withdrawal') tr.classList.add('row-withdrawal');
+        else if (t.type === 'Bank Transfer') tr.classList.add('row-transfer');
+        else if (t.type === 'Batch Transfer') tr.classList.add('row-deposit');
+
+        tr.innerHTML = `
+            <td>${formatDatePro(t.date)}</td>
+            <td>${formatDatePro(t.effectiveDate)}</td>
+            <td>${t.bankName || '-'}</td>
+            <td>${t.type}</td>
+            <td>${t.ref}</td>
+            <td>${t.description}</td>
+            <td class="text-end text-success fw-bold">${t.deposit ? formatCurrencyPro(t.deposit) : '-'}</td>
+            <td class="text-end text-danger fw-bold">${t.withdrawal ? formatCurrencyPro(t.withdrawal) : '-'}</td>
+            <td class="text-end fw-bold">${formatCurrencyPro(t.balance)}</td>
+            <td><span class="badge ${t.status === 'Verified' ? 'bg-success' : 'bg-warning text-dark'}">${t.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.filterProTable = function () {
+    const input = document.getElementById('pro-search');
+    const filter = input.value.toLowerCase();
+    const rows = document.getElementById('proTableBody').getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        // Always show Opening Balance Row
+        if (rows[i].cells[3] && rows[i].cells[3].innerText === 'Opening Balance') {
+            rows[i].style.display = "";
+            continue;
+        }
+
+        const text = rows[i].textContent.toLowerCase();
+        if (text.includes(filter)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
+// Helpers
+function formatCurrencyPro(amount) {
+    if (amount === undefined || amount === null) return '0';
+    return new Intl.NumberFormat('en-US').format(amount);
+}
+function formatDatePro(dateStr) {
+    if (!dateStr) return '-';
+    // Stick to basic string manipulation for ISO dates or use utility
+    return new Date(dateStr).toLocaleDateString('en-GB');
+}
+
+// Initializer for Pro Tab (called when Tab is shown or page loaded if this is active tab)
+function initProSummary() {
+    // Populate Pro View specific dropdowns
+    // Branches - reuse existing logic but fill #pro-branch
+    populateProBranches();
+
+    // Departments
+    populateProDepartments();
+
+    // Banks
+    loadProBanks();
+
+    // Dates
+    const todayT = new Date();
+
+    const f = document.getElementById('pro-from-date');
+    const t = document.getElementById('pro-to-date');
+    if (f && !f.value) f.valueAsDate = todayT;
+    if (t && !t.value) t.valueAsDate = todayT;
+}
+
+async function populateProBranches() {
+    try {
+        const token = localStorage.getItem('token');
+        // Fetch Stores (Branches)
+        const res = await fetch('/api/v1/stores', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.success) {
+            const select = document.getElementById('pro-branch');
+            if (!select) return;
+            select.innerHTML = '<option value="">All Branches</option>';
+            data.data.forEach(store => {
+                const opt = document.createElement('option');
+                opt.value = store.name;
+                opt.textContent = store.name; // Use Name
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function populateProDepartments(allowedDeptIds = null) {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/v1/departments', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.success) {
+            const select = document.getElementById('pro-dept');
+            if (!select) return;
+            select.innerHTML = '<option value="">All Departments</option>';
+            data.data.forEach(d => {
+                let shouldShow = true;
+
+                if (allowedDeptIds !== null && Array.isArray(allowedDeptIds)) {
+                    if (!allowedDeptIds.includes(d._id)) {
+                        shouldShow = false;
+                    }
+                }
+
+                if (shouldShow) {
+                    const opt = document.createElement('option');
+                    opt.value = d._id;
+                    opt.textContent = d.name;
+                    select.appendChild(opt);
+                }
+            });
+        }
+    } catch (e) { console.error(e); }
+}
+
+// Wire up Tab Shown event to Init (Add to DOMContentLoaded or Global)
+document.addEventListener('DOMContentLoaded', () => {
+    const tabEl = document.querySelector('button[data-bs-target="#bank-summary"]');
+    if (tabEl) {
+        tabEl.addEventListener('shown.bs.tab', function (event) {
+            initProSummary();
+        });
+    }
+    // Also if it's the default active tab
+    if (document.querySelector('#bank-summary').classList.contains('active')) {
+        initProSummary();
+    }
+});

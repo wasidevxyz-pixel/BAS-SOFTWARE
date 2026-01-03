@@ -2,6 +2,7 @@
 // --- Tab 4: Bank Payments Functions ---
 
 // Load Bank Payments into Grid
+// Load Bank Payments into Grid
 async function loadBankPayments() {
     let invFrom = document.getElementById('bp-inv-from').value;
     let invTo = document.getElementById('bp-inv-to').value;
@@ -381,35 +382,78 @@ async function editBankPayment(id) {
                 document.getElementById('bp-cheque-date').value = new Date(data.date).toISOString().split('T')[0];
             }
 
-            // Set Dropdowns 
+            // 1. Resolve Bank First (Source of Truth)
+            // Fix: Filter by data.branch to avoid picking the same Bank Name from a different branch
+            let bankRef = null;
+            if (window.allBanksReference) {
+                // Try finding by ID
+                if (data.bank) {
+                    const id = data.bank._id || data.bank;
+                    bankRef = window.allBanksReference.find(b => b._id === id);
+                }
+
+                // Fallback: Try finding by Name, BUT strictly within the current branch if possible
+                if (!bankRef && data.bankName && data.branch) {
+                    bankRef = window.allBanksReference.find(b => {
+                        const bBranch = (typeof b.branch === 'object') ? b.branch.name : b.branch;
+                        return b.bankName === data.bankName && bBranch === data.branch;
+                    });
+                }
+
+                // Last Resort: Just Name (if branch somehow missing or mismatch)
+                if (!bankRef && data.bankName) {
+                    bankRef = window.allBanksReference.find(b => b.bankName === data.bankName);
+                }
+            }
+
+            // Derive IDs
+            const bankId = bankRef ? bankRef._id : (data.bank ? (data.bank._id || data.bank) : null);
+
             const scope = document.getElementById('bank-payments');
-            if (data.branch) {
-                document.getElementById('bp-branch').value = data.branch;
-                // Wait for departments to load based on branch
+
+            // 2. Set Branch
+            // Prioritize Bank's branch if known (to ensure bank shows up), otherwise use transaction data
+            let branchName = data.branch;
+            if (bankRef && bankRef.branch) {
+                branchName = (typeof bankRef.branch === 'object') ? bankRef.branch.name : bankRef.branch;
+            }
+
+            if (branchName) {
+                document.getElementById('bp-branch').value = branchName;
+                // Load departments for this branch
                 if (window.loadDepartments) {
                     await window.loadDepartments(scope);
                 }
             }
 
-            if (data.department) {
-                const deptId = (data.department._id || data.department);
+            // 3. Set Department
+            // Prioritize Bank's real department to ensure visibility
+            let deptId = data.department ? (data.department._id || data.department) : '';
+            if (bankRef && bankRef.department) {
+                deptId = (typeof bankRef.department === 'object') ? bankRef.department._id : bankRef.department;
+            }
+
+            if (deptId) {
                 document.getElementById('bp-dept').value = deptId;
-                // Filter banks based on new department
+                // Filter banks based on this dept
                 if (window.filterBanks) {
                     window.filterBanks(scope);
                 }
             }
 
-            if (data.bank) {
-                const bankId = data.bank._id || data.bank;
-                document.getElementById('bp-bank').value = bankId;
-            } else if (data.bankName) {
-                // Fallback: match by text if ID missing
+            // 4. Set Bank Dropdown Value
+            // Now that filters are set correctly, the bank *should* be in the list
+            if (bankId) {
                 const bankSelect = document.getElementById('bp-bank');
-                for (let i = 0; i < bankSelect.options.length; i++) {
-                    if (bankSelect.options[i].text === data.bankName) {
-                        bankSelect.selectedIndex = i;
-                        break;
+                bankSelect.value = bankId;
+
+                // Fallback: If strict ID match fail, look for text
+                if (!bankSelect.value && data.bankName) {
+                    for (let i = 0; i < bankSelect.options.length; i++) {
+                        if (bankSelect.options[i].text === data.bankName) {
+                            bankSelect.selectedIndex = i;
+                            break;
+                        }
                     }
                 }
             }

@@ -74,7 +74,8 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
                 bank: { $in: bankIds },
                 mode: 'Bank',
                 isVerified: true, // Only show verified (Green) entries
-                date: { $gte: start, $lte: end } // Enforce date range
+                date: { $gte: start, $lte: end },
+                branch: bank.branch // Enforce Branch Filter matches the Bank's branch
             };
             // Add date filter back if needed, but lets see total first
             if (departmentId) fallbackQuery.department = departmentId;
@@ -109,6 +110,7 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
     // 2. BANK TRANSACTIONS (Received & Paid)
     const bankTxnQuery = {
         bankName: bank.bankName,
+        branch: bank.branch, // Enforce Branch Filter
         date: { $gte: start, $lte: end },
         $and: [
             { refType: { $ne: 'bank_transfer' } },
@@ -248,6 +250,7 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
         {
             $match: {
                 bankName: bank.bankName,
+                branch: bank.branch, // Enforce Branch Filter
                 date: { $lt: startDate },
                 $and: [
                     { refType: { $ne: 'bank_transfer' } },
@@ -297,7 +300,11 @@ exports.getBranchBankBalance = asyncHandler(async (req, res) => {
     targetDate.setHours(23, 59, 59, 999);
 
     // Get all banks for the branch
-    const banks = await Bank.find({ branch: branch });
+    // EXCLUDE EASYPAISA (MED) and EASYPAISA (GRO) as per user request
+    const banks = await Bank.find({
+        branch: branch,
+        bankName: { $nin: ['EASYPAISA (MED)', 'EASYPAISA (GRO)'] }
+    });
 
     if (!banks || banks.length === 0) {
         return res.status(200).json({ success: true, totalBalance: 0, message: 'No banks found' });
@@ -432,76 +439,92 @@ exports.getSummaryOpeningBalance = asyncHandler(async (req, res) => {
         bank: { $in: targetBankIds },
         date: { $lt: start }
     };
+    if (branch) dcMatchFilter.branch = branch;
     // Include unverified as per user request (no isVerified: true check)
 
     const dcEntries = await DailyCash.find(dcMatchFilter).lean();
     let dcTotal = 0;
     dcEntries.forEach(item => {
-        const ratePerc = item.deductedAmount || 0;
-        const grossBase = (item.totalAmount || 0) + ratePerc;
-        const deduction = (grossBase * ratePerc) / 100;
-        const netAmount = Math.round(grossBase - deduction);
-        dcTotal += netAmount;
+        // MATCH FRONTEND: Use totalAmount directly
+        dcTotal += item.totalAmount || 0;
     });
 
     // 2. Bank Transactions (Withdrawals/Deposits) - BEFORE Start Date
-    // Exclude 'bank_transfer' types as they are handled in step 3
-    const btQuery = {
-        date: { $lt: start },
-        $or: [
-            { bank: { $in: targetBankIds } },
-            { bankName: { $in: targetBankNames } }
-        ],
-        $and: [
-            { refType: { $ne: 'bank_transfer' } },
-            { narration: { $not: /^Bank Transfer/i } } // Legacy check
-        ]
-    };
+    // FIX: Use Aggregation to calculate Opening Balance respecting 'chequeDate' as priority
+    const btPipeline = [
+        {
+            $match: {
+                $or: [
+                    { bank: { $in: targetBankIds } },
+                    { bankName: { $in: targetBankNames } }
+                ]
+            }
+        }
+    ];
 
-    const btEntries = await BankTransaction.find(btQuery).select('amount type transactionType').lean();
+    // Add Branch Filter if exists
+    if (branch) {
+        btPipeline[0].$match.branch = branch;
+    }
 
-    let btTotal = 0;
-    btEntries.forEach(bt => {
-        const type = (bt.transactionType || bt.type || '').toLowerCase();
-        if (type === 'deposit' || type === 'received') {
-            btTotal += bt.amount || 0;
-        } else {
-            // Withdrawal / Paid
-            btTotal -= bt.amount || 0;
+    // Add Logic to determine Effective Date and Filter
+    // effectiveDate = chequeDate if exists, else date
+    btPipeline.push({
+        $addFields: {
+            effectiveDate: { $ifNull: [{ $toDate: "$chequeDate" }, "$date"] },
+            // Normalize types for safer conditional logic
+            normType: { $toLower: { $ifNull: ["$type", ""] } },
+            normTransType: { $toLower: { $ifNull: ["$transactionType", ""] } }
         }
     });
 
-    // 3. Bank Transfers - BEFORE Start Date
-    // If we are the 'fromBank', it's a withdrawal (-). If 'toBank', it's a deposit (+).
-    // We only care if the OTHER side is NOT in our selected list? 
-    // No, if transfer is From Bank A to Bank B, and both are selected:
-    // Bank A: -100, Bank B: +100. Net change 0. Correct.
-    // If only Bank A selected: -100. Correct.
+    btPipeline.push({
+        $match: {
+            effectiveDate: { $lt: start }
+        }
+    });
 
-    const btbFrom = await BankTransfer.aggregate([
-        { $match: { fromBank: { $in: targetBankIds }, date: { $lt: start } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    // Group and Sum
+    btPipeline.push({
+        $group: {
+            _id: null,
+            totalAmount: {
+                $sum: {
+                    $cond: [
+                        {
+                            $or: [
+                                { $in: ["$normType", ["deposit", "received"]] },
+                                { $in: ["$normTransType", ["deposit", "received"]] }
+                            ]
+                        },
+                        "$amount",                  // If Deposit: Add Amount
+                        { $multiply: ["$amount", -1] } // Else (Withdrawal): Subtract Amount
+                    ]
+                }
+            }
+        }
+    });
 
-    const btbTo = await BankTransfer.aggregate([
-        { $match: { toBank: { $in: targetBankIds }, date: { $lt: start } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    const btResult = await BankTransaction.aggregate(btPipeline);
+    const btTotal = btResult.length > 0 ? btResult[0].totalAmount : 0;
 
-    const totalFrom = btbFrom[0]?.total || 0;
-    const totalTo = btbTo[0]?.total || 0;
-    const btbTotal = totalTo - totalFrom;
+    // 3. Bank Transfers - REMOVED separate aggregation
+    // Since we now include bank_transfer entries in the BankTransaction Step (above),
+    // calculating them again from the BankTransfer model would cause double counting.
+    // Also, relying on BankTransaction ensures we account for "Orphan" transfer transactions 
+    // that might show up in the table but not in the BankTransfer collection.
+
+    const btbTotal = 0; // Effectively unused now
 
     // Final Aggregation
-    const openingBalance = dcTotal + btTotal + btbTotal;
+    const openingBalance = dcTotal + btTotal; // Removed btbTotal
 
     res.status(200).json({
         success: true,
         openingBalance: openingBalance,
         debug: {
             dc: dcTotal,
-            bt: btTotal,
-            btb: btbTotal
+            bt: btTotal
         }
     });
 });
