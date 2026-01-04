@@ -198,6 +198,18 @@ async function loadSuppliers(branchName = '') {
 async function loadInitialData() {
     try {
         const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        // Check admin logic: role 'admin', or group.isAdmin, or groupId.isAdmin
+        // Note: checking nested properties safely
+        const isAdmin = user.role === 'admin' ||
+            (user.group && user.group.isAdmin) ||
+            (user.groupId && (user.groupId.isAdmin || user.groupId.rights?.isAdmin));
+
+        // Ensure userBranch is an array
+        let userBranches = user.branch || [];
+        if (!Array.isArray(userBranches)) {
+            userBranches = [userBranches].filter(Boolean);
+        }
 
         // 1. Load Branches
         const branchRes = await fetch('/api/v1/stores', {
@@ -207,15 +219,43 @@ async function loadInitialData() {
         if (branchData.success) {
             branches = branchData.data;
             const selects = ['branchSelect', 'catBranchSelect', 'listBranchFilter'];
+
             selects.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
+
+                // For restricted users, clear "All Branches" option if it exists (mainly for filters)
+                if (!isAdmin && userBranches.length > 0) {
+                    // Only for filter dropdowns that might have "All"
+                    if (id === 'listBranchFilter') {
+                        el.innerHTML = '';
+                    }
+                }
+
+                let hasSelected = false;
+
                 branches.forEach(b => {
+                    // Filter: if not admin and user has branches, strictly match by NAME (check inclusion)
+                    if (!isAdmin && userBranches.length > 0 && !userBranches.includes(b.name)) {
+                        return;
+                    }
+
                     const opt = document.createElement('option');
                     opt.value = b._id;
                     opt.textContent = b.name;
                     el.appendChild(opt);
+
+                    // Auto-select the first valid branch if none selected yet
+                    if (!isAdmin && userBranches.includes(b.name) && !hasSelected) {
+                        opt.selected = true;
+                        hasSelected = true;
+                    }
                 });
+
+                // Trigger change event to update dependent lists (like suppliers)
+                if (!isAdmin && userBranches.length > 0 && el.options.length > 0) {
+                    el.dispatchEvent(new Event('change'));
+                }
             });
         }
 
@@ -418,6 +458,11 @@ async function saveVoucher(payload) {
 async function fetchVoucherList() {
     try {
         const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isAdmin = user.role === 'admin' ||
+            (user.group && user.group.isAdmin) ||
+            (user.groupId && (user.groupId.isAdmin || user.groupId.rights?.isAdmin));
+
         const fromDate = document.getElementById('listFromDate')?.value || '';
         const toDate = document.getElementById('listToDate')?.value || '';
 
@@ -426,6 +471,14 @@ async function fetchVoucherList() {
         let branch = '';
         if (branchEl && branchEl.value) {
             branch = branchEl.options[branchEl.selectedIndex].text;
+        }
+
+        // SECURITY FIX: if restricted user and no branch selected, FORCE their branch
+        if (!isAdmin && !branch && user.branch) {
+            const userBranches = Array.isArray(user.branch) ? user.branch : [user.branch];
+            if (userBranches.length > 0) {
+                branch = userBranches[0];
+            }
         }
 
         const supplier = document.getElementById('listSupplierFilter')?.value || '';

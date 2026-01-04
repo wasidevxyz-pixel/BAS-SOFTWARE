@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
  * Setup Idle Timer for 30 minutes
  */
 function setupIdleTimer() {
-    const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes in ms
+    const IDLE_TIMEOUT = 60 * 60 * 1000; // 60 minutes in ms
     let idleTimer;
 
     const resetTimer = () => {
@@ -34,7 +34,7 @@ function setupIdleTimer() {
             return;
         }
 
-        console.log('User inactive for 30 minutes. Logging out...');
+        console.log('User inactive for 60 minutes. Logging out...');
         window.pageAccess.logout();
     };
 
