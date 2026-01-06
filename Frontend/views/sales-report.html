@@ -336,6 +336,101 @@
         .data-table tr.total-row td::before {
             color: #adb5bd;
         }
+        /* Professional Print Styles */
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Hide Navigation, Filters, and Interactive Elements */
+            .page-header,
+            .page-title,
+            .page-subtitle,
+            .card-header-custom,
+            .filters-section,
+            .report-detail-header,
+            .btn,
+            button,
+            #sidebarToggle,
+            .sidebar,
+            .main-container > .mb-3, /* Hide tab buttons container */
+            footer,
+            .dropdown {
+                display: none !important;
+            }
+
+            /* Reset Containers for Full Width */
+            .main-container {
+                padding: 0;
+                margin: 0;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .report-card {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                overflow: visible;
+            }
+
+            /* Show Custom Print Header */
+            .print-header {
+                display: block !important;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #333;
+                padding-bottom: 15px;
+            }
+
+            /* Layout Adjustments for Data */
+            .summary-cards {
+                padding: 0 0 20px 0;
+                gap: 15px;
+                page-break-inside: avoid;
+            }
+
+            .summary-card {
+                border: 1px solid #ccc; /* Add border for print visibility */
+                box-shadow: none;
+            }
+
+            /* Ensure Table Styles Persist */
+            .report-detail-section {
+                padding: 0;
+            }
+
+            .data-table {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .data-table thead th {
+                background-color: #000 !important;
+                color: white !important;
+            }
+
+            .branch-header td {
+                background-color: #014d35 !important;
+                color: white !important;
+            }
+
+            .branch-total-row td {
+                background-color: #f8d7da !important;
+                color: #721c24 !important;
+            }
+
+            /* Margins and spacing */
+            tr {
+                page-break-inside: avoid;
+            }
+        }
     </style>
 </head>
 

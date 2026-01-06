@@ -316,7 +316,7 @@ window.selectSupplier = function (id) {
 async function loadCategories() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/supplier-categories', {
+        const res = await fetch('/api/v1/supplier-categories?type=wht_supplier', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

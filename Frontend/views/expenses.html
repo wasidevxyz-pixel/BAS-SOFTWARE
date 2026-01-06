@@ -451,7 +451,7 @@
                     <tfoot class="table-group-divider">
                         <tr>
                             <td colspan="4" class="text-end fw-bold">Total</td>
-                            <td id="totalAmount" class="fw-bold">0</td>
+                            <td id="totalAmount" class="fw-bold text-end">0</td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>
@@ -515,9 +515,7 @@
                             </div>
                         </div>
                         <div class="col-md-3 d-flex align-items-center justify-content-end">
-                            <button class="btn btn-outline-primary btn-sm" onclick="seedDefaultHeads()">
-                                <i class="fas fa-database"></i> Load Defaults
-                            </button>
+
                         </div>
                     </div>
 
@@ -676,6 +674,10 @@
                             <option value="expense">Expense Only</option>
                             <option value="receipt">Receipt Only</option>
                         </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="headActiveCheck" checked>
+                        <label class="form-check-label" for="headActiveCheck">Active</label>
                     </div>
                     <div class="mb-3" id="parentHeadGroup" style="display: none;">
                         <label class="form-label">Parent Head</label>

@@ -107,6 +107,7 @@ let loadSheetController = null;
 let refreshDataController = null;
 let closing02DeptController = null;
 let incomeStatementController = null;
+let currentIncomeStatementData = null;
 
 async function loadBranches() {
     try {
@@ -1299,26 +1300,51 @@ async function printIncomeStatement(isDayWise = false) {
     let totalIncome = opening + cashSale + bankSale;
     let totalExpense = 0;
 
-    if (isDayWise && printData) {
-        // Generate daily rows
-        if (printData.incomeExpenses) {
-            printData.incomeExpenses.forEach(exp => {
+    const sourceData = isDayWise ? printData : currentIncomeStatementData;
+
+    if (sourceData) {
+        // Generate Income rows from data
+        if (sourceData.incomeExpenses) {
+            sourceData.incomeExpenses.forEach(exp => {
                 const amt = exp.amount || 0;
                 totalIncome += amt;
                 const d = exp.date ? exp.date.split('T')[0] : '-';
-                incomeRows += `<tr><td>${d}</td><td>${exp.description || '-'}</td><td>${exp.head || '-'}</td><td>${exp.subHead || '-'}</td><td>${exp.notes || '-'}</td><td class="text-end">${amt.toLocaleString()}</td></tr>`;
+                incomeRows += `<tr><td>${d}</td><td>${exp.detail || exp.description || '-'}</td><td>${exp.head || '-'}</td><td>${exp.subHead || '-'}</td><td>${exp.notes || exp.remarks || '-'}</td><td class="text-end">${amt.toLocaleString()}</td></tr>`;
             });
         }
-        if (printData.payExpenses) {
-            printData.payExpenses.forEach(exp => {
-                const amt = exp.amount || 0;
-                totalExpense += amt;
-                const d = exp.date ? exp.date.split('T')[0] : '-';
-                payRows += `<tr><td>${d}</td><td>${exp.description || '-'}</td><td>${exp.head || '-'}</td><td>${exp.subHead || '-'}</td><td>${exp.notes || '-'}</td><td class="text-end">${amt.toLocaleString()}</td></tr>`;
+
+        // Generate Expense rows (Grouped by Sub Head)
+        if (sourceData.payExpenses) {
+            const grouped = {};
+            sourceData.payExpenses.forEach(exp => {
+                const sub = exp.subHead || 'General';
+                if (!grouped[sub]) grouped[sub] = [];
+                grouped[sub].push(exp);
+            });
+
+            // Iterate Groups sorted alphabetically
+            Object.keys(grouped).sort().forEach(subHead => {
+                const items = grouped[subHead];
+                let groupTotal = 0;
+
+                // Group Header
+                // Group Header
+                payRows += `<tr style="background-color: #f0f0f0; -webkit-print-color-adjust: exact;"><td colspan="6" class="group-header">${subHead.trim()}</td></tr>`;
+
+                items.forEach(exp => {
+                    const amt = exp.amount || 0;
+                    totalExpense += amt;
+                    groupTotal += amt;
+                    const d = exp.date ? exp.date.split('T')[0] : '-';
+                    payRows += `<tr><td>${d}</td><td>${exp.detail || exp.description || '-'}</td><td>${exp.head || '-'}</td><td>${exp.subHead || '-'}</td><td>${exp.notes || exp.remarks || '-'}</td><td class="text-end">${amt.toLocaleString()}</td></tr>`;
+                });
+
+                // Group Total
+                payRows += `<tr style="font-weight: bold; background-color: #fafafa; -webkit-print-color-adjust: exact;"><td colspan="5" class="text-end">Total ${subHead}</td><td class="text-end" style="border-top: 1px solid #ccc;">${groupTotal.toLocaleString()}</td></tr>`;
             });
         }
     } else {
-        // Use screen data (Monthly)
+        // Use screen data (fallback)
         incomeRows = document.getElementById('incomeDetailsRows').innerHTML;
         payRows = document.getElementById('payDetailsRows').innerHTML;
         totalIncome = parseVal('diffIncome');
@@ -1400,7 +1426,18 @@ async function printIncomeStatement(isDayWise = false) {
                 }
 
                 .text-end { text-align: right; }
+                .text-center { text-align: center; }
+                .text-end { text-align: right; }
+                .text-center { text-align: center; }
                 .fw-bold { font-weight: 700; }
+                .group-header {
+                    text-align: center !important;
+                    font-weight: bold;
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    vertical-align: middle;
+                    padding: 10px;
+                }
                 
                 /* Summary Styling */
                 .summary-table {
@@ -1445,6 +1482,7 @@ async function printIncomeStatement(isDayWise = false) {
                 </div>
             </div>
 
+            ${!isDayWise ? `
             <div class="section-title">Income Sources & Daily Collection</div>
             <table>
                 <thead>
@@ -1459,15 +1497,16 @@ async function printIncomeStatement(isDayWise = false) {
                         <td class="text-end fw-bold">${opening.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                     <tr>
-                        <td>Cash Sale ${isDayWise ? '' : '(Monthly Total)'}</td>
+                        <td>Cash Sale (Monthly Total)</td>
                         <td class="text-end fw-bold">${cashSale.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                     <tr>
-                        <td>Bank Sale ${isDayWise ? '' : '(Monthly Total)'}</td>
+                        <td>Bank Sale (Monthly Total)</td>
                         <td class="text-end fw-bold">${bankSale.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                 </tbody>
             </table>
+            ` : ''}
 
             <div class="section-title">Income / Receipts</div>
             <table>
@@ -1503,6 +1542,25 @@ async function printIncomeStatement(isDayWise = false) {
                 </tbody>
             </table>
 
+            ${isDayWise ? `
+            <table class="table" style="margin-top: -16px;">
+                 <tr style="font-weight: bold; font-size: 16px; background-color: #e0e0e0; -webkit-print-color-adjust: exact; border-top: 2px solid #000;">
+                    <td colspan="5" class="text-end" style="border: 1px solid #ccc; padding: 6px;">Grand Total Expenses</td>
+                    <td class="text-end" style="border: 1px solid #ccc; padding: 6px; width: 15%;">${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                 </tr>
+            </table>
+            ` : ''}
+
+            ${isDayWise ? `
+            <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
+                <table class="summary-table" style="width: auto; min-width: 300px;">
+                    <tr class="closing-row fw-bold">
+                        <td style="font-size: 18px;">Closing Balance</td>
+                        <td class="text-end" style="font-size: 18px;">${document.getElementById('diffBalance').value}</td>
+                    </tr>
+                </table>
+            </div>
+            ` : `
             <div style="margin-top: 30px;">
                 <table class="summary-table">
                     <tr>
@@ -1519,6 +1577,7 @@ async function printIncomeStatement(isDayWise = false) {
                     </tr>
                 </table>
             </div>
+            `}
 
             <div class="footer">
                 Printed by BAS Software | ${new Date().toLocaleString()}
@@ -2270,6 +2329,7 @@ async function loadIncomeStatementData() {
         const json = await res.json();
 
         if (json.success) {
+            currentIncomeStatementData = json.data;
             const { cashSaleTotal, bankSaleTotal, payExpenses, incomeExpenses, openingBalance } = json.data;
 
             // Populate Income Inputs

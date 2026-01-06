@@ -5,8 +5,9 @@ const PartyCategory = require('../models/PartyCategory');
 // @access  Private
 exports.getSupplierCategories = async (req, res) => {
     try {
+        const type = req.query.type || 'supplier';
         const categories = await PartyCategory.find({
-            type: 'supplier',
+            type: type,
             isActive: true
         }).sort('name');
 
@@ -59,8 +60,8 @@ exports.getSupplierCategory = async (req, res) => {
 // @access  Private
 exports.createSupplierCategory = async (req, res) => {
     try {
-        // Force type to 'supplier'
-        req.body.type = 'supplier';
+        // Allow type override, default to 'supplier'
+        req.body.type = req.body.type || 'supplier';
         req.body.createdBy = req.user.id;
 
         const category = await PartyCategory.create(req.body);

@@ -35,7 +35,8 @@ exports.getSupplierTaxes = asyncHandler(async (req, res, next) => {
                 select: 'name'
             }
         })
-        .sort({ date: -1 });
+        .sort({ date: -1 })
+        .lean(); // Performance: Skip hydration for reports
 
     res.status(200).json({
         success: true,

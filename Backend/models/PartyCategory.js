@@ -8,7 +8,7 @@ const PartyCategorySchema = new mongoose.Schema({
     },
     type: { // 'customer' or 'supplier'
         type: String,
-        enum: ['customer', 'supplier'],
+        enum: ['customer', 'supplier', 'wht_supplier'],
         required: [true, 'Please specify type (customer or supplier)']
     },
     branch: {

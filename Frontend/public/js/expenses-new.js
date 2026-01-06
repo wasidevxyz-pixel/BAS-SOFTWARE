@@ -133,14 +133,16 @@ async function loadExpenseHeads(type = 'expense') {
             headEl.innerHTML = '<option value="">-- Select Head --</option>';
 
             if (data.data && data.data.length > 0) {
-                data.data.forEach(head => {
+                // Filter actives only for dropdown
+                const actives = data.data.filter(h => h.isActive !== false);
+                actives.forEach(head => {
                     const option = document.createElement('option');
                     option.value = head.name;
                     option.setAttribute('data-id', head._id);
                     option.textContent = head.name;
                     headEl.appendChild(option);
                 });
-                expenseHeads = data.data;
+                expenseHeads = actives; // Store filtered list only
             } else {
                 expenseHeads = [];
             }
@@ -179,7 +181,9 @@ async function loadSubHeads(headName) {
                 subHeadEl.innerHTML = '<option value="">-- Select Sub Head --</option>';
 
                 if (data.data && data.data.length > 0) {
-                    data.data.forEach(sub => {
+                    // Filter actives only
+                    const actives = data.data.filter(s => s.isActive !== false);
+                    actives.forEach(sub => {
                         const option = document.createElement('option');
                         option.value = sub.name;
                         option.setAttribute('data-id', sub._id);
@@ -232,15 +236,21 @@ async function loadBranches() {
         if (response.ok) {
             const data = await response.json();
             if (data.data && data.data.length > 0) {
-                branchEl.innerHTML = '<option value="">Select Branch</option>';
+                // If only one branch, don't show "Select Branch" placeholder
+                if (data.data.length === 1) {
+                    branchEl.innerHTML = '';
+                } else {
+                    branchEl.innerHTML = '<option value="">Select Branch</option>';
+                }
+
                 data.data.forEach(store => {
                     const option = document.createElement('option');
                     option.value = store.name;
                     option.textContent = store.name;
                     branchEl.appendChild(option);
                 });
-                // Default to first if only one
-                if (data.data.length === 1) {
+                // Default to first branch if available (prevent showing "All" by default)
+                if (data.data.length >= 1) {
                     branchEl.value = data.data[0].name;
                 }
             }
@@ -356,7 +366,7 @@ function displayExpenses(expenses) {
 
     if (totalAmountEl) {
         totalAmountEl.textContent = totalAmount.toLocaleString();
-        totalAmountEl.className = totalAmount >= 0 ? 'fw-bold text-danger' : 'fw-bold text-success';
+        totalAmountEl.className = totalAmount >= 0 ? 'fw-bold text-danger text-end' : 'fw-bold text-success text-end';
     }
 }
 
@@ -568,7 +578,12 @@ function clearForm() {
 
     document.getElementById('payType').value = 'expense';
     document.getElementById('expenseDate').value = today;
-    document.getElementById('branch').value = 'Shop';
+    // document.getElementById('branch').value = 'Shop'; // Removed hardcoded default
+    // Select first option in the branch dropdown
+    const branchEl = document.getElementById('branch');
+    if (branchEl && branchEl.options.length > 0) {
+        branchEl.selectedIndex = 0;
+    }
     document.getElementById('head').value = '';
     document.getElementById('subHead').innerHTML = '<option value="">-- Select Sub Head --</option>';
     document.getElementById('amount').value = '';
@@ -668,19 +683,30 @@ async function loadHeadsList() {
                 return;
             }
 
+            // Determine user role for delete permission
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : {};
+            const isAdmin = user.role === 'admin';
+
             tbody.innerHTML = heads.map(head => {
-                const subHeadsHtml = (head.subHeads || []).map(sub =>
-                    `<span class="badge bg-secondary me-1">${sub.name} 
-                        <i class="fas fa-times ms-1" style="cursor:pointer" onclick="deleteHead('${sub._id}', '${sub.name}')"></i>
-                    </span>`
-                ).join('');
+                const subHeadsHtml = (head.subHeads || []).map(sub => {
+                    const isActiveSub = sub.isActive !== false;
+                    const subStyle = isActiveSub ? '' : 'text-decoration: line-through; opacity: 0.7;';
+
+                    return `<span class="badge bg-secondary me-1" style="${subStyle}">${sub.name} 
+                        <i class="fas fa-edit ms-2 me-1" style="cursor:pointer" onclick="editHead('${sub._id}')" title="Edit"></i>
+                        ${isAdmin ? `<i class="fas fa-trash" style="cursor:pointer" onclick="deleteHead('${sub._id}', '${sub.name}')" title="Delete"></i>` : ''}
+                    </span>`;
+                }).join('');
 
                 const typeLabel = head.type === 'both' ? 'Both' : (head.type === 'expense' ? 'Expense' : 'Receipt');
                 const typeClass = head.type === 'both' ? 'bg-info' : (head.type === 'expense' ? 'bg-danger' : 'bg-success');
+                const isActiveHead = head.isActive !== false;
+                const headStyle = isActiveHead ? '' : 'text-decoration: line-through; color: #999;';
 
                 return `
                     <tr>
-                        <td><strong>${head.name}</strong></td>
+                        <td style="${headStyle}"><strong>${head.name}</strong> ${!isActiveHead ? '(Inactive)' : ''}</td>
                         <td><span class="badge ${typeClass}">${typeLabel}</span></td>
                         <td>
                             ${subHeadsHtml || '<em class="text-muted">No sub-heads</em>'}
@@ -692,9 +718,10 @@ async function loadHeadsList() {
                             <button class="btn btn-warning btn-sm" onclick="editHead('${head._id}')" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            ${isAdmin ? `
                             <button class="btn btn-danger btn-sm" onclick="deleteHead('${head._id}', '${head.name}')" title="Delete">
                                 <i class="fas fa-trash"></i>
-                            </button>
+                            </button>` : ''}
                         </td>
                     </tr>
                 `;
@@ -714,6 +741,7 @@ function addNewHead() {
     document.getElementById('editParentId').value = '';
     document.getElementById('headNameInput').value = '';
     document.getElementById('headTypeSelect').value = 'both';
+    document.getElementById('headActiveCheck').checked = true;
     document.getElementById('parentHeadGroup').style.display = 'none';
 
     const branch = document.getElementById('branch').value || 'Shop';
@@ -731,6 +759,7 @@ function addNewSubHead(parentId, parentName) {
     document.getElementById('editParentId').value = parentId;
     document.getElementById('headNameInput').value = '';
     document.getElementById('headTypeSelect').value = 'both';
+    document.getElementById('headActiveCheck').checked = true;
     document.getElementById('parentHeadGroup').style.display = 'block';
     document.getElementById('parentHeadName').value = parentName;
 
@@ -759,6 +788,7 @@ async function editHead(headId) {
             document.getElementById('editParentId').value = head.parentId || '';
             document.getElementById('headNameInput').value = head.name;
             document.getElementById('headTypeSelect').value = head.type || 'both';
+            document.getElementById('headActiveCheck').checked = head.isActive !== false;
 
             if (head.parentId) {
                 document.getElementById('parentHeadGroup').style.display = 'block';
@@ -787,6 +817,7 @@ async function saveHead() {
         const parentId = document.getElementById('editParentId').value;
         const name = document.getElementById('headNameInput').value.trim();
         const type = document.getElementById('headTypeSelect').value;
+        const isActive = document.getElementById('headActiveCheck').checked;
 
         if (!name) {
             showError('Please enter a name');
@@ -800,7 +831,8 @@ async function saveHead() {
             name: name,
             type: type,
             parentId: parentId || null,
-            branch: branch
+            branch: branch,
+            isActive: isActive
         };
 
         const isUpdate = headId && headId.trim() !== '';

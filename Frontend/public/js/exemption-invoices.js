@@ -240,7 +240,7 @@ window.selectSupplier = function (id) {
 async function loadCategories() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/supplier-categories', {
+        const res = await fetch('/api/v1/supplier-categories?type=wht_supplier', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -524,7 +524,6 @@ function renderSavedTable(records) {
                     entryCatId = c;
                 }
             }
-            if (filterCatId && String(entryCatId) !== String(filterCatId)) return;
             flatRows.push({ parentId: rec._id, sheetDate, branchName, categoryName: catName, ...entry });
         });
     });
@@ -577,7 +576,6 @@ function renderGrandSummary(records) {
                     entryCatId = c;
                 }
             }
-            if (filterCatId && String(entryCatId) !== String(filterCatId)) return;
             if (!summary[catName]) summary[catName] = { amount: 0 };
             const invAmt = entry.invoiceAmount || 0;
             summary[catName].amount += invAmt;

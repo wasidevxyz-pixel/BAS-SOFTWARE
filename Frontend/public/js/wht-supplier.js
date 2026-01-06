@@ -74,7 +74,7 @@ let allCategories = [];
 async function loadCategories() {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/supplier-categories', {
+        const res = await fetch('/api/v1/supplier-categories?type=wht_supplier', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -407,7 +407,7 @@ window.saveCategory = async function () {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, type: 'wht_supplier' })
         });
         const data = await res.json();
         if (data.success) {
