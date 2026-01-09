@@ -610,127 +610,200 @@
             </div>
 
             <!-- TAB 2: PENDING CHQ -->
-            <div class="tab-pane fade h-100" id="pending-chq">
-                <!-- Top Filters for this tab -->
-                <div class="filter-row mb-3 shadow-sm border rounded">
-                    <div class="filter-group">
-                        <label>Branch</label>
-                        <select id="pc-branch" class="form-select form-select-sm branch-select"
-                            style="width: 250px;"></select>
-                    </div>
-                    <div class="filter-group ms-4">
-                        <label>Banks</label>
-                        <select id="pc-bank" class="form-select form-select-sm bank-select"
-                            style="width: 250px;"></select>
-                    </div>
-                </div>
+            <div class="tab-pane fade h-100" id="pending-chq" role="tabpanel">
+                <style>
+                    /* Scoped styles for Pending Cheque Tab */
+                    #pending-chq .main-card {
+                        background: rgba(255, 255, 255, 0.95);
+                        border-radius: 16px;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                        padding: 1.5rem;
+                        margin-bottom: 1rem;
+                    }
 
-                <div class="pending-chq-container">
-                    <!-- Left Column: Form -->
-                    <div class="form-col">
-                        <div class="mb-2">
-                            <label class="form-label-bold">Bank Date</label>
-                            <input type="date" id="pc-bank-date" class="form-control form-control-sm"
-                                onchange="loadPendingChqData()">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Bank Amount</label>
-                            <input type="number" id="pc-bank-amount" class="form-control form-control-sm bg-kpi-green"
-                                value="0.00" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Statement Date</label>
-                            <input type="date" id="pc-stmt-date" class="form-control form-control-sm">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Pending Chq.</label>
-                            <input type="number" id="pc-pending-chq" class="form-control form-control-sm bg-kpi-blue"
-                                value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Statement</label>
-                            <input type="number" id="pc-statement" class="form-control form-control-sm" value="0"
-                                oninput="calculateDiff()">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Diff.</label>
-                            <input type="number" id="pc-diff" class="form-control form-control-sm bg-kpi-red" value="0"
-                                readonly>
-                        </div>
-                        <button id="pc-save-btn" class="btn btn-success btn-sm px-4 mt-2">Save</button>
+                    #pending-chq .amount-input {
+                        font-family: 'Courier New', monospace;
+                        font-weight: 700;
+                        font-size: 1.1rem;
+                        text-align: right;
+                    }
+
+                    #pending-chq .bg-amount-green {
+                        background-color: #ecfdf5;
+                        color: #00b96b;
+                        border-color: #10b981;
+                    }
+
+                    #pending-chq .bg-amount-red {
+                        background-color: #fef2f2;
+                        color: #ef476f;
+                        border-color: #ef4444;
+                    }
+
+                    #pending-chq .bg-amount-blue {
+                        background-color: #eff6ff;
+                        color: #4361ee;
+                        border-color: #3b82f6;
+                    }
+
+                    #pending-chq .balance-breakdown {
+                        font-size: 0.8rem;
+                        background: #f8fafc;
+                        padding: 0.5rem;
+                        margin-top: 5px;
+                        display: none;
+                    }
+
+                    #pending-chq .history-card {
+                        background-color: #e2e8f0;
+                        /* Distinct list background */
+                        border: 1px solid #cbd5e1;
+                    }
+
+                    #pending-chq .history-header {
+                        background-color: #334155;
+                        color: white;
+                    }
+                </style>
+
+                <div class="container-fluid h-100 overflow-auto p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold text-primary"><i class="fas fa-check-double me-2"></i>Pending Cheque Manager
+                        </h4>
+                        <span class="badge bg-success">Professional V2</span>
                     </div>
 
-                    <!-- Middle Column: Totals summary -->
-                    <div class="discovery-col" style="display: none !important;">
-                        <div class="mb-2">
-                            <label class="form-label-bold">From</label>
-                            <input type="date" class="form-control form-control-sm">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">To</label>
-                            <input type="date" class="form-control form-control-sm">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Batch To Date</label>
-                            <input type="date" class="form-control form-control-sm">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Pending Batch</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-blue" value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Statement</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-blue" value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Deposit</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-blue" value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Total</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-green" value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Pending Chq. ()</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-orange" value="0" readonly>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label-bold">Diff.</label>
-                            <input type="number" class="form-control form-control-sm bg-kpi-red" value="0" readonly>
+                    <!-- Top Controls -->
+                    <div class="main-card mb-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Branch</label>
+                                <select class="form-select" id="new-branch">
+                                    <option value="">Select Branch...</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Bank Filter (Optional)</label>
+                                <select class="form-select" id="new-bank">
+                                    <option value="">All Banks</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" id="btn-refresh">
+                                    <i class="fas fa-sync-alt me-2"></i> Refresh Data
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Right Column: Grid -->
-                    <div class="grid-col d-flex flex-column" style="overflow: hidden;">
-                        <div class="mb-2 d-flex justify-content-end">
-                            <input type="text" class="form-control form-control-sm w-50" placeholder="Search grid...">
+                    <div class="row g-4 mb-4">
+                        <!-- Calculations -->
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold text-primary">
+                                    <i class="fas fa-calculator me-2"></i>Calculations
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Bank Date</label>
+                                        <input type="date" class="form-control" id="new-bank-date">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label d-flex justify-content-between">
+                                            <span>Bank Amount (Branch Total)</span>
+                                            <a href="javascript:void(0)" onclick="toggleBreakdown()"
+                                                class="small text-decoration-none">View Details</a>
+                                        </label>
+                                        <input type="text" class="form-control amount-input bg-amount-green"
+                                            id="new-bank-amount" readonly value="0.00">
+                                        <div class="balance-breakdown" id="breakdown-panel">
+                                            <div class="d-flex justify-content-between"><span>Verified Daily
+                                                    Cash:</span> <span id="val-dc">0</span></div>
+                                            <div class="d-flex justify-content-between"><span>Bank Txns:</span> <span
+                                                    id="val-bt">0</span></div>
+                                            <div class="d-flex justify-content-between"><span>Transfers:</span> <span
+                                                    id="val-tr">0</span></div>
+                                            <div class="d-flex justify-content-between border-top mt-1 pt-1 fw-bold">
+                                                <span>Total:</span> <span id="val-total">0</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Pending Cheque (Unverified)</label>
+                                        <input type="text" class="form-control amount-input bg-amount-blue"
+                                            id="new-pending-chq" readonly value="0.00">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="table-responsive flex-grow-1 border">
-                            <table class="table table-bordered table-sm custom-grid mb-0">
-                                <thead style="background-color: #0056b3; color: white; position: sticky; top: 0;">
+
+                        <!-- Statement -->
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white fw-bold text-dark">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i>Statement & Difference
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Statement Date</label>
+                                        <input type="date" class="form-control" id="new-stmt-date">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Statement Amount</label>
+                                        <input type="number" class="form-control amount-input text-dark"
+                                            id="new-statement" value="0" oninput="calculateProDiff()"
+                                            onkeyup="calculateProDiff()" onchange="calculateProDiff()">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Difference</label>
+                                        <input type="text" class="form-control amount-input bg-amount-green"
+                                            id="new-diff" readonly value="0.00">
+                                    </div>
+                                    <div class="mt-4">
+                                        <button class="btn btn-success w-100" id="btn-save">
+                                            <i class="fas fa-save me-2"></i> Save Record
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid -->
+                    <div class="card border-0 shadow-sm history-card">
+                        <div class="card-header fw-bold history-header">
+                            <i class="fas fa-history me-2"></i>History
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Dated</th>
                                         <th>System Date</th>
-                                        <th>Branch Name</th>
-                                        <th>Bank Name</th>
-                                        <th>Bank Date</th>
-                                        <th>Stmt Date</th>
-                                        <th>Bank Ledger</th>
-                                        <th>Pending Chq Amount</th>
-                                        <th>Statement</th>
-                                        <th>Diff</th>
-                                        <th>Action</th>
+                                        <th>Statement Date</th>
+                                        <th>Branch</th>
+                                        <th class="text-end">Bank Amount</th>
+                                        <th class="text-end">Pending Chq</th>
+                                        <th class="text-end">Statement</th>
+                                        <th class="text-end">Diff</th>
+                                        <th class="text-center">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="pendingChqBody">
-                                    <!-- Populated by JS -->
+                                <tbody id="grid-body">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">No data available</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
+
+                <!-- Load New Logic Script -->
+                <script src="/js/pending-cheque-v2.js?v=22"></script>
             </div>
+
 
             <!-- TAB 3: BANK SUMMARY (PROFESSIONAL) -->
             <div class="tab-pane fade h-100" id="bank-summary">
@@ -863,9 +936,11 @@
                     </div>
                     <div class="filter-group">
                         <button class="btn btn-primary btn-sm" onclick="fetchProReport()"><i
-                                class="fas fa-sync-alt me-1"></i> Generate</button>
+                                class="fas fa-sync-alt me-1"></i>
+                            Generate</button>
                         <button class="btn btn-secondary btn-sm" onclick="window.print()"><i
-                                class="fas fa-print me-1"></i> Print</button>
+                                class="fas fa-print me-1"></i>
+                            Print</button>
                     </div>
                 </div>
 
@@ -1203,7 +1278,7 @@
     <script src="/js/sidebar.js"></script>
     <script src="/js/desktop-ui.js"></script>
     <script src="/js/bank-payments-logic.js"></script>
-    <script src="/js/bank-management.js"></script>
+    <script src="/js/bank-management.js?v=8"></script>
 </body>
 
 </html>

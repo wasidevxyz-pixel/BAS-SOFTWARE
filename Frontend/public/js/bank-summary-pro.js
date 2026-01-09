@@ -26,14 +26,33 @@ function formatCurrency(amount) {
 }
 
 // Helper: Format Date
+// Helper: Format Date
 function formatDate(dateStr) {
     if (!dateStr) return '-';
-    // Use simple date part slice to avoid timezone shifts if strictly YYYY-MM-DD
-    // But since we use full ISO strings often, sticking to LocaleDateString is safer for display,
-    // assuming browser locale aligns with user expectation (DD/MM/YYYY).
-    // Using 'en-GB' forces DD/MM/YYYY.
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB');
+    // If it's a full ISO string (e.g. 2026-01-08T00:00:00.000Z), treating it as local might shift the day.
+    // Backend sends date objects, which are UTC.
+    // If the time is 00:00:00 UTC, converting to 'en-GB' in a timezone < UTC (like US) pushes it back a day.
+    // Pakistan is UTC+5, so it *adds* time, keeping the day or moving to next if late.
+    // BUT we want to display the DATE part exactly as stored in DB irrespective of timezone.
+    let d = new Date(dateStr);
+
+    // Fallback/Check: If we can construct from string slice directly, safer for "YYYY-MM-DD"
+    if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        d = new Date(dateStr);
+        // If we trust the server sent the correct date-point.
+    }
+
+    // Robust approach: Use UTC methods or slice if string
+    // Given most dates are stored as 00:00:00 UTC for "dates", let's use UTC parts.
+    // Actually, simple ISO slice is Safest for pure dates.
+    try {
+        if (typeof dateStr === 'string') {
+            return dateStr.split('T')[0].split('-').reverse().join('/'); // DD/MM/YYYY
+        }
+        return new Date(dateStr).toISOString().split('T')[0].split('-').reverse().join('/');
+    } catch (e) {
+        return new Date(dateStr).toLocaleDateString('en-GB');
+    }
 }
 
 async function loadBranches() {
@@ -251,3 +270,5 @@ function filterProTable() {
         }
     }
 }
+
+window.fetchProReport = fetchProReport;

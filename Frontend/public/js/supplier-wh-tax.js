@@ -310,7 +310,7 @@ window.selectSupplier = function (id) {
         amtInput.dispatchEvent(event);
     }
     document.getElementById('supplierSearchResults').style.display = 'none';
-    document.getElementById('entryDate').focus();
+    document.getElementById('entryInvNum').focus();
 }
 
 async function loadCategories() {
@@ -434,13 +434,29 @@ function setupAddButton() {
         clearEntryInputs();
     });
 
-    ['entryInvAmt', 'entryAiTaxAmt'].forEach(id => {
+    ['entryAiTaxAmt'].forEach(id => {
         document.getElementById(id).addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 document.getElementById('addItemBtn').click();
             }
         });
+    });
+
+    // Navigation for Invoice Number -> Invoice Amount
+    document.getElementById('entryInvNum').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('entryInvAmt').focus();
+        }
+    });
+
+    // Navigation for Invoice Amount -> AI Tax Amount
+    document.getElementById('entryInvAmt').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('entryAiTaxAmt').focus();
+        }
     });
 }
 

@@ -103,15 +103,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Listen for global data updates
+    window.addEventListener('bank-data-updated', () => {
+        console.log('Bank data updated, refreshing active tab...');
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (activeTab) {
+            refreshTab(activeTab.id);
+        }
+    });
+
     // Tab Activation Listeners
     document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', (e) => {
-            const target = e.target.getAttribute('data-bs-target');
-            if (target === '#bank-to-bank') {
-                loadBTBTransfers();
-            }
+            const target = e.target.getAttribute('data-bs-target'); // e.g. #bank-detail
+            const id = target.replace('#', '');
+            refreshTab(id);
         });
     });
+
+    function refreshTab(id) {
+        if (id === 'bank-to-bank') {
+            if (window.loadBTBTransfers) window.loadBTBTransfers();
+        } else if (id === 'bank-detail') {
+            // Only search if dates are selected (default behavior)
+            const from = document.getElementById('bd-from-date').value;
+            const to = document.getElementById('bd-to-date').value;
+            if (from && to && window.searchBankDetails) {
+                window.searchBankDetails();
+            }
+        } else if (id === 'bank-summary') {
+            const from = document.getElementById('pro-from-date').value;
+            const to = document.getElementById('pro-to-date').value;
+            if (from && to && window.fetchProReport) {
+                window.fetchProReport();
+            }
+        } else if (id === 'bank-payments') {
+            if (window.loadBankPayments) window.loadBankPayments();
+        } else if (id === 'pending-chq') {
+            if (window.loadPendingChqData) window.loadPendingChqData();
+        }
+    }
 
     // Select All functionality for Bank Detail tab
     const selectAllDetails = document.getElementById('selectAllBatches');
@@ -603,8 +634,15 @@ async function searchBankDetails() {
                 return mapped;
             });
 
-            // Sort by Date Ascending (Oldest first at top, Newest at bottom)
-            mappedData.sort((a, b) => new Date(a.date) - new Date(b.date));
+            // Sort: Unverified (Red) on top, Verified (Green) at bottom. Both sorted by Date Ascending.
+            mappedData.sort((a, b) => {
+                // 1. Primary Sort: Verification Status (False/Unverified comes first)
+                if (a.isVerified !== b.isVerified) {
+                    return a.isVerified ? 1 : -1;
+                }
+                // 2. Secondary Sort: Date Ascending
+                return new Date(a.date) - new Date(b.date);
+            });
 
             renderBankDetailGrid(mappedData, isDeduction);
         } else {
@@ -648,18 +686,29 @@ function renderBankDetailGrid(data, isDeduction) {
         }
 
         const bankName = item.bank ? (item.bank.bankName || item.bank) : '-';
-        const dateStr = new Date(item.date).toISOString().split('T')[0];
+        const dateObj = new Date(item.date);
+        const dateStr = dateObj.toISOString().split('T')[0]; // yyyy-mm-dd for Input
+
+        // Format Display Date as dd-mm-yyyy
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        const displayDate = `${day}-${month}-${year}`;
+
+        // Default Input Date: Today for Unverified, Saved Date for Verified
+        const todayStr = new Date().toISOString().split('T')[0];
+        const inputDateValue = item.isVerified ? dateStr : todayStr;
 
         const tr = document.createElement('tr');
         tr.dataset.id = item._id; // Store ID for persistence
 
         let html = `
-            <td>${dateStr}</td>
+            <td>${displayDate}</td>
             <td class="text-center"><input type="checkbox" class="batch-checkbox" value="${item._id}" ${item.isVerified ? 'checked' : ''}></td>
         `;
 
         if (isDeduction) {
-            html += `<td><input type="date" class="form-control form-control-sm border-0 bg-transparent batch-date-input" value="${dateStr}"></td>`;
+            html += `<td><input type="date" class="form-control form-control-sm border-0 bg-transparent batch-date-input" value="${inputDateValue}"></td>`;
         } else {
             html += `<td style="display:none"></td>`;
         }
@@ -846,13 +895,16 @@ async function updateBankRowsStatus() {
 
 // --- Tab 2: Pending Cheques ---
 async function loadPendingChqData() {
-    const branch = document.getElementById('pc-branch').value;
+    const branchInput = document.getElementById('pc-branch');
+    if (!branchInput) return; // Exit if old UI elements are missing
+
+    const branch = branchInput.value;
     const bank = document.getElementById('pc-bank').value;
 
     console.log(`Loading pending chq data for Branch: ${branch}, Bank: ${bank}`);
 
-    // Calculate total bank balance for the selected branch
-    await calculateBranchBankBalance(branch);
+    // Calculate total bank balance for the selected branch (Uses Final Client-Side Aggregation)
+    await calculateBranchBalanceFinal(branch);
 
     // Calculate pending cheque amount (unverified payment entries)
     await calculatePendingChqAmount(branch);
@@ -950,7 +1002,8 @@ async function calculatePendingChqAmount(branch) {
 }
 
 // Calculate total balance of all banks in the selected branch as of the Bank Date
-async function calculateBranchBankBalance(branch) {
+// Calculate total balance of all banks in the selected branch as of the Bank Date (Client-Side Aggregation)
+async function calculateBranchBalanceFinal(branch) {
     const bankAmountInput = document.getElementById('pc-bank-amount');
     const bankDateInput = document.getElementById('pc-bank-date');
 
@@ -966,22 +1019,92 @@ async function calculateBranchBankBalance(branch) {
         return;
     }
 
+    // Visual indicator that calculation started
+    bankAmountInput.value = "Calculating...";
+
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/v1/reports/bank-ledger/branch-balance?branch=${encodeURIComponent(branch)}&date=${bankDate}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        // Aggregating from 2000-01-01 to ensure full history
+        const startDate = '2000-01-01';
+        const endDate = new Date(bankDate);
+        endDate.setHours(23, 59, 59, 999);
+        const endStr = endDate.toISOString();
+
+        // 0. Get All Banks in this Branch (Needed for filtering transfers)
+        // We include *all* banks (no exclusions) to match "ALL SUM" requirement.
+        const bankRes = await fetch(`/api/v1/banks?branch=${encodeURIComponent(branch)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const bankData = await bankRes.json();
+        const branchBankIds = new Set();
+        if (bankData.success && bankData.data) {
+            bankData.data.forEach(b => branchBankIds.add(b._id));
+        }
+
+        // 1. Fetch Daily Cash (Batch Transfers)
+        const dcUrl = `/api/v1/daily-cash?startDate=${startDate}&endDate=${endStr}&mode=Bank&hasBank=true&branch=${encodeURIComponent(branch)}&limit=0&_t=${Date.now()}`;
+        const dcRes = await fetch(dcUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+        const dcData = await dcRes.json();
+
+        let dcTotal = 0;
+        if (dcData.success && dcData.data) {
+            dcTotal = dcData.data.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+        }
+
+        // 2. Fetch Bank Transactions
+        // Note: Check if the API supports 'limit=0' for all records. Assuming yes based on usage.
+        const btUrl = `/api/v1/bank-transactions?startDate=${startDate}&endDate=${endStr}&branch=${encodeURIComponent(branch)}&limit=0&_t=${Date.now()}`;
+        const btRes = await fetch(btUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+        const btData = await btRes.json();
+
+        let btTotal = 0;
+        if (btData.success && btData.data) {
+            btTotal = btData.data.reduce((sum, item) => {
+                const type = (item.type || '').toLowerCase();
+                const transType = (item.transactionType || '').toLowerCase();
+                const isDeposit = type === 'deposit' || type === 'received' || transType === 'deposit' || transType === 'received';
+                return isDeposit ? sum + (item.amount || 0) : sum - (item.amount || 0);
+            }, 0);
+        }
+
+        // 3. Fetch Bank Transfers (Crucial for Inter-Bank/Main-Branch movements)
+        // We fetch ALL transfers appearing in this date range and filter client-side 
+        // because the API might not support filtering by "Branch of Bank".
+        const transUrl = `/api/v1/bank-transfers?startDate=${startDate}&endDate=${endStr}&limit=0&_t=${Date.now()}`;
+        const transRes = await fetch(transUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+        const transData = await transRes.json();
+
+        let transTotal = 0;
+        if (transData.success && transData.data) {
+            transData.data.forEach(t => {
+                const fromId = t.fromBank?._id || t.fromBank;
+                const toId = t.toBank?._id || t.toBank;
+
+                // If funds CAME TO a bank in this branch -> ADD
+                if (branchBankIds.has(toId)) {
+                    transTotal += (t.amount || 0);
+                }
+                // If funds WENT FROM a bank in this branch -> SUBTRACT
+                if (branchBankIds.has(fromId)) {
+                    transTotal -= (t.amount || 0);
+                }
+            });
+        }
+
+        const totalBalance = dcTotal + btTotal + transTotal;
+        console.log('Client-Side Branch Calc (Enhanced):', {
+            branch,
+            banksCount: branchBankIds.size,
+            dcTotal,
+            btTotal,
+            transTotal,
+            totalBalance
         });
 
-        const data = await response.json();
+        bankAmountInput.value = totalBalance.toFixed(2);
 
-        if (data.success) {
-            bankAmountInput.value = (data.totalBalance || 0).toFixed(2);
-        } else {
-            console.error('Failed to get branch balance:', data.message);
-            bankAmountInput.value = '0.00';
-        }
+        if (window.calculateDiff) window.calculateDiff();
+
     } catch (e) {
-        console.error('Error fetching branch balance:', e);
+        console.error('Error fetching branch balance (client-side):', e);
         bankAmountInput.value = '0.00';
     }
 }
@@ -1922,13 +2045,26 @@ async function populateProBranches() {
         if (data.success) {
             const select = document.getElementById('pro-branch');
             if (!select) return;
-            select.innerHTML = '<option value="">All Branches</option>';
+
+            // Only show "All Branches" if multiple branches exist
+            if (data.data.length > 1) {
+                select.innerHTML = '<option value="">All Branches</option>';
+            } else {
+                select.innerHTML = '';
+            }
+
             data.data.forEach(store => {
                 const opt = document.createElement('option');
                 opt.value = store.name;
                 opt.textContent = store.name; // Use Name
                 select.appendChild(opt);
             });
+
+            // Auto-select if only one branch available
+            if (data.data.length === 1) {
+                select.value = data.data[0].name;
+                select.dispatchEvent(new Event('change'));
+            }
         }
     } catch (e) { console.error(e); }
 }

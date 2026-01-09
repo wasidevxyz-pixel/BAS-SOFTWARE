@@ -310,6 +310,8 @@ async function saveBankPayment() {
             alert('Bank Payment Saved Successfully');
 
             // Ensure the list shows the new/updated entry by updating filter dates if needed
+            // Ensure the list shows the new/updated entry by updating filter dates if needed
+            // 1. Check Cheque Date
             const currentFromInput = document.getElementById('bp-chq-from');
             const currentToInput = document.getElementById('bp-chq-to');
 
@@ -326,8 +328,27 @@ async function saveBankPayment() {
                 }
             }
 
+            // 2. Check Invoice Date
+            const currentInvFromInput = document.getElementById('bp-inv-from');
+            const currentInvToInput = document.getElementById('bp-inv-to');
+
+            if (currentInvFromInput && currentInvToInput && invoiceDate) {
+                const currentInvFrom = currentInvFromInput.value;
+                const currentInvTo = currentInvToInput.value;
+
+                if (!currentInvFrom || new Date(invoiceDate) < new Date(currentInvFrom)) {
+                    currentInvFromInput.value = invoiceDate;
+                }
+                if (!currentInvTo || new Date(invoiceDate) > new Date(currentInvTo)) {
+                    currentInvToInput.value = invoiceDate;
+                }
+            }
+
             clearBankPaymentForm();
             loadBankPayments(); // Refresh Grid
+
+            // Notify other components that bank data has changed
+            window.dispatchEvent(new Event('bank-data-updated'));
         } else {
             alert(result.message || 'Failed to save');
         }

@@ -32,35 +32,49 @@ async function loadBranches() {
     try {
         const token = localStorage.getItem('token');
 
-        const response = await fetch(`${API_URL}/stores`, {
+        // Fetch allowed branches for filter (respects permissions)
+        const responseAllowed = await fetch(`${API_URL}/stores`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            allBranches = data.data || [];
+        // Fetch ALL branches for "From" dropdown (ignores permissions)
+        const responseAll = await fetch(`${API_URL}/stores?showAll=true`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-            // Populate "From" branch dropdown (for Receive type) with all branches
-            const fromBranchSelect = document.getElementById('fromBranch');
-            const filterBranchSelect = document.getElementById('filterBranch');
+        const fromBranchSelect = document.getElementById('fromBranch');
+        const filterBranchSelect = document.getElementById('filterBranch');
 
-            fromBranchSelect.innerHTML = '<option value="">Select Branch</option>';
-            filterBranchSelect.innerHTML = '<option value="all">All Branches</option>';
+        // Clear existing options
+        fromBranchSelect.innerHTML = '<option value="">Select Branch</option>';
+        filterBranchSelect.innerHTML = '<option value="all">All Branches</option>';
 
-            allBranches.forEach(branch => {
-                // From dropdown - all branches
-                const option1 = document.createElement('option');
-                option1.value = branch.name;
-                option1.textContent = branch.name;
-                fromBranchSelect.appendChild(option1);
+        // Populate Filter dropdown (Allowed branches only)
+        if (responseAllowed.ok) {
+            const data = await responseAllowed.json();
+            const allowedBranches = data.data || [];
 
-                // Filter dropdown - all branches
-                const option2 = document.createElement('option');
-                option2.value = branch.name;
-                option2.textContent = branch.name;
-                filterBranchSelect.appendChild(option2);
+            allowedBranches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.name;
+                option.textContent = branch.name;
+                filterBranchSelect.appendChild(option);
             });
         }
+
+        // Populate From dropdown (All branches)
+        if (responseAll.ok) {
+            const data = await responseAll.json();
+            allBranches = data.data || []; // Update global if needed
+
+            allBranches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.name;
+                option.textContent = branch.name;
+                fromBranchSelect.appendChild(option);
+            });
+        }
+
     } catch (error) {
         console.error('Error loading branches:', error);
     }

@@ -2,12 +2,13 @@ const Bank = require('../models/Bank');
 
 exports.getBanks = async (req, res) => {
     try {
-        const allBanks = await Bank.find();
-        console.log(`Total banks in database: ${allBanks.length}`);
-        console.log('All banks:', allBanks.map(b => ({ name: b.bankName, branch: b.branch, isActive: b.isActive })));
+        let query = { isActive: true };
 
-        const banks = await Bank.find({ isActive: true }).sort({ bankName: 1 });
-        console.log(`Active banks: ${banks.length}`);
+        if (req.query.branch) {
+            query.branch = req.query.branch;
+        }
+
+        const banks = await Bank.find(query).sort({ bankName: 1 });
 
         res.status(200).json({ success: true, data: banks });
     } catch (error) {

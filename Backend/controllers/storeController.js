@@ -7,7 +7,10 @@ exports.getStores = async (req, res) => {
         let query = {};
 
         // If user is not admin and has specific allowed branches
-        if (req.user && req.user.role !== 'admin' && req.user.branch && req.user.branch.length > 0) {
+        // Check if we want to show all branches regardless of permissions (e.g. for reference dropdowns)
+        const showAll = req.query.showAll === 'true';
+
+        if (!showAll && req.user && req.user.role !== 'admin' && req.user.branch && req.user.branch.length > 0) {
             query.name = { $in: req.user.branch };
         }
 

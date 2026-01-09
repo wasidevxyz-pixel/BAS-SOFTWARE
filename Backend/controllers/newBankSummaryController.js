@@ -158,7 +158,7 @@ exports.getProBankSummary = asyncHandler(async (req, res) => {
         dcList.forEach(item => {
             transactions.push({
                 date: item.date, // Daily cash uses date
-                effectiveDate: item.date,
+                effectiveDate: item.date, // Match date exactly
                 type: 'Batch Transfer',
                 ref: item.batchNo || '-',
                 description: item.remarks ? `Batch Transfer (Regular) - ${item.remarks}` : 'Batch Transfer',
@@ -210,7 +210,8 @@ exports.getProBankSummary = asyncHandler(async (req, res) => {
         const bankName = item.bankName || '-';
 
         transactions.push({
-            date: item.date,
+            // USER REQUIREMENT: Show Cheque Date key as "Date" in the table if available
+            date: item.effectiveDate,
             effectiveDate: item.effectiveDate,
             type: typeStr,
             ref: item.invoiceNo || '-',

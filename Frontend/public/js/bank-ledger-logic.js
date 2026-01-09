@@ -1,5 +1,6 @@
 let allBanks = [];
 let allDepartments = [];
+let allBranches = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Set default dates
@@ -12,8 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // User info
     const user = JSON.parse(localStorage.getItem('user')) || { name: 'User' };
-    document.getElementById('userNameDisplay').textContent = user.name;
-    document.getElementById('userInitial').textContent = user.name.charAt(0).toUpperCase();
+    const userNameEl = document.getElementById('userName'); // Fixed ID
+    if (userNameEl) userNameEl.textContent = user.name;
+    // document.getElementById('userInitial').textContent = user.name.charAt(0).toUpperCase(); // Optional if ID exists
 });
 
 async function loadInitialData() {
@@ -29,7 +31,13 @@ async function loadInitialData() {
 
             if (storesData.success) {
                 const branchSelect = document.getElementById('branchSelect');
-                branchSelect.innerHTML = '<option value="">All Branches</option>';
+
+                // Only show "All Branches" if multiple branches exist
+                if (storesData.data.length > 1) {
+                    branchSelect.innerHTML = '<option value="">All Branches</option>';
+                } else {
+                    branchSelect.innerHTML = '';
+                }
 
                 storesData.data.forEach(store => {
                     const opt = document.createElement('option');
@@ -37,6 +45,15 @@ async function loadInitialData() {
                     opt.textContent = store.name;
                     branchSelect.appendChild(opt);
                 });
+
+                // Save to global variable
+                allBranches = storesData.data;
+
+                // Auto-select if only one branch available
+                if (storesData.data.length === 1) {
+                    branchSelect.value = storesData.data[0].name;
+                    // handleBranchChange(); // Deferred to end of function
+                }
             }
         } catch (err) {
             console.error('Error loading stores:', err);
@@ -50,8 +67,7 @@ async function loadInitialData() {
 
         if (banksData.success) {
             allBanks = banksData.data;
-            // Populate all banks initially
-            populateBanks(allBanks);
+            // Do NOT populate all banks here. Wait for final filterBanks call.
         }
 
         // 3. Load Departments
@@ -64,6 +80,9 @@ async function loadInitialData() {
             allDepartments = deptData.data;
             populateDepartments(); // Initial population
         }
+
+        // Final Filter Update to ensure correct state based on defaults/auto-selects
+        handleBranchChange();
 
     } catch (error) {
         console.error('Error loading data:', error);
@@ -120,19 +139,51 @@ function filterBanks() {
 
     // Filter by Branch (Store Name)
     if (selectedBranch) {
-        filteredBanks = filteredBanks.filter(b => b.branch === selectedBranch);
+        // Find the Branch Object to get its ID
+        const branchObj = allBranches.find(br => br.name === selectedBranch);
+        const branchId = branchObj ? String(branchObj._id) : null;
+
+        console.log('Filtering for Branch:', selectedBranch, 'ID:', branchId);
+
+        filteredBanks = filteredBanks.filter(b => {
+            const bBranchName = (b.branch && typeof b.branch === 'object') ? b.branch.name : b.branch;
+            const bBranchId = (b.branch && typeof b.branch === 'object') ? b.branch._id : b.branch;
+
+            // Convert to string for safe comparison
+            const safeName = String(bBranchName);
+            const safeId = String(bBranchId);
+
+            // Match Name OR ID
+            const match = safeName === selectedBranch || (branchId && safeId === branchId);
+            return match;
+        });
     }
 
     // Filter by Department
     if (selectedDeptId) {
         filteredBanks = filteredBanks.filter(b => {
-            const bDeptId = (b.department && b.department._id) ? b.department._id : b.department;
-            return bDeptId === selectedDeptId;
+            const bDeptId = (b.department && typeof b.department === 'object') ? b.department._id : b.department;
+            return String(bDeptId) === selectedDeptId;
         });
     }
 
-    // Filter: Hide 'Branch Bank' type from this report
+    // Exclude 'Branch Bank' type as per User Request
     filteredBanks = filteredBanks.filter(b => b.bankType !== 'Branch Bank');
+
+    // Filter: User Requested "Only 2 bank" - REVERTING based on user feedback "show branch bank like old".
+    // We will now show ALL banks that match the Branch/Department filters.
+    /*
+    filteredBanks = filteredBanks.filter(b => {
+        const isBranchBank = b.bankType === 'Branch Bank';
+        const isEasypaisa = b.bankName && b.bankName.toUpperCase().includes('EASYPAISA');
+        
+        // Also allow if it matches the selected Branch Name EXACTLY (often main bank is named same as branch)
+        // or contains "Main"
+        const isMain = b.bankName && (b.bankName === selectedBranch || b.bankName.toUpperCase().includes('MAIN'));
+
+        return isBranchBank || isEasypaisa || isMain;
+    });
+    */
 
     populateBanks(filteredBanks);
 }

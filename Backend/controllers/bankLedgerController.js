@@ -4,6 +4,8 @@ const BankTransaction = require('../models/BankTransaction');
 const DailyCash = require('../models/DailyCash');
 const BankTransfer = require('../models/BankTransfer');
 const Department = require('../models/Department');
+const Store = require('../models/Store'); // Required for Branch ID lookup
+const mongoose = require('mongoose');
 
 // @desc    Get Bank Ledger Report with Advanced Filtering
 // @route   GET /api/v1/reports/bank-ledger
@@ -29,9 +31,21 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
         return res.status(404).json({ success: false, message: 'Bank not found' });
     }
 
+    // Force usage of Query Branch (String) if available to avoid ObjectId vs Name mismatches
+    if (branch) {
+        bank.branch = branch;
+    }
+
+    // Resolve Branch ID if branch name is provided (for robust filtering)
+    let branchId = null;
+    if (branch) {
+        const store = await Store.findOne({ name: branch }).select('_id');
+        if (store) branchId = store._id;
+    }
+
     console.log('=== BANK LEDGER REPORT ===');
     console.log('Bank:', bank.bankName);
-    console.log('Branch:', branch || 'All');
+    console.log('Branch:', branch || 'All', '(ID:', branchId, ')');
     console.log('Department:', departmentId || 'All');
     console.log('Date Range:', start.toISOString().split('T')[0], 'to', end.toISOString().split('T')[0]);
     console.log('Inv Date Filter:', hasInvDateFilter ? 'YES' : 'NO');
@@ -45,9 +59,15 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
             bank: bank._id,
             mode: 'Bank',
             // Default filters
-            isVerified: true,
+            isVerified: true, // User Request: Only Verified Entries
             date: { $gte: start, $lte: end }
         };
+
+        // Strict Branch Filter
+        if (branch) {
+            dailyCashQuery.$or = [{ branch: branch }];
+            if (branchId) dailyCashQuery.$or.push({ branch: branchId });
+        }
 
         if (departmentId) {
             dailyCashQuery.department = departmentId;
@@ -73,10 +93,14 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
             const fallbackQuery = {
                 bank: { $in: bankIds },
                 mode: 'Bank',
-                isVerified: true, // Only show verified (Green) entries
-                date: { $gte: start, $lte: end },
-                branch: bank.branch // Enforce Branch Filter matches the Bank's branch
+                isVerified: true, // User Request: Only Verified Entries
+                date: { $gte: start, $lte: end }
+                // branch filter removed: relying on strict Bank ID matching
             };
+            if (branch) {
+                fallbackQuery.$or = [{ branch: branch }];
+                if (branchId) fallbackQuery.$or.push({ branch: branchId });
+            }
             // Add date filter back if needed, but lets see total first
             if (departmentId) fallbackQuery.department = departmentId;
 
@@ -108,39 +132,82 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
 
 
     // 2. BANK TRANSACTIONS (Received & Paid)
-    const bankTxnQuery = {
-        bankName: bank.bankName,
-        branch: bank.branch, // Enforce Branch Filter
-        date: { $gte: start, $lte: end },
+    // Refactored to use Aggregation for Consistent "Effective Date" logic (matching Opening Balance)
+    const btMatchArg = {
         $and: [
+            {
+                $or: [
+                    { bank: bank._id },
+                    {
+                        bankName: bank.bankName,
+                        branch: branch || bank.branch // Enforce branch only for name match
+                    }
+                ]
+            },
             { refType: { $ne: 'bank_transfer' } },
             { narration: { $not: /^Bank Transfer/i } }
         ]
     };
 
-    if (hasInvDateFilter) {
-        bankTxnQuery.invoiceDate = {};
-        if (startInvDate) bankTxnQuery.invoiceDate.$gte = new Date(startInvDate);
-        if (endInvDate) bankTxnQuery.invoiceDate.$lte = new Date(endInvDate);
+    if (departmentId) {
+        btMatchArg.department = new mongoose.Types.ObjectId(departmentId);
     }
 
-    const bankTransactions = await BankTransaction.find(bankTxnQuery)
-        .populate('department', 'name')
-        .lean();
-    console.log('Bank Transactions found:', bankTransactions.length);
+    const btListPipeline = [
+        { $match: btMatchArg },
+        {
+            $addFields: {
+                // Calculate Effective Date for filtering
+                effectiveDate: { $ifNull: [{ $toDate: "$chequeDate" }, "$date"] },
+                normType: { $toLower: { $ifNull: ["$type", ""] } }
+            }
+        },
+        {
+            $match: {
+                effectiveDate: { $gte: start, $lte: end }
+            }
+        },
+        // Lookup Department
+        {
+            $lookup: {
+                from: "departments",
+                localField: "department",
+                foreignField: "_id",
+                as: "deptInfo"
+            }
+        },
+        { $unwind: { path: "$deptInfo", preserveNullAndEmptyArrays: true } }
+    ];
+
+    if (hasInvDateFilter) {
+        // Invoice Date Filter applied to invoiceDate field (usually Booking Date concept, but keeping as is)
+        if (startInvDate) btListPipeline.push({ $match: { invoiceDate: { $gte: new Date(startInvDate) } } });
+        if (endInvDate) btListPipeline.push({ $match: { invoiceDate: { $lte: new Date(endInvDate) } } });
+    }
+
+    const bankTransactions = await BankTransaction.aggregate(btListPipeline);
+    console.log('Bank Transactions (Aggregated) found:', bankTransactions.length);
 
     bankTransactions.forEach(bt => {
+        // Determine if it is a Receipt (Deposit/Add) or Payment (Withdrawal/Subtract)
+        // Must match calculateOpeningBalance logic EXACTLY
+        const isReceipt =
+            ['deposit', 'received', 'receipt', 'opening balance'].includes(bt.normType) ||
+            ['deposit', 'received', 'receipt', 'opening balance'].includes(bt.normTransType);
+
+        // Map fields
         transactions.push({
-            date: bt.date,
+            date: bt.effectiveDate || bt.date,
             narration: bt.narration || bt.remarks || 'Bank Transaction',
             remarks: bt.remarks || '',
             batchNo: bt.invoiceNo || '-',
-            invoiceDate: bt.type === 'deposit' ? null : (bt.invoiceDate || null), // Only show Inv Date for Payments
-            department: bt.department?.name || '-',
-            type: bt.type === 'deposit' ? 'Bank Receipt' : 'Bank Payment',
-            debit: bt.type === 'deposit' ? bt.amount : 0,
-            credit: bt.type === 'withdrawal' ? bt.amount : 0,
-            sortDate: new Date(bt.date).getTime()
+            // Only show Inv Date for Payments (not receipts)
+            invoiceDate: isReceipt ? null : (bt.invoiceDate || null),
+            department: bt.deptInfo ? bt.deptInfo.name : '-',
+            type: isReceipt ? 'Bank Receipt' : 'Bank Payment',
+            debit: isReceipt ? bt.amount : 0,
+            credit: !isReceipt ? bt.amount : 0,
+            sortDate: new Date(bt.effectiveDate || bt.date).getTime()
         });
     });
 
@@ -229,59 +296,144 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
 async function calculateOpeningBalance(bank, startDate, departmentId) {
     let balance = 0;
 
-    // Daily Cash before start date
-    const dcQuery = {
-        bank: bank._id,
+    // 1. Daily Cash (Batch Transfers) - BEFORE Start Date
+    // ROBUST LOGIC: Match List View's Fallback strategy
+    // Find all Bank IDs that match this Key Name (Legacy support)
+    const banksWithName = await Bank.find({ bankName: bank.bankName }).select('_id');
+    const bankIds = banksWithName.map(b => b._id);
+    // Ensure current ID is included
+    if (!bankIds.some(id => id.toString() === bank._id.toString())) {
+        bankIds.push(bank._id);
+    }
+
+    // Resolve Branch ID for OB filter
+    let branchId = null;
+    const branchName = bank.branch; // Assuming bank.branch is set to Name string in main func
+    if (branchName) {
+        const store = await Store.findOne({ name: branchName }).select('_id');
+        if (store) branchId = store._id;
+    }
+
+    const dcMatch = {
         mode: 'Bank',
-        isVerified: true,
-        date: { $lt: startDate }
+        isVerified: true, // User Request: Only Verified Entries
+        date: { $lt: startDate },
+        bank: { $in: bankIds } // Match ANY ID associated with this Bank Name
     };
-    if (departmentId) dcQuery.department = departmentId;
+
+    // Apply Branch Filter if available
+    if (branchName) {
+        dcMatch.$or = [{ branch: branchName }];
+        if (branchId) dcMatch.$or.push({ branch: branchId });
+    }
+
+    if (departmentId) dcMatch.department = new mongoose.Types.ObjectId(departmentId);
 
     const dcHistory = await DailyCash.aggregate([
-        { $match: dcQuery },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-    ]);
-
-    balance += dcHistory[0]?.total || 0;
-
-    // Bank Transactions before start date
-    const btHistory = await BankTransaction.aggregate([
-        {
-            $match: {
-                bankName: bank.bankName,
-                branch: bank.branch, // Enforce Branch Filter
-                date: { $lt: startDate },
-                $and: [
-                    { refType: { $ne: 'bank_transfer' } },
-                    { narration: { $not: /^Bank Transfer/i } }
-                ]
-            }
-        },
+        { $match: dcMatch },
         {
             $group: {
                 _id: null,
-                deposits: { $sum: { $cond: [{ $eq: ['$type', 'deposit'] }, '$amount', 0] } },
-                withdrawals: { $sum: { $cond: [{ $eq: ['$type', 'withdrawal'] }, '$amount', 0] } }
+                total: { $sum: { $toDouble: "$totalAmount" } } // Safe Cast
             }
         }
     ]);
+    balance += dcHistory[0]?.total || 0;
 
-    balance += (btHistory[0]?.deposits || 0) - (btHistory[0]?.withdrawals || 0);
 
-    // Bank Transfers before start date
-    const transfersFrom = await BankTransfer.aggregate([
-        { $match: { fromBank: bank._id, date: { $lt: startDate } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    // 2. Bank Transactions (Withdrawals/Deposits) - BEFORE Start Date
+    // MATCH LIST LOGIC: Exclude Bank Transfers from here, sum them separately.
+    const btPipeline = [
+        {
+            $match: {
+                $or: [
+                    { bank: bank._id }, // Match by ID
+                    {
+                        bankName: bank.bankName,
+                        branch: bank.branch // Match by Name
+                    }
+                ]
+            }
+        }
+    ];
 
-    const transfersTo = await BankTransfer.aggregate([
-        { $match: { toBank: bank._id, date: { $lt: startDate } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    if (departmentId) {
+        btPipeline[0].$match.department = new mongoose.Types.ObjectId(departmentId);
+    }
 
-    balance -= transfersFrom[0]?.total || 0;
-    balance += transfersTo[0]?.total || 0;
+    // Add Effective Date Logic
+    btPipeline.push({
+        $addFields: {
+            effectiveDate: { $ifNull: [{ $toDate: "$chequeDate" }, "$date"] },
+            normType: { $toLower: { $ifNull: ["$type", ""] } },
+            normTransType: { $toLower: { $ifNull: ["$transactionType", ""] } }
+        }
+    });
+
+    btPipeline.push({
+        $match: {
+            effectiveDate: { $lt: startDate },
+            // EXCLUDE transfers here to match 'getBankLedgerReport' logic and avoid duplicates/gaps
+            $and: [
+                { refType: { $ne: 'bank_transfer' } },
+                { narration: { $not: /^Bank Transfer/i } }
+            ]
+        }
+    });
+
+    // Group and Sum
+    btPipeline.push({
+        $group: {
+            _id: null,
+            totalAmount: {
+                $sum: {
+                    $cond: [
+                        {
+                            $or: [
+                                { $in: ["$normType", ["deposit", "received", "receipt", "opening balance"]] },
+                                { $in: ["$normTransType", ["deposit", "received", "receipt", "opening balance"]] }
+                            ]
+                        },
+                        { $toDouble: "$amount" },       // SAFE CAST: Ensure amount is treated as number
+                        { $multiply: [{ $toDouble: "$amount" }, -1] } // Else (Withdrawal): Subtract Amount
+                    ]
+                }
+            }
+        }
+    });
+
+    const btResult = await BankTransaction.aggregate(btPipeline);
+    const btTotal = btResult.length > 0 ? btResult[0].totalAmount : 0;
+    balance += btTotal;
+
+
+    // 3. Bank Transfers - BEFORE Start Date (RESTORED)
+    // We must query this collection to catch transfers that might not be in BankTransaction
+    // or to ensure consistency with the List view which uses this collection.
+    const transferQuery = {
+        date: { $lt: startDate },
+        $or: [
+            { fromBank: bank._id },
+            { toBank: bank._id }
+        ]
+    };
+
+    const trEntries = await BankTransfer.find(transferQuery).lean();
+    let trTotal = 0;
+
+    trEntries.forEach(t => {
+        const fromId = t.fromBank?._id?.toString() || t.fromBank?.toString();
+        const toId = t.toBank?._id?.toString() || t.toBank?.toString();
+        const currentId = bank._id.toString();
+
+        if (toId === currentId) {
+            trTotal += (t.amount || 0); // Credit/Received
+        } else if (fromId === currentId) {
+            trTotal -= (t.amount || 0); // Debit/Paid
+        }
+    });
+
+    balance += trTotal;
 
     return balance;
 }
