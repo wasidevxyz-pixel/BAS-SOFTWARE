@@ -1,4 +1,5 @@
 const DailyCash = require('../models/DailyCash');
+const Store = require('../models/Store');
 
 // @desc    Get daily cash records
 // @route   GET /api/v1/daily-cash
@@ -21,7 +22,23 @@ exports.getDailyCash = async (req, res) => {
         }
 
         if (req.query.branch) {
-            query.branch = req.query.branch;
+            const branchInput = req.query.branch;
+            // Robust Branch Filter: Match Name OR ID
+            let branchIds = [branchInput]; // Start with the input itself
+
+            // Try to resolve other forms (Name -> ID or ID -> Name)
+            // Assuming input is Name usually
+            const store = await Store.findOne({
+                $or: [{ name: branchInput }, { _id: branchInput && branchInput.match(/^[0-9a-fA-F]{24}$/) ? branchInput : null }]
+            });
+
+            if (store) {
+                branchIds = [store.name, store._id.toString()];
+            }
+
+            console.log(`DEBUG: DailyCash Branch Filter. Input: '${branchInput}', Resolved:`, branchIds);
+
+            query.$or = branchIds.map(b => ({ branch: b }));
         }
 
         if (req.query.mode) {
@@ -104,7 +121,8 @@ exports.verifyDailyCash = async (req, res) => {
                 update: {
                     $set: {
                         isVerified: update.isVerified,
-                        ...(update.date && { date: update.date })
+                        // Store verification date separately, preserve original date
+                        ...(update.verifiedDate && { verifiedDate: update.verifiedDate })
                     }
                 }
             }

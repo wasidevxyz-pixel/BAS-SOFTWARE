@@ -103,6 +103,56 @@ const partySchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+// Generate Party Code before saving (Robust)
+partySchema.pre('save', async function () {
+  // Only run on new documents
+  if (!this.isNew) return;
+
+  try {
+    // 1. Check if provided code is already taken
+    if (this.code) {
+      const existing = await this.constructor.findOne({ code: this.code });
+      if (!existing) {
+        // Code is unique, proceed
+        return;
+      }
+      // If code exists, fall through to auto-generation
+    }
+
+    const prefix = this.partyType === 'supplier' ? 'SUPP' : 'CUST';
+
+    // Find latest code with this prefix
+    const lastParty = await this.constructor.findOne({
+      code: { $regex: new RegExp(`^${prefix}-\\d+$`) }
+    }).sort({ code: -1 });
+
+    let sequence = 1;
+
+    if (lastParty && lastParty.code) {
+      const parts = lastParty.code.split('-');
+      if (parts.length > 1) {
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num)) sequence = num + 1;
+      }
+    }
+
+    // Collision Check Loop
+    let isUnique = false;
+    while (!isUnique) {
+      this.code = `${prefix}-${sequence.toString().padStart(3, '0')}`;
+
+      const existing = await this.constructor.findOne({ code: this.code });
+      if (existing) {
+        sequence++;
+      } else {
+        isUnique = true;
+      }
+    }
+  } catch (err) {
+    throw err;
+  }
+});
+
 // Update current balance
 partySchema.methods.updateBalance = async function (amount, type = 'add') {
   if (type === 'add') {

@@ -253,14 +253,25 @@ async function loadInitialData() {
                 });
 
                 // Trigger change event to update dependent lists (like suppliers)
+                // MODIFIED: Do NOT dispatch event for branchSelect here to avoid race condition with the explicit load below.
                 if (!isAdmin && userBranches.length > 0 && el.options.length > 0) {
-                    el.dispatchEvent(new Event('change'));
+                    if (id !== 'branchSelect') {
+                        el.dispatchEvent(new Event('change'));
+                    }
                 }
             });
         }
 
-        // 2. Load Suppliers (initially load all, will filter on branch selection)
-        await loadSuppliers();
+        // 2. Load Suppliers
+        // FIX: Pass the currently selected branch name to ensure correct filtering on load
+        const branchSelect = document.getElementById('branchSelect');
+        let initialBranch = '';
+        if (branchSelect && branchSelect.selectedIndex >= 0) {
+            initialBranch = branchSelect.options[branchSelect.selectedIndex].text;
+            // If Text is "Select Branch" or similar dummy, ignore it?
+            if (branchSelect.value === '') initialBranch = '';
+        }
+        await loadSuppliers(initialBranch);
 
         // 3. Load Customer Categories
         const catRes = await fetch('/api/v1/customer-categories?limit=500', {

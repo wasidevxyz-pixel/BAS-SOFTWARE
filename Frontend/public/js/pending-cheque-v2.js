@@ -279,7 +279,21 @@ async function calculateBankAmount(branch, dateStr) {
         dcTotal = dcData.data
             .filter(item => item.isVerified === true)
             .filter(item => validBankIds.has(item.bank) || validBankIds.has(item.bank?._id))
-            .reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+            .reduce((sum, item) => {
+                let amount = parseFloat(item.totalAmount) || 0;
+
+                // Deduction Logic: Match Bank Ledger
+                // Verified entries usually have deductions applied in Ledger view, so we must mirror that here.
+                const deductionRate = parseFloat(item.deductedAmount) || 0;
+                // Robust check: check bool flag OR if rate > 0
+                const isDed = (item.isDeduction === true || item.isDeduction === 'true');
+
+                if (isDed || deductionRate > 0) {
+                    const deductionVal = (amount * deductionRate) / 100;
+                    amount = Math.round(amount - deductionVal);
+                }
+                return sum + amount;
+            }, 0);
     }
 
     // FETCH 2: Bank Transactions (Valid Banks Only)

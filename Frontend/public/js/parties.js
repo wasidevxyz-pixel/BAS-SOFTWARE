@@ -121,9 +121,10 @@ function initPartiesPage() {
     document.getElementById('partyTypeFilter').addEventListener('change', loadParties);
     document.getElementById('balanceFilter').addEventListener('change', loadParties);
 
-    // Event listener for party type change to reload categories
+    // Event listener for party type change to reload categories AND generate code
     document.getElementById('partyType').addEventListener('change', function () {
         loadCategories(this.value);
+        generatePartyCode(); // Rerun generation on type change
     });
 
     // Auto-generate party code
@@ -149,25 +150,37 @@ function initializeCategoryDropdown() {
 }
 
 // Generate party code
+// Generate party code based on TYPE
 async function generatePartyCode() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/parties?limit=1&sort=-createdAt', {
+        const partyType = document.getElementById('partyType').value || 'customer'; // Default to customer if not set
+        const prefix = partyType === 'supplier' ? 'SUPP' : 'CUST';
+
+        // Fetch latest party of THIS specific type
+        const response = await fetch(`/api/v1/parties?partyType=${partyType}&limit=1&sort=-createdAt`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        let newCode = `${prefix}-001`;
+
         if (response.ok) {
             const data = await response.json();
-            const lastParty = data.data[0];
-            let newCode = 'CUST-001';
-
-            if (lastParty && lastParty.code) {
-                const lastNumber = parseInt(lastParty.code.split('-')[1]) || 0;
-                newCode = `CUST-${String(lastNumber + 1).padStart(3, '0')}`;
+            if (data.data && data.data.length > 0) {
+                const lastParty = data.data[0];
+                // Check if lastParty code matches our expected prefix format
+                if (lastParty.code && lastParty.code.startsWith(prefix)) {
+                    const parts = lastParty.code.split('-');
+                    if (parts.length > 1) {
+                        const lastNumber = parseInt(parts[1], 10);
+                        if (!isNaN(lastNumber)) {
+                            newCode = `${prefix}-${String(lastNumber + 1).padStart(3, '0')}`;
+                        }
+                    }
+                }
             }
-
-            document.getElementById('partyCode').value = newCode;
         }
+        document.getElementById('partyCode').value = newCode;
     } catch (error) {
         console.error('Error generating party code:', error);
     }

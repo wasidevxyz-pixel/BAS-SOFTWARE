@@ -111,21 +111,33 @@ exports.getBankLedgerReport = asyncHandler(async (req, res) => {
         }
 
         dailyCashEntries.forEach(dc => {
-            const amount = dc.totalAmount || 0;
+            let amount = parseFloat(dc.totalAmount) || 0;
+
+            // User Request: If Deduction (Verified Batch), show Net Amount
+            // Robust check: if isDeduction flag is set OR if there is a deduction rate > 0
+            const deductionRate = parseFloat(dc.deductedAmount) || 0;
+            if (dc.isDeduction || deductionRate > 0) {
+                const deductionVal = (amount * deductionRate) / 100;
+                amount = Math.round(amount - deductionVal);
+            }
+
             // If verified, show "Batch Transfered" in remarks
             const remarksText = dc.isVerified ? 'Batch Transfered' : (dc.remarks || '');
 
+            // Use VERIFIED DATE if available, else original date
+            const displayDate = (dc.isVerified && dc.verifiedDate) ? dc.verifiedDate : dc.date;
+
             transactions.push({
-                date: dc.date,
+                date: displayDate,
                 narration: `Daily Cash`,
                 remarks: remarksText,
                 batchNo: dc.batchNo || '-',
                 invoiceDate: null, // Daily Cash has no invoice date
                 department: dc.department?.name || '-',
                 type: 'Daily Cash',
-                debit: amount, // Received
+                debit: amount, // Received (Net Amount)
                 credit: 0,
-                sortDate: new Date(dc.date).getTime()
+                sortDate: new Date(displayDate).getTime()
             });
         });
     }
@@ -334,7 +346,31 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
         {
             $group: {
                 _id: null,
-                total: { $sum: { $toDouble: "$totalAmount" } } // Safe Cast
+                total: {
+                    $sum: {
+                        $cond: [
+                            {
+                                $or: [
+                                    { $eq: ["$isDeduction", true] },
+                                    { $gt: [{ $toDouble: "$deductedAmount" }, 0] }
+                                ]
+                            },
+                            {
+                                // Net = Total - (Total * Rate / 100)
+                                $subtract: [
+                                    { $toDouble: "$totalAmount" },
+                                    {
+                                        $multiply: [
+                                            { $toDouble: "$totalAmount" },
+                                            { $divide: [{ $toDouble: "$deductedAmount" }, 100] }
+                                        ]
+                                    }
+                                ]
+                            },
+                            { $toDouble: "$totalAmount" } // Gross if no deduction
+                        ]
+                    }
+                }
             }
         }
     ]);

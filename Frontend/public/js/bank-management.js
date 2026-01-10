@@ -601,7 +601,9 @@ async function searchBankDetails() {
                     remarks: item.remarks || item.details || item.description || '',
                     batchNo: item.batchNo || '-',
                     _id: item._id,
-                    isVerified: item.isVerified || false,
+                    // Ensure strict boolean
+                    isVerified: (item.isVerified === true || item.isVerified === 'true' || item.isVerified === 1),
+                    verifiedDate: item.verifiedDate, // Map new field
                     department: item.department ? (item.department.name || item.department) : '-'
                 };
 
@@ -636,12 +638,19 @@ async function searchBankDetails() {
 
             // Sort: Unverified (Red) on top, Verified (Green) at bottom. Both sorted by Date Ascending.
             mappedData.sort((a, b) => {
-                // 1. Primary Sort: Verification Status (False/Unverified comes first)
-                if (a.isVerified !== b.isVerified) {
-                    return a.isVerified ? 1 : -1;
+                const vA = a.isVerified ? 1 : 0;
+                const vB = b.isVerified ? 1 : 0;
+
+                // 1. Primary Sort: Verification Status
+                // 0 (Unverified) comes before 1 (Verified)
+                if (vA !== vB) {
+                    return vA - vB;
                 }
+
                 // 2. Secondary Sort: Date Ascending
-                return new Date(a.date) - new Date(b.date);
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                return dateA - dateB;
             });
 
             renderBankDetailGrid(mappedData, isDeduction);
@@ -695,9 +704,14 @@ function renderBankDetailGrid(data, isDeduction) {
         const year = dateObj.getFullYear();
         const displayDate = `${day}-${month}-${year}`;
 
-        // Default Input Date: Today for Unverified, Saved Date for Verified
-        const todayStr = new Date().toISOString().split('T')[0];
-        const inputDateValue = item.isVerified ? dateStr : todayStr;
+        // Default Input Date: Use Verified Date if exists, else Original Date
+        let inputDateValue = dateStr;
+        if (item.verifiedDate) {
+            inputDateValue = new Date(item.verifiedDate).toISOString().split('T')[0];
+        } else if (item.isVerified) {
+            // If marked verified but no verifiedDate (legacy), use dateStr
+            inputDateValue = dateStr;
+        }
 
         const tr = document.createElement('tr');
         tr.dataset.id = item._id; // Store ID for persistence
@@ -856,7 +870,7 @@ async function updateBankRowsStatus() {
             updates.push({
                 id: id,
                 isVerified: checkbox.checked,
-                date: dateInput ? dateInput.value : null
+                verifiedDate: dateInput ? dateInput.value : null
             });
             // Instant visual feedback before save completes
             applyRowColor(row, checkbox.checked);

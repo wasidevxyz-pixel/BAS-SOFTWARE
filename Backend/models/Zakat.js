@@ -45,15 +45,45 @@ const zakatSchema = new mongoose.Schema({
 });
 
 // Generate zakat number before saving
+// Generate zakat number before saving
 zakatSchema.pre('save', async function () {
     if (!this.isNew || this.zakatNo) return;
 
     try {
-        const count = await this.constructor.countDocuments();
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        this.zakatNo = `ZKT-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
+        const prefix = `ZKT-${year}${month}-`;
+
+        // Find the latest Zakat Number with this prefix
+        // This is safer than countDocuments() which breaks if docs are deleted
+        const lastRecord = await this.constructor.findOne({
+            zakatNo: { $regex: new RegExp(`^${prefix}`) }
+        }).sort({ zakatNo: -1 });
+
+        let sequence = 1;
+        if (lastRecord && lastRecord.zakatNo) {
+            // Extract the sequence part (Last 4 digits)
+            const lastSeqStr = lastRecord.zakatNo.split('-')[2];
+            if (lastSeqStr && !isNaN(lastSeqStr)) {
+                sequence = parseInt(lastSeqStr, 10) + 1;
+            }
+        }
+
+        // Loop to ensure uniqueness (Collision Check)
+        let isUnique = false;
+        while (!isUnique) {
+            this.zakatNo = `${prefix}${sequence.toString().padStart(4, '0')}`;
+
+            // Check if this ID actually exists
+            const existing = await this.constructor.findOne({ zakatNo: this.zakatNo });
+            if (existing) {
+                // If collision, increment and try again
+                sequence++;
+            } else {
+                isUnique = true;
+            }
+        }
     } catch (error) {
         throw error;
     }
