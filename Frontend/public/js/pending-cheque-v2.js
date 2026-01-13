@@ -397,10 +397,11 @@ window.loadProBranches = loadProBranches;
 // Global variable to track editing
 let editingRecordId = null;
 
-function saveProPendingChqRecord() {
+async function saveProPendingChqRecord() {
     const branch = document.getElementById('new-branch').value;
     const bankDate = document.getElementById('new-bank-date').value;
     const stmtDate = document.getElementById('new-stmt-date').value;
+    const token = localStorage.getItem('token');
 
     if (!branch || !bankDate) {
         alert("Please select a branch and date.");
@@ -408,55 +409,93 @@ function saveProPendingChqRecord() {
     }
 
     const currentDiff = document.getElementById('new-diff').value;
+    const bankAmount = document.getElementById('new-bank-amount').value;
+    const pendingChq = document.getElementById('new-pending-chq').value;
+    const statement = document.getElementById('new-statement').value;
 
-    const record = {
-        id: editingRecordId || Date.now(),
-        date: editingRecordId ? getDataById(editingRecordId).date : new Date().toISOString(), // Keep original sys date if edit
-        branch: branch,
-        bankDate: bankDate,
+    const payload = {
+        branch,
+        bankDate,
         statementDate: stmtDate,
-        bankAmount: document.getElementById('new-bank-amount').value,
-        pendingChq: document.getElementById('new-pending-chq').value,
-        statement: document.getElementById('new-statement').value,
+        bankAmount,
+        pendingChq,
+        statement,
         diff: currentDiff
     };
 
-    let history = JSON.parse(localStorage.getItem('pending_chq_history') || '[]');
+    const saveBtn = document.getElementById('btn-save');
+    const originalBtnContent = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Saving...';
 
-    if (editingRecordId) {
-        // Update existing
-        const index = history.findIndex(h => h.id === editingRecordId);
-        if (index !== -1) history[index] = record;
-        editingRecordId = null; // Reset
-        document.getElementById('btn-save').innerHTML = '<i class="fas fa-save me-2"></i> Save Record';
-    } else {
-        // Add new
-        history.unshift(record);
+    try {
+        let url = '/api/v1/pending-cheques';
+        let method = 'POST';
+
+        if (editingRecordId) {
+            url += `/${editingRecordId}`;
+            method = 'PUT';
+        }
+
+        const res = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert("Record Saved Successfully to Database!");
+            editingRecordId = null;
+            document.getElementById('btn-save').innerHTML = '<i class="fas fa-save me-2"></i> Save Record';
+
+            // Clear inputs (Optional, or keep for rapid entry?)
+            // document.getElementById('new-statement').value = '';
+
+            loadProHistory();
+        } else {
+            alert("Error saving record: " + (data.error || 'Unknown Error'));
+        }
+    } catch (e) {
+        console.error("Save Error", e);
+        alert("Failed to save to database.");
+    } finally {
+        saveBtn.disabled = false;
+        if (!editingRecordId) saveBtn.innerHTML = '<i class="fas fa-save me-2"></i> Save Record';
+        else saveBtn.innerHTML = '<i class="fas fa-edit me-2"></i> Update Record';
     }
-
-    localStorage.setItem('pending_chq_history', JSON.stringify(history));
-
-    loadProHistory();
-    alert("Record Saved Successfully!");
 }
 
+// Cache for current data
+let currentHistoryData = [];
+
 function getDataById(id) {
-    const history = JSON.parse(localStorage.getItem('pending_chq_history') || '[]');
-    return history.find(h => h.id === id) || {};
+    return currentHistoryData.find(h => h._id === id) || {};
 }
 
 function editProRecord(id) {
-    const record = getDataById(id);
-    if (!record) return;
+    // ID coming from HTML onclick might be string, ensure type match
+    const record = getDataById(String(id));
+    if (!record || !record._id) {
+        console.error("Record not found for edit", id);
+        return;
+    }
 
     // Populate Fields
     document.getElementById('new-branch').value = record.branch;
-    // We need to trigger branch change to load banks? 
-    // Maybe just set values directly if we assume banks loaded? 
-    // Better to just set values and let user refresh if needed.
 
-    document.getElementById('new-bank-date').value = record.bankDate;
-    document.getElementById('new-stmt-date').value = record.statementDate || '';
+    // Format Date for Input (YYYY-MM-DD)
+    const formatDateForInput = (d) => {
+        if (!d) return '';
+        return new Date(d).toISOString().split('T')[0];
+    };
+
+    document.getElementById('new-bank-date').value = formatDateForInput(record.bankDate);
+    document.getElementById('new-stmt-date').value = formatDateForInput(record.statementDate);
 
     document.getElementById('new-bank-amount').value = record.bankAmount;
     document.getElementById('new-pending-chq').value = record.pendingChq;
@@ -464,7 +503,7 @@ function editProRecord(id) {
     document.getElementById('new-diff').value = record.diff;
 
     // Set Edit Mode
-    editingRecordId = record.id;
+    editingRecordId = record._id;
     document.getElementById('btn-save').innerHTML = '<i class="fas fa-edit me-2"></i> Update Record';
 
     // Scroll to top
@@ -474,14 +513,31 @@ function editProRecord(id) {
     calculateProDiff();
 }
 
-function loadProHistory() {
-    const history = JSON.parse(localStorage.getItem('pending_chq_history') || '[]');
-    const currentBranch = document.getElementById('new-branch').value;
-    let displayData = history;
-    if (currentBranch) {
-        displayData = history.filter(h => h.branch === currentBranch);
+async function loadProHistory() {
+    try {
+        const token = localStorage.getItem('token');
+        const branch = document.getElementById('new-branch').value;
+
+        // Filter by branch if selected
+        let url = '/api/v1/pending-cheques';
+        if (branch) {
+            url += `?branch=${encodeURIComponent(branch)}`;
+        }
+
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            currentHistoryData = data.data;
+            renderProGrid(currentHistoryData);
+        } else {
+            console.error("Failed to load history", data.error);
+        }
+    } catch (e) {
+        console.error("Error loading history", e);
     }
-    renderProGrid(displayData);
 }
 
 function renderProGrid(data) {
@@ -490,28 +546,31 @@ function renderProGrid(data) {
     tbody.innerHTML = '';
 
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No data available in Database</td></tr>';
         return;
     }
 
     data.forEach(item => {
         // Format System Date (Local)
-        const sysDate = new Date(item.date).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const sysDate = new Date(item.createdAt || item.date).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        // Helper to format short date
+        const shortDate = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '-';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="small">${sysDate}</td>
-            <td>${item.statementDate || '-'}</td>
+            <td>${shortDate(item.statementDate)}</td>
             <td>${item.branch}</td>
-            <td class="text-end fw-bold text-success">${item.bankAmount}</td>
-            <td class="text-end text-primary">${item.pendingChq}</td>
-            <td class="text-end">${item.statement}</td>
-            <td class="text-end fw-bold text-danger">${item.diff}</td>
+            <td class="text-end fw-bold text-success">${formatCurrency(item.bankAmount)}</td>
+            <td class="text-end text-primary">${formatCurrency(item.pendingChq)}</td>
+            <td class="text-end">${formatCurrency(item.statement)}</td>
+            <td class="text-end fw-bold text-danger">${formatCurrency(item.diff)}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary me-1" onclick="editProRecord(${item.id})">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editProRecord('${item._id}')">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteProRecord(${item.id})">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteProRecord('${item._id}')">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -520,12 +579,29 @@ function renderProGrid(data) {
     });
 }
 
-function deleteProRecord(id) {
-    if (!confirm("Are you sure you want to delete this record?")) return;
-    let history = JSON.parse(localStorage.getItem('pending_chq_history') || '[]');
-    history = history.filter(h => h.id !== id);
-    localStorage.setItem('pending_chq_history', JSON.stringify(history));
-    loadProHistory();
+function formatCurrency(val) {
+    return Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function deleteProRecord(id) {
+    if (!confirm("Are you sure you want to delete this record from the database?")) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`/api/v1/pending-cheques/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            loadProHistory();
+        } else {
+            alert("Error deleting: " + data.error);
+        }
+    } catch (e) {
+        alert("Delete failed.");
+    }
 };
 
 window.calculateProDiff = calculateProDiff;

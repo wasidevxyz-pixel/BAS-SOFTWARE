@@ -386,8 +386,18 @@ body {
     z-index: 99;
 }
 
+/* Sidebar Integration */
+body.sidebar-full .action-bar {
+    left: 280px; /* Matches --sidebar-width-full in sidebar.css */
+}
+
+body.sidebar-mini .action-bar {
+    left: 60px; /* Matches --sidebar-width-mini in sidebar.css */
+}
+
+/* Fallback / Legacy */
 .action-bar.with-sidebar {
-    left: 250px;
+    left: 280px;
 }
 
 /* ============================================

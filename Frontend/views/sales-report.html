@@ -336,6 +336,7 @@
         .data-table tr.total-row td::before {
             color: #adb5bd;
         }
+
         /* Professional Print Styles */
         @media print {
             @page {
@@ -360,7 +361,8 @@
             button,
             #sidebarToggle,
             .sidebar,
-            .main-container > .mb-3, /* Hide tab buttons container */
+            .main-container>.mb-3,
+            /* Hide tab buttons container */
             footer,
             .dropdown {
                 display: none !important;
@@ -397,7 +399,8 @@
             }
 
             .summary-card {
-                border: 1px solid #ccc; /* Add border for print visibility */
+                border: 1px solid #ccc;
+                /* Add border for print visibility */
                 box-shadow: none;
             }
 
@@ -609,12 +612,17 @@
             }
 
             // Set default date range to current month
+            // Set default date range to current month (Local Time Safe)
             const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-            document.getElementById('filterFromDate').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('filterToDate').value = lastDay.toISOString().split('T')[0];
+            const firstDateStr = `${year}-${month}-01`;
+            const lastDateStr = `${year}-${month}-${String(lastDayOfMonth).padStart(2, '0')}`;
+
+            document.getElementById('filterFromDate').value = firstDateStr;
+            document.getElementById('filterToDate').value = lastDateStr;
 
             loadFilters();
         });

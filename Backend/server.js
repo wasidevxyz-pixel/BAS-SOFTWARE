@@ -70,6 +70,7 @@ const groupRoutes = require('./routes/groups');
 const backupRoutes = require('./routes/backup');
 const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
 const zakatRoutes = require('./routes/zakats');
+const pendingChequeRoutes = require('./routes/pendingCheques');
 
 
 
@@ -295,6 +296,7 @@ app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/backup', backupRoutes);
 app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
 app.use('/api/v1/zakats', zakatRoutes);
+app.use('/api/v1/pending-cheques', pendingChequeRoutes);
 
 
 
