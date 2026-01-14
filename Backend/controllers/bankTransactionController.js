@@ -369,27 +369,33 @@ exports.updateBankTransaction = asyncHandler(async (req, res) => {
     if (ledgerEntry) {
       // Reverse old entry
       const bankLedger = await Ledger.findById(ledgerEntry.ledgerId);
-      if (oldType === 'withdrawal') {
-        bankLedger.currentBalance -= oldAmount;
-      } else {
-        bankLedger.currentBalance += oldAmount;
-      }
 
-      // Apply new entry
-      if (type === 'withdrawal') {
-        bankLedger.currentBalance += amount;
-        ledgerEntry.debit = amount;
-        ledgerEntry.credit = 0;
+      if (bankLedger) {
+        if (oldType === 'withdrawal') {
+          bankLedger.currentBalance -= oldAmount;
+        } else {
+          bankLedger.currentBalance += oldAmount;
+        }
+
+        // Apply new entry
+        if (type === 'withdrawal') {
+          bankLedger.currentBalance += amount;
+          ledgerEntry.debit = amount;
+          ledgerEntry.credit = 0;
+        } else {
+          bankLedger.currentBalance -= amount;
+          ledgerEntry.debit = 0;
+          ledgerEntry.credit = amount;
+        }
+
+        await bankLedger.save();
       } else {
-        bankLedger.currentBalance -= amount;
-        ledgerEntry.debit = 0;
-        ledgerEntry.credit = amount;
+        console.warn(`Bank Ledger not found for ID: ${ledgerEntry.ledgerId} during Transaction Update`);
       }
 
       ledgerEntry.narration = narration;
       ledgerEntry.refType = `bank_${type}`;
       await ledgerEntry.save();
-      await bankLedger.save();
     }
 
     const populatedTransaction = await BankTransaction.findById(updatedTransaction._id)

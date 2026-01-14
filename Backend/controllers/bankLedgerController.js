@@ -328,7 +328,7 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
 
     const dcMatch = {
         mode: 'Bank',
-        isVerified: true, // User Request: Only Verified Entries
+        // isVerified: true, // User Request: Removed to match Summary Pro (includes unverified)
         date: { $lt: startDate },
         bank: { $in: bankIds } // Match ANY ID associated with this Bank Name
     };
@@ -346,31 +346,8 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
         {
             $group: {
                 _id: null,
-                total: {
-                    $sum: {
-                        $cond: [
-                            {
-                                $or: [
-                                    { $eq: ["$isDeduction", true] },
-                                    { $gt: [{ $toDouble: "$deductedAmount" }, 0] }
-                                ]
-                            },
-                            {
-                                // Net = Total - (Total * Rate / 100)
-                                $subtract: [
-                                    { $toDouble: "$totalAmount" },
-                                    {
-                                        $multiply: [
-                                            { $toDouble: "$totalAmount" },
-                                            { $divide: [{ $toDouble: "$deductedAmount" }, 100] }
-                                        ]
-                                    }
-                                ]
-                            },
-                            { $toDouble: "$totalAmount" } // Gross if no deduction
-                        ]
-                    }
-                }
+                // MATCH SUMMARY PRO: Use totalAmount directly, ignore deductions logic
+                total: { $sum: { $toDouble: "$totalAmount" } }
             }
         }
     ]);
@@ -443,33 +420,8 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
     balance += btTotal;
 
 
-    // 3. Bank Transfers - BEFORE Start Date (RESTORED)
-    // We must query this collection to catch transfers that might not be in BankTransaction
-    // or to ensure consistency with the List view which uses this collection.
-    const transferQuery = {
-        date: { $lt: startDate },
-        $or: [
-            { fromBank: bank._id },
-            { toBank: bank._id }
-        ]
-    };
-
-    const trEntries = await BankTransfer.find(transferQuery).lean();
-    let trTotal = 0;
-
-    trEntries.forEach(t => {
-        const fromId = t.fromBank?._id?.toString() || t.fromBank?.toString();
-        const toId = t.toBank?._id?.toString() || t.toBank?.toString();
-        const currentId = bank._id.toString();
-
-        if (toId === currentId) {
-            trTotal += (t.amount || 0); // Credit/Received
-        } else if (fromId === currentId) {
-            trTotal -= (t.amount || 0); // Debit/Paid
-        }
-    });
-
-    balance += trTotal;
+    // 3. Bank Transfers - SECTION REMOVED to align with Summary Pro Logic
+    // Using BankTransaction aggregation above covers transfers if they are synced.
 
     return balance;
 }
@@ -551,7 +503,7 @@ exports.getBranchBankBalances = asyncHandler(async (req, res) => {
     let totalBalance = 0;
 
     for (const bank of banks) {
-        const bankBal = await calculateOpeningBalance(bank, nextDay);
+        const bankBal = await calculateOpeningBalance(bank, nextDay, bank.department?._id); // Passing Department ID
         totalBalance += bankBal;
 
         // Get department abbreviation from the bank's department
