@@ -7,6 +7,13 @@ const {
     deleteBackup,
     cleanOldBackups
 } = require('../utils/backupUtils');
+// Safely import cronService
+let cronService;
+try {
+    cronService = require('../services/cronService');
+} catch (err) {
+    console.warn('cronService not found, automated backups will not run.');
+}
 
 /**
  * MongoDB Backup Controller
@@ -261,6 +268,13 @@ exports.updateBackupSettings = async (req, res) => {
         if (autoBackupTime !== undefined) settings.autoBackupTime = autoBackupTime;
 
         await settings.save();
+
+        await settings.save();
+
+        // Update cron schedule
+        if (cronService && cronService.updateSchedule) {
+            await cronService.updateSchedule();
+        }
 
         res.status(200).json({
             success: true,

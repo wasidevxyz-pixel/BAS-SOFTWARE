@@ -226,6 +226,7 @@ class SidebarNavigation {
                     { label: 'Stock Adjustments', link: '/stock-adjustments.html', permission: 'stock_adjustments' }
                 ]
             },
+            { id: 'backup', icon: 'fa-database', label: 'Backup & Restore', link: '/backup.html', permission: 'settings' }, // Using 'settings' permission for now
             { id: 'settings', icon: 'fa-cog', label: 'Settings', link: '/settings.html', permission: 'settings' }
         ];
 

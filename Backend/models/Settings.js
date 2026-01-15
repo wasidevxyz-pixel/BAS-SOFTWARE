@@ -238,7 +238,7 @@ const settingsSchema = new mongoose.Schema({
   mongodbUri: {
     type: String,
     trim: true,
-    default: process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inventory'
+    default: process.env.MONGO_URI || 'mongodb://localhost:27017/BAS-SOFTWARE'
   },
   backupFolderPath: {
     type: String,

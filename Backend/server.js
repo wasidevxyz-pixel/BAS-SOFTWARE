@@ -599,6 +599,10 @@ app.get('/employee-commission.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-commission.html'));
 });
 
+app.get('/backup.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'backup.html'));
+});
+
 app.get('/employee-penalty.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-penalty.html'));
 });
@@ -665,5 +669,9 @@ process.on('unhandledRejection', (err, promise) => {
   // Close server & exit process
   server.close(() => process.exit(1));
 });
+// Initialize Cron Jobs
+const cronService = require('./services/cronService');
+cronService.init();
+
 // Forced restart for route update
 
