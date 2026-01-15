@@ -234,6 +234,33 @@ const settingsSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // MongoDB Backup Configuration
+  mongodbUri: {
+    type: String,
+    trim: true,
+    default: process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inventory'
+  },
+  backupFolderPath: {
+    type: String,
+    trim: true,
+    default: './backups'
+  },
+  mongoToolsPath: {
+    type: String,
+    trim: true,
+    default: '' // Empty means use system PATH
+  },
+  lastBackupDate: {
+    type: Date
+  },
+  autoBackupEnabled: {
+    type: Boolean,
+    default: true
+  },
+  autoBackupTime: {
+    type: String,
+    default: '02:00' // 2 AM daily backup
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

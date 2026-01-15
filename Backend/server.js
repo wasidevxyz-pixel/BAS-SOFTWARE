@@ -68,6 +68,7 @@ const holyDayRoutes = require('./routes/holyDays');
 const supplierTaxCPRRoutes = require('./routes/supplierTaxCPRs');
 const groupRoutes = require('./routes/groups');
 const backupRoutes = require('./routes/backup');
+const mongoBackupRoutes = require('./routes/mongoBackup');
 const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
 const zakatRoutes = require('./routes/zakats');
 const pendingChequeRoutes = require('./routes/pendingCheques');
@@ -226,6 +227,73 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inven
     } catch (err) {
       console.error('Migration error:', err);
     }
+
+    // Initialize backup scheduler after database connection
+    try {
+      const cron = require('node-cron');
+      const Settings = require('./models/Settings');
+      const { createBackup, cleanOldBackups } = require('./utils/backupUtils');
+
+      const settings = await Settings.findOne({});
+
+      if (!settings) {
+        console.log('[AUTO-BACKUP] Settings not found. Automatic backup disabled.');
+      } else if (!settings.autoBackupEnabled) {
+        console.log('[AUTO-BACKUP] Automatic backup is disabled in settings.');
+      } else {
+        // Parse backup time (format: "HH:MM")
+        const backupTime = settings.autoBackupTime || '02:00';
+        const [hour, minute] = backupTime.split(':');
+
+        // Create cron schedule (runs daily at specified time)
+        const cronSchedule = `${minute} ${hour} * * *`;
+
+        console.log(`[AUTO-BACKUP] Scheduler initialized. Daily backup at ${backupTime}`);
+
+        // Schedule the backup
+        cron.schedule(cronSchedule, async () => {
+          console.log('[AUTO-BACKUP] Starting scheduled backup...');
+
+          try {
+            const currentSettings = await Settings.findOne({});
+
+            if (!currentSettings || !currentSettings.autoBackupEnabled) {
+              console.log('[AUTO-BACKUP] Automatic backup is now disabled. Skipping...');
+              return;
+            }
+
+            const backupConfig = {
+              mongodbUri: currentSettings.mongodbUri || process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inventory',
+              backupFolderPath: currentSettings.backupFolderPath || './backups',
+              mongoToolsPath: currentSettings.mongoToolsPath || ''
+            };
+
+            // Create backup
+            const result = await createBackup(backupConfig);
+
+            // Update last backup date
+            currentSettings.lastBackupDate = result.timestamp;
+            await currentSettings.save();
+
+            console.log(`[AUTO-BACKUP] ✓ Backup completed: ${result.backupFolder}`);
+
+            // Clean old backups
+            if (currentSettings.backupRetentionDays) {
+              const cleanupResult = await cleanOldBackups(
+                backupConfig.backupFolderPath,
+                currentSettings.backupRetentionDays
+              );
+              console.log(`[AUTO-BACKUP] Cleanup: ${cleanupResult.message}`);
+            }
+
+          } catch (error) {
+            console.error('[AUTO-BACKUP] ✗ Error:', error.message);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[AUTO-BACKUP] Failed to initialize scheduler:', error.message);
+    }
   })
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -294,6 +362,7 @@ app.use('/api/v1/holy-days', holyDayRoutes);
 app.use('/api/v1/supplier-tax-cprs', supplierTaxCPRRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/backup', backupRoutes);
+app.use('/api/v1/mongodb-backup', mongoBackupRoutes);
 app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
 app.use('/api/v1/zakats', zakatRoutes);
 app.use('/api/v1/pending-cheques', pendingChequeRoutes);
@@ -596,7 +665,5 @@ process.on('unhandledRejection', (err, promise) => {
   // Close server & exit process
   server.close(() => process.exit(1));
 });
-
 // Forced restart for route update
-
 

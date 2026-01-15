@@ -28,11 +28,11 @@ function initSettingsPage() {
     loadAllSettings();
     loadAllSettings();
 
+
     // Event listeners
     document.getElementById('companyForm').addEventListener('submit', handleCompanySubmit);
     document.getElementById('invoiceForm').addEventListener('submit', handleInvoiceSubmit);
     document.getElementById('taxForm').addEventListener('submit', handleTaxSubmit);
-    document.getElementById('backupSettingsForm').addEventListener('submit', handleBackupSettingsSubmit);
 
     // Logo preview
     document.getElementById('companyLogo').addEventListener('change', handleLogoChange);
@@ -463,6 +463,381 @@ async function restoreBackup() {
     } finally {
         hideLoading();
     }
+}
+
+// ============================================
+// MongoDB Backup & Restore Functions
+// ============================================
+
+// Load backup information on page load
+document.addEventListener('DOMContentLoaded', function () {
+    // Load backup info when backup tab is shown
+    const backupTab = document.getElementById('backup-tab');
+    if (backupTab) {
+        backupTab.addEventListener('shown.bs.tab', function () {
+            loadBackupInfo();
+            loadAvailableBackups();
+            loadBackupConfiguration();
+        });
+    }
+
+    // Setup backup config form
+    const backupConfigForm = document.getElementById('backupConfigForm');
+    if (backupConfigForm) {
+        backupConfigForm.addEventListener('submit', saveBackupConfiguration);
+    }
+
+    // Setup restore modal checkbox
+    const confirmRestore = document.getElementById('confirmRestore');
+    if (confirmRestore) {
+        confirmRestore.addEventListener('change', function () {
+            document.getElementById('confirmRestoreBtn').disabled = !this.checked;
+        });
+    }
+});
+
+/**
+ * Load backup information (last backup date, count, size)
+ */
+async function loadBackupInfo() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/mongodb-backup/info', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const info = data.data;
+
+            // Update UI
+            document.getElementById('lastBackupDate').textContent =
+                info.lastBackupDate ? new Date(info.lastBackupDate).toLocaleString() : 'Never';
+            document.getElementById('backupCount').textContent = info.backupCount || '0';
+            document.getElementById('totalBackupSize').textContent = info.totalSizeFormatted || '0 B';
+        } else {
+            console.error('Failed to load backup info');
+        }
+    } catch (error) {
+        console.error('Error loading backup info:', error);
+    }
+}
+
+/**
+ * Perform manual backup
+ */
+async function performManualBackup() {
+    const btn = document.getElementById('manualBackupBtn');
+    const originalText = btn.innerHTML;
+
+    try {
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Backup...';
+
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/mongodb-backup/manual', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showBackupAlert('success', `✓ Backup created successfully: ${result.data.backupFolder}`);
+            // Reload backup info and list
+            loadBackupInfo();
+            loadAvailableBackups();
+        } else {
+            showBackupAlert('danger', `✗ Backup failed: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        showBackupAlert('danger', '✗ Backup failed: ' + error.message);
+    } finally {
+        // Restore button state
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/**
+ * Load available backups list
+ */
+async function loadAvailableBackups() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/mongodb-backup/list', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const backups = data.data;
+
+            const tbody = document.getElementById('backupsTableBody');
+
+            if (backups.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            <i class="fas fa-folder-open me-2"></i>No backups available
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = backups.map(backup => `
+                <tr>
+                    <td>
+                        <i class="fas fa-folder text-warning me-2"></i>
+                        <code>${backup.name}</code>
+                    </td>
+                    <td>${new Date(backup.createdAt).toLocaleString()}</td>
+                    <td>${backup.sizeFormatted}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-warning me-1" onclick="restoreBackupFromList('${backup.name}')" title="Restore">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteBackupFromList('${backup.name}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Also update restore modal dropdown
+            updateRestoreDropdown(backups);
+        } else {
+            console.error('Failed to load backups list');
+        }
+    } catch (error) {
+        console.error('Error loading backups:', error);
+    }
+}
+
+/**
+ * Update restore modal dropdown with available backups
+ */
+function updateRestoreDropdown(backups) {
+    const select = document.getElementById('restoreBackupSelect');
+    if (!select) return;
+
+    if (backups.length === 0) {
+        select.innerHTML = '<option value="">No backups available</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">Select a backup...</option>' +
+        backups.map(backup =>
+            `<option value="${backup.name}">${backup.name} (${new Date(backup.createdAt).toLocaleString()})</option>`
+        ).join('');
+}
+
+/**
+ * Show restore modal
+ */
+function showRestoreModal() {
+    // Load backups first
+    loadAvailableBackups();
+
+    // Reset modal state
+    document.getElementById('confirmRestore').checked = false;
+    document.getElementById('confirmRestoreBtn').disabled = true;
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('restoreModal'));
+    modal.show();
+}
+
+/**
+ * Restore backup from list (quick restore)
+ */
+function restoreBackupFromList(backupName) {
+    // Set the backup in dropdown
+    document.getElementById('restoreBackupSelect').value = backupName;
+
+    // Show modal
+    showRestoreModal();
+}
+
+/**
+ * Perform restore operation
+ */
+async function performRestore() {
+    const backupFolder = document.getElementById('restoreBackupSelect').value;
+
+    if (!backupFolder) {
+        showBackupAlert('warning', 'Please select a backup to restore');
+        return;
+    }
+
+    const btn = document.getElementById('confirmRestoreBtn');
+    const originalText = btn.innerHTML;
+
+    try {
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Restoring...';
+
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/mongodb-backup/restore', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ backupFolder })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('restoreModal')).hide();
+
+            showBackupAlert('success', '✓ Database restored successfully! Page will reload in 3 seconds...');
+
+            // Reload page after 3 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        } else {
+            showBackupAlert('danger', `✗ Restore failed: ${result.message}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Error restoring backup:', error);
+        showBackupAlert('danger', '✗ Restore failed: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/**
+ * Delete backup from list
+ */
+async function deleteBackupFromList(backupName) {
+    if (!confirm(`Are you sure you want to delete backup: ${backupName}?`)) {
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/v1/mongodb-backup/${encodeURIComponent(backupName)}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showBackupAlert('success', '✓ Backup deleted successfully');
+            loadBackupInfo();
+            loadAvailableBackups();
+        } else {
+            showBackupAlert('danger', `✗ Delete failed: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Error deleting backup:', error);
+        showBackupAlert('danger', '✗ Delete failed: ' + error.message);
+    }
+}
+
+/**
+ * Load backup configuration
+ */
+async function loadBackupConfiguration() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/mongodb-backup/info', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const info = data.data;
+
+            // Populate form
+            document.getElementById('backupFolderPath').value = info.backupFolderPath || './backups';
+            document.getElementById('mongoToolsPath').value = info.mongoToolsPath || '';
+            document.getElementById('autoBackupEnabled').checked = info.autoBackupEnabled || false;
+            document.getElementById('autoBackupTime').value = info.autoBackupTime || '02:00';
+        }
+    } catch (error) {
+        console.error('Error loading backup configuration:', error);
+    }
+}
+
+/**
+ * Save backup configuration
+ */
+async function saveBackupConfiguration(e) {
+    e.preventDefault();
+
+    try {
+        showLoading();
+
+        const token = localStorage.getItem('token');
+        const formData = {
+            backupFolderPath: document.getElementById('backupFolderPath').value,
+            mongoToolsPath: document.getElementById('mongoToolsPath').value,
+            autoBackupEnabled: document.getElementById('autoBackupEnabled').checked,
+            autoBackupTime: document.getElementById('autoBackupTime').value
+        };
+
+        const response = await fetch('/api/v1/mongodb-backup/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showBackupAlert('success', '✓ Backup configuration saved successfully');
+        } else {
+            showBackupAlert('danger', `✗ Save failed: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Error saving backup configuration:', error);
+        showBackupAlert('danger', '✗ Save failed: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+/**
+ * Show backup alert message
+ */
+function showBackupAlert(type, message) {
+    const container = document.getElementById('backupAlertContainer');
+    if (!container) return;
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.role = 'alert';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    container.innerHTML = '';
+    container.appendChild(alert);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+    }, 5000);
 }
 
 // Format date
