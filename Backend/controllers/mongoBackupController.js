@@ -132,8 +132,42 @@ exports.restoreFromBackup = async (req, res) => {
 
         console.log('\n🚀 Starting restore process...');
 
-        // Restore backup
+        // 1. SAVE CURRENT ADMIN user before restore (Safety Mechanism)
+        // This ensures the user doesn't get locked out if the backup is missing the admin account
+        const User = require('../models/User');
+        let currentAdmin = null;
+        try {
+            // Get the user triggering the request (or admin@dwatson.pk as fallback)
+            const userId = req.user ? req.user.id : null;
+            if (userId) {
+                currentAdmin = await User.findById(userId).lean();
+                console.log(`[SAFETY] Preserving current admin user: ${currentAdmin ? currentAdmin.email : 'Not found'}`);
+            }
+        } catch (err) {
+            console.warn('[SAFETY] Failed to backup current admin user:', err.message);
+        }
+
+        // 2. Perform Restore
         const result = await restoreBackup(restoreConfig);
+
+        // 3. RESTORE ADMIN if missing (Safety Mechanism)
+        if (currentAdmin) {
+            try {
+                const checkUser = await User.findOne({ email: currentAdmin.email });
+                if (!checkUser) {
+                    console.log(`[SAFETY] Admin user ${currentAdmin.email} was lost during restore. Recreating it...`);
+                    // Remove _id to let Mongo generate a new one, or keep it if you want strict restoration
+                    // We keep the hashed password so they can still log in!
+                    const { _id, ...userData } = currentAdmin;
+                    await User.create(userData);
+                    console.log('[SAFETY] Admin user restored successfully.');
+                } else {
+                    console.log('[SAFETY] Admin user exists in backup. No action needed.');
+                }
+            } catch (err) {
+                console.error('[SAFETY] Error restoring admin user:', err.message);
+            }
+        }
 
         console.log('\n✅ RESTORE SUCCESSFUL!');
         console.log('   - Backup:', result.backupFolder);
