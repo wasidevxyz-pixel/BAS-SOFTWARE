@@ -72,6 +72,7 @@ const mongoBackupRoutes = require('./routes/mongoBackup');
 const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
 const zakatRoutes = require('./routes/zakats');
 const pendingChequeRoutes = require('./routes/pendingCheques');
+const incomeStatementRoutes = require('./routes/incomeStatement');
 
 
 
@@ -366,6 +367,7 @@ app.use('/api/v1/mongodb-backup', mongoBackupRoutes);
 app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
 app.use('/api/v1/zakats', zakatRoutes);
 app.use('/api/v1/pending-cheques', pendingChequeRoutes);
+app.use('/api/v1/income-statement', incomeStatementRoutes);
 
 
 
@@ -557,6 +559,9 @@ app.get('/zakat.html', (req, res) => {
 });
 app.get('/print-zakat-report.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'print-zakat-report.html'));
+});
+app.get('/income-statement.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'income-statement.html'));
 });
 
 

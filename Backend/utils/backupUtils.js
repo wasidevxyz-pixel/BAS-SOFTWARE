@@ -86,13 +86,43 @@ async function restoreBackup(config) {
             throw new Error(`Backup folder not found: ${backupFolder}`);
         }
 
+        // Extract target database name from URI
+        const targetDbName = mongodbUri.split('/').pop().split('?')[0];
+
+        // Check if backup has a database subfolder
+        const backupContents = await fs.readdir(fullBackupPath);
+        const dbFolders = [];
+
+        for (const item of backupContents) {
+            const itemPath = path.join(fullBackupPath, item);
+            const stat = await fs.stat(itemPath);
+            if (stat.isDirectory()) {
+                dbFolders.push(item);
+            }
+        }
+
+        // Determine the source database name from backup
+        let sourceDbName = targetDbName;
+        if (dbFolders.length > 0) {
+            sourceDbName = dbFolders[0]; // Use first database folder found
+            console.log(`[RESTORE] Found database in backup: ${sourceDbName}`);
+        }
+
         // Build mongorestore command
         const mongorestoreCmd = mongoToolsPath
             ? path.join(mongoToolsPath, 'mongorestore')
             : 'mongorestore';
 
-        // Use --drop to replace existing data
-        const command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop "${fullBackupPath}"`;
+        // If source and target database names are different, we need to rename during restore
+        let command;
+        if (sourceDbName !== targetDbName) {
+            console.log(`[RESTORE] Renaming database from ${sourceDbName} to ${targetDbName}`);
+            // Use --nsFrom and --nsTo to rename database during restore
+            command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop --nsFrom="${sourceDbName}.*" --nsTo="${targetDbName}.*" "${fullBackupPath}"`;
+        } else {
+            // Standard restore - use --drop to replace existing data
+            command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop "${fullBackupPath}"`;
+        }
 
         console.log(`[RESTORE] Starting restore from: ${backupFolder}`);
         console.log(`[RESTORE] Command: ${command.replace(mongodbUri, 'HIDDEN_URI')}`);
@@ -107,12 +137,13 @@ async function restoreBackup(config) {
         }
 
         console.log(`[RESTORE] Success: ${backupFolder}`);
+        console.log(`[RESTORE] Restored to database: ${targetDbName}`);
 
         return {
             success: true,
             backupFolder,
             timestamp: new Date(),
-            message: 'Database restored successfully'
+            message: `Database restored successfully to ${targetDbName}`
         };
 
     } catch (error) {
@@ -120,6 +151,7 @@ async function restoreBackup(config) {
         throw new Error(`Restore failed: ${error.message}`);
     }
 }
+
 
 /**
  * Get list of available backup folders

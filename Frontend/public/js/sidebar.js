@@ -134,6 +134,7 @@ class SidebarNavigation {
                             { label: 'Ledger', link: '/ledger-report.html', permission: 'ledger_link' },
                             { label: 'Bank Ledger', link: '/bank-ledger.html', permission: 'bank_ledger_link' },
                             { label: 'Expense Report', link: '/expense-report.html', permission: 'expense_rpt_link' },
+                            { label: 'Income Statement', link: '/income-statement.html', permission: 'income_statement' },
                             {
                                 id: 'pv-reports-group',
                                 label: 'Vouchers',

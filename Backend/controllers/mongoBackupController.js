@@ -80,25 +80,41 @@ exports.manualBackup = async (req, res) => {
  * @access  Private/Admin
  */
 exports.restoreFromBackup = async (req, res) => {
+    console.log('\n' + '='.repeat(70));
+    console.log('🔄 RESTORE REQUEST RECEIVED');
+    console.log('='.repeat(70));
+
     try {
+        console.log('📦 Request Body:', JSON.stringify(req.body, null, 2));
+
         const { backupFolder } = req.body;
 
         if (!backupFolder) {
+            console.log('❌ ERROR: No backup folder provided');
             return res.status(400).json({
                 success: false,
                 message: 'Backup folder name is required'
             });
         }
 
+        console.log('✓ Backup folder:', backupFolder);
+
         // Get settings
+        console.log('📋 Fetching settings from database...');
         const settings = await Settings.findOne({});
 
         if (!settings) {
+            console.log('❌ ERROR: Settings not found in database');
             return res.status(400).json({
                 success: false,
                 message: 'Settings not found. Please configure backup settings first.'
             });
         }
+
+        console.log('✓ Settings found');
+        console.log('   - mongodbUri:', settings.mongodbUri || 'NOT SET (will use .env)');
+        console.log('   - backupFolderPath:', settings.backupFolderPath);
+        console.log('   - mongoToolsPath:', settings.mongoToolsPath || '(using system PATH)');
 
         // Prepare restore configuration
         const restoreConfig = {
@@ -108,8 +124,21 @@ exports.restoreFromBackup = async (req, res) => {
             backupFolder: backupFolder
         };
 
+        console.log('\n📝 Restore Configuration:');
+        console.log('   - Target DB:', restoreConfig.mongodbUri.split('/').pop().split('?')[0]);
+        console.log('   - Backup Path:', restoreConfig.backupFolderPath);
+        console.log('   - Backup Folder:', restoreConfig.backupFolder);
+        console.log('   - Mongo Tools:', restoreConfig.mongoToolsPath || '(system PATH)');
+
+        console.log('\n🚀 Starting restore process...');
+
         // Restore backup
         const result = await restoreBackup(restoreConfig);
+
+        console.log('\n✅ RESTORE SUCCESSFUL!');
+        console.log('   - Backup:', result.backupFolder);
+        console.log('   - Message:', result.message);
+        console.log('='.repeat(70) + '\n');
 
         res.status(200).json({
             success: true,
@@ -121,7 +150,12 @@ exports.restoreFromBackup = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Restore error:', error);
+        console.log('\n❌ RESTORE FAILED!');
+        console.error('Error Type:', error.name);
+        console.error('Error Message:', error.message);
+        console.error('Stack Trace:', error.stack);
+        console.log('='.repeat(70) + '\n');
+
         res.status(500).json({
             success: false,
             message: error.message || 'Restore failed'
