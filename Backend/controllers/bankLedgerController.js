@@ -328,7 +328,7 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
 
     const dcMatch = {
         mode: 'Bank',
-        // isVerified: true, // User Request: Removed to match Summary Pro (includes unverified)
+        isVerified: true, // User Request: standardized to match report list view
         date: { $lt: startDate },
         bank: { $in: bankIds } // Match ANY ID associated with this Bank Name
     };
@@ -341,17 +341,22 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
 
     if (departmentId) dcMatch.department = new mongoose.Types.ObjectId(departmentId);
 
-    const dcHistory = await DailyCash.aggregate([
-        { $match: dcMatch },
-        {
-            $group: {
-                _id: null,
-                // MATCH SUMMARY PRO: Use totalAmount directly, ignore deductions logic
-                total: { $sum: { $toDouble: "$totalAmount" } }
-            }
+    const dcHistory = await DailyCash.find(dcMatch).lean(); // Fetch all to handle logic in JS safely and accurately
+
+    // Calculate Total with Deductions Logic (matching List View)
+    let dcTotal = 0;
+    dcHistory.forEach(dc => {
+        let amount = parseFloat(dc.totalAmount) || 0;
+        const deductionRate = parseFloat(dc.deductedAmount) || 0;
+
+        if (dc.isDeduction || deductionRate > 0) {
+            const deductionVal = (amount * deductionRate) / 100;
+            amount = Math.round(amount - deductionVal);
         }
-    ]);
-    balance += dcHistory[0]?.total || 0;
+        dcTotal += amount;
+    });
+
+    balance += dcTotal;
 
 
     // 2. Bank Transactions (Withdrawals/Deposits) - BEFORE Start Date
@@ -387,9 +392,9 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
         $match: {
             effectiveDate: { $lt: startDate },
             // EXCLUDE transfers here to match 'getBankLedgerReport' logic and avoid duplicates/gaps
+            // Only exclude explicit system Bank Transfers. Manual manual entries with "Bank Transfer" narration should be included!
             $and: [
-                { refType: { $ne: 'bank_transfer' } },
-                { narration: { $not: /^Bank Transfer/i } }
+                { refType: { $ne: 'bank_transfer' } }
             ]
         }
     });
@@ -420,11 +425,39 @@ async function calculateOpeningBalance(bank, startDate, departmentId) {
     balance += btTotal;
 
 
-    // 3. Bank Transfers - SECTION REMOVED to align with Summary Pro Logic
-    // Using BankTransaction aggregation above covers transfers if they are synced.
+    // 3. Bank Transfers (Before Start Date)
+    // FIX: Re-enable logic to fetch transfers from BankTransfer model
+    const transferQuery = {
+        date: { $lt: startDate },
+        $or: [
+            { fromBank: bank._id },
+            { toBank: bank._id }
+        ]
+    };
+
+    // STRICT MODE: No Multi-ID fallback to match confirmed correct balance logic
+
+    const transfers = await BankTransfer.find(transferQuery).lean();
+
+    let transferTotal = 0;
+    transfers.forEach(t => {
+        const amount = parseFloat(t.amount) || 0;
+
+        // Check if we are the Receiver (To) or Sender (From)
+        const isReceiver = t.toBank?.toString() === bank._id.toString();
+
+        if (isReceiver) {
+            transferTotal += amount; // Received -> Add
+        } else {
+            transferTotal -= amount; // Sent -> Subtract
+        }
+    });
+
+    balance += transferTotal;
 
     return balance;
 }
+
 
 // @desc    Get Aggregate Bank Balance for all banks in a Branch as of a specific date
 // @route   GET /api/v1/reports/bank-ledger/branch-balance
