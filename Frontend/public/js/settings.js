@@ -36,6 +36,33 @@ function initSettingsPage() {
 
     // Logo preview
     document.getElementById('companyLogo').addEventListener('change', handleLogoChange);
+
+    // Add scroll-to-view functionality for all tabs
+    setupTabScrolling();
+}
+
+// Setup automatic scrolling when tabs are clicked
+function setupTabScrolling() {
+    const tabButtons = document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function (event) {
+            // Get the target tab pane ID from the button's data-bs-target attribute
+            const targetId = event.target.getAttribute('data-bs-target');
+            const targetElement = document.querySelector(targetId);
+            
+            if (targetElement) {
+                // Scroll to the tab content with smooth animation
+                // Add a small delay to ensure the tab content is fully rendered
+                setTimeout(() => {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            }
+        });
+    });
 }
 
 // Load all settings at once (optimization)
