@@ -12,12 +12,15 @@ async function populateBDBank() {
             select.innerHTML = '<option value="">All Banks</option>';
 
             const epIds = [];
+            const jcIds = [];
             const bbIds = [];
 
             data.data.forEach(b => {
                 const name = (b.bankName || '').toUpperCase();
                 if (name.includes('EASYPAISA')) {
                     epIds.push(b._id);
+                } else if (name.includes('JAZZ CASH') || name.includes('JAZZCASH')) {
+                    jcIds.push(b._id);
                 } else {
                     bbIds.push(b._id);
                 }
@@ -28,6 +31,14 @@ async function populateBDBank() {
                 opt.value = 'GROUP_EP';
                 opt.textContent = 'Easypaisa';
                 opt.dataset.ids = epIds.join(',');
+                select.appendChild(opt);
+            }
+
+            if (jcIds.length > 0) {
+                const opt = document.createElement('option');
+                opt.value = 'GROUP_JC';
+                opt.textContent = 'Jazz Cash';
+                opt.dataset.ids = jcIds.join(',');
                 select.appendChild(opt);
             }
 
