@@ -8,4 +8,8 @@ const incomeStatementController = require('../controllers/incomeStatementControl
 // @access  Private
 router.get('/', protect, incomeStatementController.getIncomeStatement);
 
+router.post('/save', protect, incomeStatementController.saveIncomeStatement);
+router.get('/saved', protect, incomeStatementController.getSavedReports);
+router.delete('/saved/:id', protect, incomeStatementController.deleteSavedReport);
+
 module.exports = router;

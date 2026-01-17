@@ -70,7 +70,7 @@
             padding: 10px;
             text-align: center;
             font-weight: 600;
-            border: 1px solid #1e4c8c;
+            border: 1px solid white;
             font-size: 0.9rem;
         }
 
@@ -90,9 +90,19 @@
             font-family: 'Courier New', monospace;
         }
 
-        .income-table tr.total-row {
+        .income-table tr.total-row,
+        .income-table tr.total-row td,
+        .income-table tr.total-row td:first-child {
             background-color: #e9ecef;
             font-weight: bold;
+        }
+
+        .income-table tr.grand-total-row,
+        .income-table tr.grand-total-row td {
+            background-color: black !important;
+            color: white !important;
+            font-weight: bold;
+            border-color: white !important;
         }
 
         .summary-table {
@@ -124,6 +134,8 @@
             font-weight: bold;
         }
 
+
+
         .summary-table tr.net-profit td {
             border-color: #000;
         }
@@ -131,13 +143,65 @@
         @media print {
 
             .filter-section,
-            .no-print {
+            .no-print,
+            .page-header,
+            .sidebar,
+            .btn,
+            button,
+            .modal,
+            #sidebarToggle {
                 display: none !important;
             }
 
+            .main-content {
+                margin-left: 0 !important;
+                padding-top: 0 !important;
+                width: 100% !important;
+                background-color: white !important;
+                /* Force white background */
+            }
+
+            .container-fluid {
+                padding: 0 !important;
+                background-color: white !important;
+            }
+
+            /* Reset report container for print */
             .report-container {
                 box-shadow: none;
+                margin: 0;
                 padding: 0;
+                border: none;
+                background-color: white !important;
+            }
+
+            /* Adjust table for better fit */
+            .income-table {
+                font-size: 10px;
+                /* Smaller font to ensure fit */
+                width: 100% !important;
+            }
+
+            .income-table th,
+            .income-table td {
+                padding: 4px !important;
+            }
+
+            /* Remove input styling */
+            input.form-control {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                height: auto !important;
+                text-align: right !important;
+                width: auto !important;
+                display: block;
+            }
+
+            /* Ensure colors match screen */
+            .summary-table {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
         }
     </style>
@@ -225,13 +289,14 @@
                     <table class="income-table">
                         <thead>
                             <tr>
-                                <th style="width: 25%;">CATEGORY</th>
-                                <th style="width: 15%;">SALES</th>
-                                <th style="width: 15%;">COST</th>
-                                <th style="width: 15%;">BANK DED.</th>
-                                <th style="width: 10%;">G.P</th>
-                                <th style="width: 10%;">DISCOUNT</th>
-                                <th style="width: 10%;">GP PROFIT</th>
+                                <th style="width: 25%; text-align: left; padding-left: 15px;">CATEGORY</th>
+                                <th style="width: 12%; text-align: right;">SALES</th>
+                                <th style="width: 12%; text-align: right;">COST</th>
+                                <th style="width: 9%; text-align: right;">BANK DED.</th>
+                                <th style="width: 9%; text-align: right;">EXPENSE</th>
+                                <th style="width: 11%; text-align: right;">GROSS PROFIT</th>
+                                <th style="width: 10%; text-align: center;">DISCOUNT</th>
+                                <th style="width: 12%; text-align: right;">GP RATE</th>
                             </tr>
                         </thead>
                         <tbody id="incomeTableBody">
@@ -240,40 +305,55 @@
                     </table>
 
                     <!-- Summary Section -->
-                    <table class="summary-table">
-                        <tr>
-                            <td>TOTAL SALE</td>
-                            <td id="summaryTotalSale">0</td>
-                        </tr>
-                        <tr>
-                            <td>TOTAL SALE RETURNS</td>
-                            <td id="summaryTotalReturns">0</td>
-                        </tr>
-                        <tr>
-                            <td>NET SALES</td>
-                            <td id="summaryNetSales">0</td>
-                        </tr>
-                        <tr>
-                            <td>COST</td>
-                            <td id="summaryCost">0</td>
-                        </tr>
-                        <tr>
-                            <td>G.PROFIT</td>
-                            <td id="summaryGrossProfit">0</td>
-                        </tr>
-                        <tr>
-                            <td>EXPENSES</td>
-                            <td id="summaryExpenses">0</td>
-                        </tr>
-                        <tr>
-                            <td>SHORT CASH (-)</td>
-                            <td id="summaryShortCash">0</td>
-                        </tr>
-                        <tr class="net-profit">
-                            <td>NET PROFIT</td>
-                            <td id="summaryNetProfit">0</td>
-                        </tr>
-                    </table>
+                    <div class="d-flex flex-column align-items-center mt-4">
+                        <div style="width: 50%; min-width: 400px;">
+                            <h5 class="text-center text-white py-2 mb-0"
+                                style="background-color: #145a32; font-weight: bold; border-bottom: 1px solid white;">
+                                SUMMARY</h5>
+                            <table class="summary-table" style="width: 100%; margin-top: 0;">
+                                <!-- Total Sale removed as requested -->
+                                <tr>
+                                    <td>NET SALES</td>
+                                    <td id="summaryNetSales">0</td>
+                                </tr>
+                                <tr>
+                                    <td>COST</td>
+                                    <td id="summaryCost">0</td>
+                                </tr>
+                                <tr>
+                                    <td>G.PROFIT</td>
+                                    <td id="summaryGrossProfit">0</td>
+                                </tr>
+                                <tr>
+                                    <td>EXPENSES (Manual)</td>
+                                    <td style="padding: 0;">
+                                        <input type="number" id="summaryExpenses" class="form-control text-end border-0"
+                                            value="" placeholder="0"
+                                            style="font-family: 'Courier New', monospace; font-weight: bold;"
+                                            oninput="recalculateNetProfit()">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>SHORT CASH (-)</td>
+                                    <td id="summaryShortCash">0</td>
+                                </tr>
+                                <tr class="net-profit">
+                                    <td style="background-color: black; color: white; border-color: white;">NET PROFIT
+                                    </td>
+                                    <td id="summaryNetProfit"
+                                        style="background-color: black; color: white; border-color: white;">0</td>
+                                </tr>
+                            </table>
+                            <div class="mt-3 d-flex gap-2">
+                                <button class="btn btn-success flex-grow-1" onclick="saveIncomeStatement()">
+                                    <i class="fas fa-save me-2"></i>Save Report
+                                </button>
+                                <button class="btn btn-info text-white flex-grow-1" onclick="showSavedReports()">
+                                    <i class="fas fa-history me-2"></i>History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -294,6 +374,58 @@
         </div>
     </div>
 
+    <!-- Saved Reports Modal -->
+    <div class="modal fade" id="savedReportsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-history me-2"></i>Saved Income Statements</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Filters -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <select id="historyFilterBranch" class="form-select" onchange="filterSavedReports()">
+                                <option value="">All Branches</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="month" id="historyFilterMonth" class="form-control"
+                                onchange="filterSavedReports()">
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-primary" onclick="refreshSavedReportsList()">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle" id="savedReportsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date Saved</th>
+                                    <th>Month</th> <!-- New Column -->
+                                    <th>Branch</th>
+                                    <th>Period</th>
+                                    <th class="text-end">Net Profit</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="savedReportsList">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>

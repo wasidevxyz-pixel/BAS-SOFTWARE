@@ -228,6 +228,7 @@ async function generateReport() {
             const discount = item.discountValue || 0;
             const discountPer = item.discountPer || 0;
             const dailyAverage = item.dailyAverage || 0;
+            const cost = item.cost || 0;
 
             return {
                 key: `${item.branch}-${item.dept}`,
@@ -237,6 +238,7 @@ async function generateReport() {
                 discount: discount,
                 discountPer: discountPer,
                 net: net,
+                cost: cost,
                 dailyAverage: dailyAverage
             };
         });
@@ -246,7 +248,7 @@ async function generateReport() {
 
     } catch (err) {
         console.error('Report Generation Error', err);
-        document.getElementById('reportTableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error generating report: ${err.message}</td></tr>`;
+        document.getElementById('reportTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error generating report: ${err.message}</td></tr>`;
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -277,7 +279,7 @@ function renderReport(data) {
     if (data.length === 0) {
         const tbody = document.createElement('tbody');
         tbody.id = 'reportTableBody';
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No records found for the selected criteria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No records found for the selected criteria.</td></tr>';
         // Insert after thead
         table.insertBefore(tbody, tfoot);
         tfoot.style.display = 'none';
@@ -291,7 +293,7 @@ function renderReport(data) {
         return a.dept.localeCompare(b.dept);
     });
 
-    let tDisc = 0, tNet = 0, tDaily = 0;
+    let tDisc = 0, tNet = 0, tDaily = 0, tCost = 0;
 
     // Group items
     const groups = {};
@@ -312,23 +314,34 @@ function renderReport(data) {
         // Group Header Row
         let groupHtml = `
             <tr class="group-header">
-                <td colspan="6" class="fw-bold text-uppercase" >
+                <td colspan="7" class="fw-bold text-uppercase" >
                     <i class="fas fa-folder-open me-2"></i> ${firstItem.branch} | ${firstItem.parentDept}
                 </td>
+            </tr>
+            <tr class="table-dark text-white text-uppercase small fw-bold text-center">
+                <th class="text-start ps-4">Branch</th>
+                <th class="text-start">Sub-Department</th>
+                <th class="text-end">Discount</th>
+                <th class="text-end">Disc %</th>
+                <th class="text-end">Net Sale</th>
+                <th class="text-end">Cost</th>
+                <th class="text-end">Daily Average</th>
             </tr>
         `;
 
         // Sub-Dept Rows
-        let subDisc = 0, subNet = 0, subDaily = 0;
+        let subDisc = 0, subNet = 0, subDaily = 0, subCost = 0;
 
         items.forEach(item => {
             tDisc += item.discount;
             tNet += item.net;
             tDaily += item.dailyAverage;
+            tCost += item.cost;
 
             subDisc += item.discount;
             subNet += item.net;
             subDaily += item.dailyAverage;
+            subCost += item.cost;
 
             groupHtml += `
             <tr class="dept-row">
@@ -344,6 +357,7 @@ function renderReport(data) {
                 <td data-label="Discount" class="text-end" style="color:#d39e00;">${formatCurrency(item.discount)}</td>
                 <td data-label="Disc %" class="text-end"><span class="badge bg-soft-info text-info border border-info" style="background-color: #e0faff;">${item.discountPer.toFixed(2)}%</span></td>
                 <td data-label="Net Sale" class="text-end fw-bold">${formatCurrency(item.net)}</td>
+                <td data-label="Cost" class="text-end text-danger">${formatCurrency(item.cost)}</td>
                 <td data-label="Daily Average" class="text-end text-primary fw-bold" style="background-color: #f8faff;">${formatCurrency(item.dailyAverage)}</td>
             </tr>
             `;
@@ -359,6 +373,7 @@ function renderReport(data) {
                 <td data-label="Discount" class="text-end">${formatCurrency(subDisc)}</td>
                 <td data-label="Disc %" class="text-end"><span class="badge bg-secondary">${avgDiscPer.toFixed(2)}%</span></td>
                 <td data-label="Net Sale" class="text-end">${formatCurrency(subNet)}</td>
+                <td data-label="Cost" class="text-end">${formatCurrency(subCost)}</td>
                 <td data-label="Daily Avg" class="text-end text-primary">${formatCurrency(subDaily)}</td>
             </tr>
         `;
@@ -371,6 +386,7 @@ function renderReport(data) {
     document.getElementById('tblDisc').textContent = formatCurrency(tDisc);
     document.getElementById('tblNet').textContent = formatCurrency(tNet);
     document.getElementById('tblDaily').textContent = formatCurrency(tDaily);
+    document.getElementById('tblCost').textContent = formatCurrency(tCost);
 
     tfoot.style.display = 'table-footer-group'; // Fix display type
 }
@@ -439,21 +455,24 @@ async function showDetails(branch, dept) {
                             <th class="text-end">Discount</th>
                             <th class="text-end">Disc %</th>
                             <th class="text-end">Net Sale</th>
+                            <th class="text-end">Cost</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
         if (details.length === 0) {
-            detailsHtml += '<tr><td colspan="4" class="text-center text-muted">No data available</td></tr>';
+            detailsHtml += '<tr><td colspan="5" class="text-center text-muted">No data available</td></tr>';
         } else {
             details.forEach(item => {
+                const itemCost = item.costSale || item.cost || 0;
                 detailsHtml += `
                     <tr>
                         <td>${new Date(item.date).toLocaleDateString()}</td>
                         <td class="text-end">${formatCurrency(item.discountValue || 0)}</td>
                         <td class="text-end"><span class="badge bg-info">${(item.discountPer || 0).toFixed(2)}%</span></td>
                         <td class="text-end fw-bold">${formatCurrency(item.totalSaleComputer || 0)}</td>
+                         <td class="text-end text-danger">${formatCurrency(itemCost)}</td>
                     </tr>
                 `;
             });

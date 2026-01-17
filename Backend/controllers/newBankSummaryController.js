@@ -249,3 +249,144 @@ exports.getProBankSummary = asyncHandler(async (req, res) => {
     });
 
 });
+
+// @desc    Get All Bank Balances for a Branch on a Date (For SMS/Daily Reporting)
+// @route   GET /api/v1/reports/bank-ledger/all-balances-pro
+exports.getAllBankBalances = asyncHandler(async (req, res) => {
+    const { date, branch } = req.query;
+
+    if (!date) {
+        return res.status(400).json({ success: false, message: 'Please provide date' });
+    }
+
+    const reportDate = new Date(date);
+    // Set to End of Day to include all transactions for that date
+    reportDate.setHours(23, 59, 59, 999);
+
+    // 1. Get All Banks for Branch
+    const bankQuery = {};
+    if (branch) bankQuery.branch = branch;
+    const banks = await Bank.find(bankQuery).populate('department', 'name').lean();
+
+    // Map for fast lookup and aggregation
+    // Key: Bank._id (String) -> { displayName, balance: 0, bankName }
+    const bankMap = {};
+    // Name Map to resolve BankTransactions that store 'bankName' string
+    const nameToIdMap = {};
+
+    banks.forEach(b => {
+        const idStr = b._id.toString();
+        bankMap[idStr] = {
+            _id: idStr,
+            bankName: b.bankName,
+            // Format Display Name: Name (Dep)
+            displayName: b.bankName,
+            balance: 0
+        };
+        if (b.bankName) {
+            nameToIdMap[b.bankName.trim().toUpperCase()] = idStr;
+        }
+    });
+
+    // 2. Aggregate Daily Cash (Batch Transfers)
+    // Rule: mode='Bank', date <= reportDate
+    const dcPipeline = [
+        {
+            $match: {
+                mode: 'Bank',
+                date: { $lte: reportDate },
+                ...(branch && { branch: branch })
+            }
+        },
+        {
+            $group: {
+                _id: "$bank", // Group by Bank ID
+                total: { $sum: "$totalAmount" }
+            }
+        }
+    ];
+
+    const dcResults = await DailyCash.aggregate(dcPipeline);
+    dcResults.forEach(res => {
+        if (res._id && bankMap[res._id.toString()]) {
+            bankMap[res._id.toString()].balance += (res.total || 0);
+        }
+    });
+
+    // 3. Aggregate Bank Transactions
+    // Rule: effectiveDate <= reportDate
+    const btPipeline = [
+        {
+            $match: {
+                ...(branch && { branch: branch })
+            }
+        },
+        {
+            $addFields: {
+                effectiveDate: { $ifNull: [{ $toDate: "$chequeDate" }, "$date"] },
+                normType: { $toLower: { $ifNull: ["$type", ""] } },
+                normTransType: { $toLower: { $ifNull: ["$transactionType", ""] } }
+            }
+        },
+        {
+            $match: {
+                effectiveDate: { $lte: reportDate }
+            }
+        },
+        {
+            $group: {
+                _id: "$bankName", // Group by Bank Name string
+                total: {
+                    $sum: {
+                        $cond: [
+                            {
+                                $or: [
+                                    { $in: ["$normType", ["deposit", "received"]] },
+                                    { $in: ["$normTransType", ["deposit", "received"]] }
+                                ]
+                            },
+                            "$amount",
+                            { $multiply: ["$amount", -1] }
+                        ]
+                    }
+                }
+            }
+        }
+    ];
+
+    const btResults = await BankTransaction.aggregate(btPipeline);
+    btResults.forEach(res => {
+        if (res._id) {
+            const nameKey = res._id.trim().toUpperCase();
+            const id = nameToIdMap[nameKey];
+            if (id && bankMap[id]) {
+                bankMap[id].balance += (res.total || 0);
+            } else {
+                // Determine if we should count this (orphan transaction or bank outside branch filter)
+                // If branch filter was applied in match, this belongs to the branch but maybe Bank record is missing/inactive?
+                // We'll skip strictly to known banks to avoid garbage
+            }
+        }
+    });
+
+    // 4. Format Result
+    let finalBanks = Object.values(bankMap).map(b => ({
+        bankName: b.bankName,
+        displayName: b.bankName, // Use simple name to avoid duplication like 'Alf (Med) (Med)'
+        balance: b.balance
+    }));
+
+    // Filter out 0 balances and specific 'Branch Bank' label if it exists
+    finalBanks = finalBanks.filter(b => b.balance !== 0 && b.bankName !== 'Branch Bank');
+
+    // Calculate Total (Includes all banks? Or only shown ones? Usually total available)
+    // User requested "Balance" in SMS. usually matches the sum of items shown.
+    // So we sum the filtered list.
+    const totalBalance = finalBanks.reduce((sum, b) => sum + b.balance, 0);
+
+    res.status(200).json({
+        success: true,
+        banks: finalBanks,
+        totalBalance
+    });
+});

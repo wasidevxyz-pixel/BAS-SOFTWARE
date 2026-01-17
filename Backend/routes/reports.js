@@ -45,13 +45,17 @@ const {
   exportLedgerReport
 } = require('../controllers/ledgerController');
 const { getBankLedgerReport, getBranchBankBalance, getBranchBankBalances, getSummaryOpeningBalance } = require('../controllers/bankLedgerController');
-const { getProBankSummary } = require('../controllers/newBankSummaryController');
+const { getProBankSummary, getAllBankBalances } = require('../controllers/newBankSummaryController');
 const { protect, accountsAccess } = require('../middleware/auth');
 
 // New Professional Bank Summary
 router
   .route('/bank-ledger/pro-summary')
   .get(protect, accountsAccess, getProBankSummary);
+
+router
+  .route('/bank-ledger/all-balances-pro')
+  .get(protect, accountsAccess, getAllBankBalances);
 
 // Bank Ledger Report
 router

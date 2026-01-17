@@ -366,15 +366,19 @@
             }
 
             .print-header .header-content {
+                position: relative;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
                 margin-bottom: 10px;
+                min-height: 80px;
             }
 
             .print-header .logo-box {
-                flex: 0 0 100px;
-                /* Fixed width for logo container */
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
                 text-align: left;
             }
 
@@ -388,8 +392,8 @@
             }
 
             .print-header .company-details {
-                flex: 1;
-                text-align: right;
+                width: 100%;
+                text-align: center;
             }
 
             .print-header .company-name {
@@ -491,17 +495,21 @@
             }
 
             .grand-total-table {
-                background: transparent !important;
+                background: #1e4c8c !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                width: 100% !important;
             }
 
             .grand-total-table td {
-                color: #000 !important;
-                border: 1px solid #000;
-                padding: 10px;
+                color: white !important;
+                border: 1px solid white !important;
+                padding: 5px 8px !important;
             }
 
             .grand-total-sublabel {
-                color: #555 !important;
+                color: #b3d7ff !important;
             }
 
             /* Utility */
@@ -532,8 +540,9 @@
         }
 
         .grand-total-table td {
-            padding: 20px 15px;
+            padding: 10px 10px;
             vertical-align: middle;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .grand-total-label {
@@ -541,6 +550,9 @@
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-align: left;
+            /* Align Grand Total label to left */
+            padding-left: 20px;
         }
 
         .grand-total-value {
@@ -724,12 +736,22 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Set default dates (current month)
+            // Set default dates (current month)
             const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            // Local Start of Month
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const firstDay = `${year}-${month}-01`;
 
-            document.getElementById('startDate').value = startOfMonth.toISOString().split('T')[0];
-            document.getElementById('endDate').value = endOfMonth.toISOString().split('T')[0];
+            // Local End of Month
+            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const endYear = end.getFullYear();
+            const endMonth = String(end.getMonth() + 1).padStart(2, '0');
+            const endDay = String(end.getDate()).padStart(2, '0');
+            const lastDay = `${endYear}-${endMonth}-${endDay}`;
+
+            document.getElementById('startDate').value = firstDay;
+            document.getElementById('endDate').value = lastDay;
 
             // Load filters
             await loadFilters();
@@ -979,7 +1001,7 @@
                     const matchesSearch = normalize(catName).includes(searchTerm) || normalize(b.branch).includes(searchTerm);
                     const hasValues = b.sale !== 0 || b.cost !== 0 || b.payment !== 0;
                     return matchesSearch && hasValues;
-                }).sort((a, b) => a.branch.localeCompare(b.branch));
+                }).sort((a, b) => b.sale - a.sale);
 
                 if (branchesToShow.length === 0) return;
                 hasAnyData = true;

@@ -2886,7 +2886,7 @@ async function generateSMSPreview() {
     } else if (type === 'Bank Activity') {
         // Fetch individual bank balances from API
         try {
-            const response = await fetch(`/api/v1/reports/bank-ledger/branch-bank-balances?branch=${encodeURIComponent(branch)}&date=${date}`, {
+            const response = await fetch(`/api/v1/reports/bank-ledger/all-balances-pro?branch=${encodeURIComponent(branch)}&date=${date}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const json = await response.json();

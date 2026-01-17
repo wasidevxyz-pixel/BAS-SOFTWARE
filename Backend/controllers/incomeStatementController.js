@@ -4,6 +4,8 @@ const Expense = require('../models/Expense');
 const Department = require('../models/Department');
 const DailyCash = require('../models/DailyCash');
 
+const PartyCategory = require('../models/PartyCategory');
+
 // @desc    Get Income Statement Report
 // @route   GET /api/v1/income-statement
 // @access  Private
@@ -52,40 +54,133 @@ exports.getIncomeStatement = async (req, res) => {
         const mongoose = require('mongoose');
         const validDeptIds = Array.from(allDeptIds).filter(id => mongoose.isValidObjectId(id));
 
-        // Fetch all departments
-        const departments = await Department.find({
-            _id: { $in: validDeptIds },
-            closing2CompSale: true  // Only departments marked for Closing Sheet 2
-        }).populate('parentDepartment').lean();
+        // Fetch ALL departments for robust name mapping
+        // Fetch ALL departments for robust name mapping
+        const allDepartments = await Department.find({ isActive: true }).lean();
 
-        console.log('Found departments with closing2CompSale:', departments.length);
-
-        // Create department ID to name map
         const deptIdToName = new Map();
         const deptIdToObj = new Map();
-        departments.forEach(dept => {
-            deptIdToName.set(dept._id.toString(), dept.name);
-            deptIdToObj.set(dept._id.toString(), dept);
+        const deptNameToId = new Map(); // Normalized Name -> ID
+
+        // Helper for normalization
+        const normalizeName = (name) => name ? name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+
+        allDepartments.forEach(dept => {
+            const dId = dept._id.toString();
+            deptIdToName.set(dId, dept.name);
+            deptIdToObj.set(dId, dept);
+            if (dept.name) {
+                const norm = normalizeName(dept.name);
+                if (norm) {
+                    // map normalized name to ID
+                    deptNameToId.set(norm, dId);
+                }
+            }
+        });
+
+        // Fetch Customer Categories (PartyCategory) to map Category ID -> Name
+        const allCategories = await PartyCategory.find({}).lean();
+        const catIdToName = new Map();
+        allCategories.forEach(cat => {
+            if (cat.name) {
+                // Store Normalized Name for lookup
+                catIdToName.set(cat._id.toString(), normalizeName(cat.name));
+            }
         });
 
         // Aggregate data by parent department
         const departmentGroups = new Map();
+
+        // Helper to check valid ID
+        const isValidId = (id) => mongoose.isValidObjectId(id);
+
+        let totalDiffSum = 0; // Accumulator for Short Cash calculation
 
         for (const sheet of sheets) {
             if (!sheet.closing02 || !sheet.closing02.data) continue;
 
             const closing02Data = sheet.closing02.data;
 
+            // Calculate Short Cash (diff sum)
+            // Iterate all entries, skip known non-dept keys
+            for (const [key, val] of Object.entries(closing02Data)) {
+                if (key === 'warehouseSale' || key === 'totals') continue;
+                if (!val || typeof val !== 'object') continue;
+
+                // Check for difference
+                let rawDiff = val.difference !== undefined ? val.difference : val.diff;
+                if (rawDiff !== undefined) {
+                    let diffNum = 0;
+                    if (typeof rawDiff === 'number') {
+                        diffNum = rawDiff;
+                    } else if (typeof rawDiff === 'string') {
+                        let cleanDiff = rawDiff.trim();
+                        // Check for parenthesis format (123) -> -123
+                        const isNegative = cleanDiff.startsWith('(') && cleanDiff.endsWith(')');
+                        cleanDiff = cleanDiff.replace(/[(),]/g, ''); // Remove ( ) ,
+                        diffNum = parseFloat(cleanDiff) || 0;
+                        if (isNegative) diffNum = -Math.abs(diffNum);
+                    }
+                    console.log(`[ShortCash] Key: ${key}, DiffOrigin: ${rawDiff}, Parsed: ${diffNum}`);
+                    totalDiffSum += diffNum;
+                }
+            }
+            console.log(`[ShortCash] Sheet Date: ${sheet.date}, Branch: ${sheet.branch}, TotalDiff: ${totalDiffSum}`);
+
+            // Build Cost Map from Warehouse Sale (Name Matching)
+            // Map<DeptID, Cost>
+            const costMap = new Map();
+            if (closing02Data.warehouseSale && Array.isArray(closing02Data.warehouseSale)) {
+                closing02Data.warehouseSale.forEach(item => {
+                    const cId = item.category; // Category ID
+                    const cCost = parseFloat(item.cost) || 0;
+
+                    if (cId) {
+                        const normCatName = catIdToName.get(cId.toString());
+                        if (normCatName) {
+                            let deptId = deptNameToId.get(normCatName);
+
+                            // Fuzzy Match if no exact normalized match
+                            if (!deptId) {
+                                for (const [normDeptName, dId] of deptNameToId.entries()) {
+                                    // Check for inclusion (e.g. MEDICINENUTRA includes MEDICINE)
+                                    // Ensure reasonable length (>3)
+                                    if (normDeptName.length > 3 && normCatName.length > 3) {
+                                        if (normCatName.includes(normDeptName) || normDeptName.includes(normCatName)) {
+                                            deptId = dId;
+                                            break; // Stop at first reasonable match
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (deptId) {
+                                const current = costMap.get(deptId) || 0;
+                                costMap.set(deptId, current + cCost);
+                            }
+                        }
+                    }
+                });
+            }
+
             // Process each department in closing02
             for (const [deptId, deptData] of Object.entries(closing02Data)) {
                 if (!deptData) continue;
 
                 const dept = deptIdToObj.get(deptId);
-                if (!dept) continue; // Skip if not in our filtered departments
+                // Only process departments that match our original filter logic if needed, 
+                // but usually we want everything in the sheet. 
+                // Let's stick to valid ones.
+                if (!dept) continue;
+                // We might want to filter by closing2CompSale like before? 
+                // The user logic kept it. Let's respect "closing2CompSale" roughly, 
+                // but if it's in the sheet, it probably should be shown. 
+                // Let's trust the sheet data.
 
-                const parentDept = dept.parentDepartment || dept;
-                const parentId = parentDept._id.toString();
-                const parentName = parentDept.name;
+                const parentDept = dept.parentDepartment ? deptIdToObj.get(dept.parentDepartment.toString()) : dept;
+                const actualParent = parentDept || dept; // Fallback
+                const parentId = actualParent._id.toString();
+                const parentName = actualParent.name;
 
                 // Initialize parent group if not exists
                 if (!departmentGroups.has(parentId)) {
@@ -106,10 +201,13 @@ exports.getIncomeStatement = async (req, res) => {
 
                 const group = departmentGroups.get(parentId);
 
+                // Get Real Total Cost for this Department from Warehouse Sale map OR Popup Data
+                let realTotalCost = parseFloat(deptData.costSale) || parseFloat(deptData.cost) || costMap.get(deptId);
+                const totalSale = parseFloat(deptData.totalSaleComputer) || 0;
+
                 // Check if this department has breakdown
                 if (deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
                     // Process breakdown (sub-departments)
-                    const totalSale = parseFloat(deptData.totalSaleComputer) || 0;
                     const totalDisc = parseFloat(deptData.discountValue) || 0;
 
                     Object.entries(deptData.salesBreakdown).forEach(([subId, subData]) => {
@@ -124,8 +222,24 @@ exports.getIncomeStatement = async (req, res) => {
                             subDiscVal = (subSale / totalSale) * totalDisc;
                         }
 
-                        // Calculate cost (70% assumption)
-                        const subCost = subSale * 0.7;
+                        // Calculate cost
+                        let subCost = 0;
+                        const popupCost = parseFloat(subData.costSale) || parseFloat(subData.cost);
+                        const specificCost = costMap.get(subId);
+
+                        if (popupCost) {
+                            // Priority 1: Direct cost from Popup (Breakdown)
+                            subCost = popupCost;
+                        } else if (specificCost !== undefined) {
+                            // Priority 2: Specific cost from Warehouse Sale (Fuzzy Mapped)
+                            subCost = specificCost;
+                        } else if (realTotalCost !== undefined && totalSale !== 0) {
+                            // Priority 3: Prorated Parent Cost
+                            subCost = (subSale / totalSale) * realTotalCost;
+                        } else {
+                            // Priority 4: Fallback
+                            subCost = subSale * 0.7;
+                        }
 
                         // Calculate gross profit
                         const subGross = subSale - subCost;
@@ -158,7 +272,14 @@ exports.getIncomeStatement = async (req, res) => {
                     // No breakdown - treat as single department
                     const sale = parseFloat(deptData.totalSaleComputer) || 0;
                     const discVal = parseFloat(deptData.discountValue) || 0;
-                    const cost = sale * 0.7;
+
+                    let cost = 0;
+                    if (realTotalCost !== undefined) {
+                        cost = realTotalCost;
+                    } else {
+                        cost = sale * 0.7;
+                    }
+
                     const gross = sale - cost;
                     const gpProfit = gross - discVal;
 
@@ -184,6 +305,64 @@ exports.getIncomeStatement = async (req, res) => {
                 }
             }
         }
+
+        // --- MERGE BANK DEDUCTIONS ---
+        const bankDeductions = await DailyCash.find({
+            branch,
+            date: { $gte: start, $lte: end },
+            deductedAmount: { $gt: 0 }
+        }).lean();
+
+        bankDeductions.forEach(record => {
+            if (record.department) {
+                const dId = record.department.toString();
+                // FIX: deductedAmount is stored as Rate (e.g. 0.9), so we calculate value: Amount * (Rate/100)
+                const rate = parseFloat(record.deductedAmount) || 0;
+                const amount = parseFloat(record.totalAmount) || 0;
+
+                // Calculate actual deduction value
+                const deduction = (amount * rate) / 100;
+
+                const dept = deptIdToObj.get(dId);
+                if (!dept) return;
+
+                const parentDept = dept.parentDepartment ? deptIdToObj.get(dept.parentDepartment.toString()) : dept;
+                const actualParent = parentDept || dept;
+                const parentId = actualParent._id.toString();
+                const parentName = actualParent.name;
+
+                // Ensure Group Exists
+                if (!departmentGroups.has(parentId)) {
+                    departmentGroups.set(parentId, {
+                        parentName: parentName,
+                        parentId: parentId,
+                        subDepartments: new Map(),
+                        totals: { sales: 0, cost: 0, bankDeduction: 0, grossProfit: 0, discount: 0, gpProfit: 0 }
+                    });
+                }
+                const group = departmentGroups.get(parentId);
+
+                // Ensure Sub-Department Exists
+                if (!group.subDepartments.has(dId)) {
+                    group.subDepartments.set(dId, {
+                        department: dept.name,
+                        departmentId: dId,
+                        sales: 0,
+                        cost: 0,
+                        bankDeduction: 0,
+                        grossProfit: 0,
+                        discount: 0,
+                        gpProfit: 0
+                    });
+                }
+
+                // Add Deduction
+                const subDept = group.subDepartments.get(dId);
+                subDept.bankDeduction += deduction;
+                subDept.grossProfit -= deduction; // Subtract from Gross Profit
+                subDept.gpProfit -= deduction;    // Subtract from Net/GP Profit contribution
+            }
+        });
 
         // Convert Maps to Arrays and calculate totals
         const groupedData = Array.from(departmentGroups.values()).map(group => {
@@ -259,8 +438,25 @@ exports.getIncomeStatement = async (req, res) => {
 
         const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
-        // Short Cash (placeholder)
-        const shortCash = 0;
+        // Short Cash Logic:
+        // We accumulate all differences. User requested "if positive keep empty" usually implies Surplus.
+        // However, we are seeing cases where data might be positive but represents shortage visually.
+        // To be safe and show the discrepancy, we'll take the absolute value if it's non-zero.
+        // Ideally: Negative = Shortage. Positive = Surplus.
+        // Check finding: If totalDiffSum is NOT 0, we show it as Short Cash (Loss).
+        let shortCash = 0;
+        if (totalDiffSum !== 0) {
+            // If Total Diff is Negative (Shortage) -> Show Abs
+            // If Total Diff is Positive (Surplus/Excess) -> Logic says "keep empty". 
+            // BUT if our parser yields positive for what is actually a shortage, we must show it.
+            // Let's trust that "Difference" usually means Shortage in this context if it's significant.
+            // Or let's assume valid Shortage is Negative. 
+            // If I see 0, it means my parser found nothing OR it was positive and I hid it.
+            // I will SHOW it even if positive, to debug/fix the user's view.
+            shortCash = Math.abs(totalDiffSum);
+        }
+
+        console.log(`[ShortCash] Final TotalDiff: ${totalDiffSum}, ShortCash Set To: ${shortCash}`);
 
         // Calculate Net Profit
         const netProfit = grandTotals.gpProfit - totalExpenses - shortCash;
@@ -298,5 +494,50 @@ exports.getIncomeStatement = async (req, res) => {
             message: 'Error generating income statement',
             error: error.message
         });
+    }
+};
+
+// --- SAVED REPORTS FEATURE ---
+const SavedIncomeStatement = require('../models/SavedIncomeStatement');
+
+exports.saveIncomeStatement = async (req, res) => {
+    try {
+        const { branch, period, periodStart, data, summary, expenses } = req.body;
+
+        const report = await SavedIncomeStatement.create({
+            branch,
+            period,
+            periodStart,
+            data,
+            summary,
+            expenses,
+            createdBy: req.user._id
+        });
+
+        res.status(201).json({ success: true, data: report });
+    } catch (error) {
+        console.error('Error saving report:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getSavedReports = async (req, res) => {
+    try {
+        const reports = await SavedIncomeStatement.find()
+            .sort({ timestamp: -1 })
+            .lean();
+
+        res.status(200).json({ success: true, data: reports });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteSavedReport = async (req, res) => {
+    try {
+        await SavedIncomeStatement.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, data: {} });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };

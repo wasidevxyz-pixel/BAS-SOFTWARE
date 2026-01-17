@@ -122,10 +122,21 @@ exports.getDepartmentWiseReport = async (req, res) => {
             _id: { $in: validDeptIds }
         }).lean();
 
-        // Create a map of department ID to name
+        // Fetch all PartyCategories for Warehouse Sale mapping
+        const PartyCategory = require('../models/PartyCategory');
+        const partyCategories = await PartyCategory.find({}).lean();
+        const catIdToName = new Map();
+        partyCategories.forEach(c => catIdToName.set(c._id.toString(), c.name));
+
+        // Create a map of department ID to name AND Name to ID (for fuzzy matching)
         const deptIdToName = new Map();
+        const deptNameToId = new Map(); // Normalized Name -> ID
+
+        const normalizeName = (name) => name ? name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+
         departments.forEach(dept => {
             deptIdToName.set(dept._id.toString(), dept.name);
+            deptNameToId.set(normalizeName(dept.name), dept._id.toString());
         });
 
         // Aggregate department-wise data from closing02
@@ -138,11 +149,46 @@ exports.getDepartmentWiseReport = async (req, res) => {
             if (sheet.closing02 && sheet.closing02.data) {
                 const closing02Data = sheet.closing02.data;
 
+                // --- BUILD COST MAP (Warehouse Sale) ---
+                const costMap = new Map();
+                if (closing02Data.warehouseSale && Array.isArray(closing02Data.warehouseSale)) {
+                    closing02Data.warehouseSale.forEach(item => {
+                        const cId = item.category;
+                        const cCost = parseFloat(item.cost) || 0;
+                        if (cId) {
+                            const normCatName = normalizeName(catIdToName.get(cId.toString()));
+                            if (normCatName) {
+                                let targetDeptId = deptNameToId.get(normCatName);
+                                // Fuzzy Match (Inclusion)
+                                if (!targetDeptId) {
+                                    for (const [dName, dId] of deptNameToId.entries()) {
+                                        if (dName.length > 3 && normCatName.length > 3) {
+                                            if (normCatName.includes(dName) || dName.includes(normCatName)) {
+                                                targetDeptId = dId;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (targetDeptId) {
+                                    const current = costMap.get(targetDeptId) || 0;
+                                    costMap.set(targetDeptId, current + cCost);
+                                }
+                            }
+                        }
+                    });
+                }
+                // ---------------------------------------
+
                 // Iterate through each department in closing02
                 for (const [deptId, deptData] of Object.entries(closing02Data)) {
                     if (!deptData) continue; // Skip invalid entries
 
                     const parentName = deptIdToName.get(deptId) || 'UNKNOWN';
+
+                    // Get Real Total Cost for this Department from Warehouse Sale map OR Popup Data
+                    let realTotalCost = parseFloat(deptData.costSale) || parseFloat(deptData.cost) || costMap.get(deptId);
+
                     let itemsToProcess = [];
 
                     // Logic: If breakdown=true AND this department has a detailed breakdown, explode it.
@@ -169,6 +215,25 @@ exports.getDepartmentWiseReport = async (req, res) => {
                             // Calculate inferred Gross for the sub-item (Net + Disc)
                             const subGross = subSale + subDiscVal;
 
+                            // COST CALCULATION (Prioritized)
+                            let subCost = 0;
+                            const popupCost = parseFloat(subData.costSale) || parseFloat(subData.cost);
+                            const specificCost = costMap.get(subId); // Cost matched specifically to this sub-dept ID
+
+                            if (popupCost) {
+                                // Priority 1: Direct cost from Popup (Breakdown)
+                                subCost = popupCost;
+                            } else if (specificCost !== undefined) {
+                                // Priority 2: Specific cost from Warehouse Sale (Fuzzy Mapped to Sub-Dept)
+                                subCost = specificCost;
+                            } else if (realTotalCost !== undefined && totalSale !== 0) {
+                                // Priority 3: Prorated Parent Cost
+                                subCost = (subSale / totalSale) * realTotalCost;
+                            } else {
+                                // Priority 4: Fallback
+                                subCost = subSale * 0.7;
+                            }
+
                             itemsToProcess.push({
                                 id: subId,
                                 parentDept: parentName,
@@ -176,12 +241,25 @@ exports.getDepartmentWiseReport = async (req, res) => {
                                 discVal: subDiscVal,
                                 discPer: baseDiscountPer, // Inherit parent discount %
                                 gross: subGross,
+                                cost: subCost,
                                 // Breakdown items don't have these metrics tracked individually, so we leave them 0
                                 counterClosing: 0, bankTotal: 0, receivedCash: 0, difference: 0, tSaleManual: 0
                             });
                         });
                     } else {
                         // Standard Mode (or No Breakdown available)
+
+                        // COST CALCULATION (Prioritized for Parent)
+                        let myCost = 0;
+                        const popupCost = parseFloat(deptData.costSale) || parseFloat(deptData.cost)
+                        if (popupCost) {
+                            myCost = popupCost;
+                        } else if (realTotalCost !== undefined) {
+                            myCost = realTotalCost;
+                        } else {
+                            myCost = (parseFloat(deptData.totalSaleComputer) || 0) * 0.7;
+                        }
+
                         itemsToProcess.push({
                             id: deptId,
                             parentDept: parentName,
@@ -189,6 +267,7 @@ exports.getDepartmentWiseReport = async (req, res) => {
                             discVal: parseFloat(deptData.discountValue) || 0,
                             discPer: parseFloat(deptData.discountPer) || 0,
                             gross: parseFloat(deptData.grossSale) || 0,
+                            cost: myCost,
                             counterClosing: parseFloat(deptData.counterClosing) || 0,
                             bankTotal: parseFloat(deptData.bankTotal) || 0,
                             receivedCash: parseFloat(deptData.receivedCash) || 0,
@@ -211,6 +290,7 @@ exports.getDepartmentWiseReport = async (req, res) => {
                                 grossSale: 0,
                                 discountValue: 0,
                                 discountPer: 0,
+                                cost: 0,
                                 counterClosing: 0,
                                 bankTotal: 0,
                                 receivedCash: 0,
@@ -225,6 +305,7 @@ exports.getDepartmentWiseReport = async (req, res) => {
                         aggregated.grossSale += item.gross;
                         aggregated.discountValue += item.discVal;
                         aggregated.discountPer += item.discPer;
+                        aggregated.cost += item.cost;
                         aggregated.counterClosing += item.counterClosing;
                         aggregated.bankTotal += item.bankTotal;
                         aggregated.receivedCash += item.receivedCash;
@@ -257,6 +338,9 @@ exports.getDepartmentWiseReport = async (req, res) => {
 // @desc    Get department details (daily breakdown) for popup
 // @route   GET /api/v1/closing-sheets/department-details
 // @access  Private
+// @desc    Get department details (daily breakdown) for popup
+// @route   GET /api/v1/closing-sheets/department-details
+// @access  Private
 exports.getDepartmentDetails = async (req, res) => {
     try {
         const { startDate, endDate, branch, dept } = req.query;
@@ -277,7 +361,7 @@ exports.getDepartmentDetails = async (req, res) => {
         // Fetch closing sheets
         const sheets = await ClosingSheet.find(query).sort({ date: 1 }).lean();
 
-        // Get all department IDs (including from salesBreakdown)
+        // Get all department IDs
         const allDeptIds = new Set();
         sheets.forEach(sheet => {
             if (sheet.closing02 && sheet.closing02.data) {
@@ -290,45 +374,97 @@ exports.getDepartmentDetails = async (req, res) => {
             }
         });
 
-        // Fetch all departments
-        const Department = require('../models/Department');
         const mongoose = require('mongoose');
+        const Department = require('../models/Department');
+        const PartyCategory = require('../models/PartyCategory');
+
         const validDeptIds = Array.from(allDeptIds).filter(id => mongoose.isValidObjectId(id));
 
-        const departments = await Department.find({
-            _id: { $in: validDeptIds }
-        }).lean();
-
-        // Create a map of department ID to name
+        // Fetch Departments
+        const departments = await Department.find({ _id: { $in: validDeptIds } }).lean();
         const deptIdToName = new Map();
+        const deptNameToId = new Map();
+        const normalizeName = (name) => name ? name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+
         departments.forEach(d => {
             deptIdToName.set(d._id.toString(), d.name);
+            deptNameToId.set(normalizeName(d.name), d._id.toString());
         });
 
-        // Extract daily data for the specific department
+        // Fetch Categories for Cost Mapping
+        const partyCategories = await PartyCategory.find({}).lean();
+        const catIdToName = new Map();
+        partyCategories.forEach(c => catIdToName.set(c._id.toString(), c.name));
+
+        // Extract daily data
         const dailyData = [];
 
         for (const sheet of sheets) {
             if (sheet.closing02 && sheet.closing02.data) {
                 const closing02Data = sheet.closing02.data;
 
+                // --- BUILD COST MAP for this Sheet ---
+                const costMap = new Map();
+                if (closing02Data.warehouseSale && Array.isArray(closing02Data.warehouseSale)) {
+                    closing02Data.warehouseSale.forEach(item => {
+                        const cId = item.category;
+                        const cCost = parseFloat(item.cost) || 0;
+                        if (cId) {
+                            const normCatName = normalizeName(catIdToName.get(cId.toString()));
+                            if (normCatName) {
+                                let targetDeptId = deptNameToId.get(normCatName);
+                                // Fuzzy Match (Inclusion)
+                                if (!targetDeptId) {
+                                    for (const [dName, dId] of deptNameToId.entries()) {
+                                        if (dName.length > 3 && normCatName.length > 3) {
+                                            if (normCatName.includes(dName) || dName.includes(normCatName)) {
+                                                targetDeptId = dId;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (targetDeptId) {
+                                    const current = costMap.get(targetDeptId) || 0;
+                                    costMap.set(targetDeptId, current + cCost);
+                                }
+                            }
+                        }
+                    });
+                }
+                // -------------------------------------
+
                 let daySale = 0;
                 let dayDisc = 0;
                 let dayGross = 0;
+                let dayCost = 0;
                 let foundForDay = false;
 
                 for (const [deptId, deptData] of Object.entries(closing02Data)) {
+                    if (!deptData) continue;
+
                     const mainDeptName = deptIdToName.get(deptId);
 
-                    // Case 1: The Main Department entry itself matches the requested name
+                    // Determine Real Cost for Main Dept
+                    let realTotalCost = parseFloat(deptData.costSale) || parseFloat(deptData.cost) || costMap.get(deptId);
+
+                    // Case 1: Main Department matches
                     if (mainDeptName === dept) {
                         daySale += parseFloat(deptData.totalSaleComputer) || 0;
                         dayDisc += parseFloat(deptData.discountValue) || 0;
                         dayGross += parseFloat(deptData.grossSale) || 0;
+
+                        // Cost Logic
+                        if (realTotalCost !== undefined) {
+                            dayCost += realTotalCost;
+                        } else {
+                            dayCost += (parseFloat(deptData.totalSaleComputer) || 0) * 0.7;
+                        }
+
                         foundForDay = true;
                     }
 
-                    // Case 2: Check inside salesBreakdown for nested sub-department entries
+                    // Case 2: Sub-Department matches (Breakdown)
                     if (deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
                         const totalParentSale = parseFloat(deptData.totalSaleComputer) || 0;
                         const totalParentDisc = parseFloat(deptData.discountValue) || 0;
@@ -338,15 +474,31 @@ exports.getDepartmentDetails = async (req, res) => {
                             if (subDeptName === dept) {
                                 const subSale = parseFloat(subData.sale) || 0;
 
-                                // Prorate discount from the parent department
+                                // Prorate discount
                                 let subDiscVal = 0;
                                 if (totalParentSale !== 0) {
                                     subDiscVal = (subSale / totalParentSale) * totalParentDisc;
                                 }
 
+                                // COST LOGIC (Sub-Dept)
+                                let subCost = 0;
+                                const popupCost = parseFloat(subData.costSale) || parseFloat(subData.cost);
+                                const specificCost = costMap.get(subId);
+
+                                if (popupCost) {
+                                    subCost = popupCost;
+                                } else if (specificCost !== undefined) {
+                                    subCost = specificCost;
+                                } else if (realTotalCost !== undefined && totalParentSale !== 0) {
+                                    subCost = (subSale / totalParentSale) * realTotalCost;
+                                } else {
+                                    subCost = subSale * 0.7;
+                                }
+
                                 daySale += subSale;
                                 dayDisc += subDiscVal;
                                 dayGross += (subSale + subDiscVal);
+                                dayCost += subCost;
                                 foundForDay = true;
                             }
                         }
@@ -354,15 +506,14 @@ exports.getDepartmentDetails = async (req, res) => {
                 }
 
                 if (foundForDay) {
-                    // Calculate average discount percentage for the day's aggregated data
-                    // Gross = Sale + Discount. So Discount % = (Discount / Gross) * 100
                     const dPer = dayGross !== 0 ? (dayDisc / dayGross) * 100 : 0;
                     dailyData.push({
                         date: sheet.date,
                         discountValue: dayDisc,
                         discountPer: dPer,
                         totalSaleComputer: daySale,
-                        grossSale: dayGross
+                        grossSale: dayGross,
+                        cost: dayCost
                     });
                 }
             }
