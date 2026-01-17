@@ -44,13 +44,13 @@ function initSettingsPage() {
 // Setup automatic scrolling when tabs are clicked
 function setupTabScrolling() {
     const tabButtons = document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]');
-    
+
     tabButtons.forEach(button => {
         button.addEventListener('shown.bs.tab', function (event) {
             // Get the target tab pane ID from the button's data-bs-target attribute
             const targetId = event.target.getAttribute('data-bs-target');
             const targetElement = document.querySelector(targetId);
-            
+
             if (targetElement) {
                 // Scroll to the tab content with smooth animation
                 // Add a small delay to ensure the tab content is fully rendered
@@ -625,6 +625,11 @@ async function loadAvailableBackups() {
                         <code>${backup.name}</code>
                     </td>
                     <td>${new Date(backup.createdAt).toLocaleString()}</td>
+                    <td>
+                        <span class="badge ${backup.type === 'Auto' ? 'bg-info' : 'bg-secondary'}">
+                            ${backup.type || 'Manual'}
+                        </span>
+                    </td>
                     <td>${backup.sizeFormatted}</td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-warning me-1" onclick="restoreBackupFromList('${backup.name}')" title="Restore">

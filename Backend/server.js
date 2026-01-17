@@ -266,7 +266,8 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inven
             const backupConfig = {
               mongodbUri: currentSettings.mongodbUri || process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inventory',
               backupFolderPath: currentSettings.backupFolderPath || './backups',
-              mongoToolsPath: currentSettings.mongoToolsPath || ''
+              mongoToolsPath: currentSettings.mongoToolsPath || '',
+              type: 'auto'
             };
 
             // Create backup

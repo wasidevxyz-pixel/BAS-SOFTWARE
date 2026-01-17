@@ -28,7 +28,7 @@ exports.startBackupJob = async () => {
         }
 
         const settings = await Settings.findOne({});
-        
+
         if (!settings || !settings.autoBackupEnabled) {
             console.log('Automated backup is disabled');
             return;
@@ -41,10 +41,10 @@ exports.startBackupJob = async () => {
 
         // Parse time (HH:mm)
         const [hours, minutes] = settings.autoBackupTime.split(':');
-        
+
         // Cron schedule: minute hour * * * (Daily)
         const schedule = `${minutes} ${hours} * * *`;
-        
+
         console.log(`Scheduling automated backup for ${settings.autoBackupTime} (Daily)`);
 
         backupTask = cron.schedule(schedule, async () => {
@@ -53,14 +53,15 @@ exports.startBackupJob = async () => {
                 const backupConfig = {
                     mongodbUri: settings.mongodbUri || process.env.MONGO_URI || 'mongodb://localhost:27017/BAS-SOFTWARE',
                     backupFolderPath: settings.backupFolderPath || './backups',
-                    mongoToolsPath: settings.mongoToolsPath || ''
+                    mongoToolsPath: settings.mongoToolsPath || '',
+                    type: 'auto'
                 };
 
                 await createBackup(backupConfig);
-                
+
                 // Update last run info could be good here but let's keep it simple
                 // We might want to refresh settings to get latest update time
-                
+
             } catch (err) {
                 console.error('Scheduled backup failed:', err);
             }

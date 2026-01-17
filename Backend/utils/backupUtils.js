@@ -15,15 +15,51 @@ const execPromise = util.promisify(exec);
  * @param {string} config.mongodbUri - MongoDB connection URI
  * @param {string} config.backupFolderPath - Base path for backups
  * @param {string} config.mongoToolsPath - Path to MongoDB tools (optional)
+ * @param {string} config.type - Type of backup ('auto' or 'manual')
  * @returns {Promise<Object>} Backup result with folder name and timestamp
  */
 async function createBackup(config) {
     try {
-        const { mongodbUri, backupFolderPath, mongoToolsPath } = config;
+        const { mongodbUri, backupFolderPath, mongoToolsPath, type = 'manual' } = config;
 
-        // Create timestamp for backup folder
-        const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
-        const backupFolder = `backup-${timestamp}`;
+        let backupFolder;
+
+        if (type === 'auto') {
+            // For auto backups, use a date-based name to prevent duplicates (One per day)
+            // Using UTC date ensures consistency across server restarts/timezones
+            const datePart = new Date().toISOString().split('T')[0];
+            backupFolder = `backup-auto-${datePart}`;
+
+            // Check if this daily backup already exists
+            const checkPath = path.join(backupFolderPath, backupFolder);
+            try {
+                await fs.access(checkPath);
+                // If we get here, directory exists.
+                // Check if it's a "successful" backup (has info file)
+                try {
+                    await fs.access(path.join(checkPath, 'backup-info.json'));
+                    console.log(`[BACKUP] Auto backup for today (${backupFolder}) already exists. Skipping.`);
+                    return {
+                        success: true,
+                        backupFolder,
+                        fullPath: checkPath,
+                        timestamp: new Date(), // Just current time
+                        message: 'Daily backup already exists'
+                    };
+                } catch (e) {
+                    // Directory exists but no info file? might be partial/failed. 
+                    // We will proceed to overwrite/resume.
+                    console.log(`[BACKUP] Found partial auto backup folders, overwriting...`);
+                }
+            } catch (err) {
+                // Directory does not exist, proceed.
+            }
+        } else {
+            // Manual: Keep precise timestamp with milliseconds
+            const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+            backupFolder = `backup-${timestamp}`;
+        }
+
         const fullBackupPath = path.join(backupFolderPath, backupFolder);
 
         // Ensure backup directory exists
@@ -36,7 +72,7 @@ async function createBackup(config) {
 
         const command = `"${mongodumpCmd}" --uri="${mongodbUri}" --out="${fullBackupPath}"`;
 
-        console.log(`[BACKUP] Starting backup: ${backupFolder}`);
+        console.log(`[BACKUP] Starting separate backup: ${backupFolder} (Type: ${type})`);
         console.log(`[BACKUP] Command: ${command.replace(mongodbUri, 'HIDDEN_URI')}`);
 
         // Execute mongodump
@@ -47,6 +83,14 @@ async function createBackup(config) {
         if (stderr && !stderr.includes('done dumping')) {
             console.error(`[BACKUP] Warning: ${stderr}`);
         }
+
+        // Save metadata
+        const metadata = {
+            type,
+            timestamp: new Date(),
+            folder: backupFolder
+        };
+        await fs.writeFile(path.join(fullBackupPath, 'backup-info.json'), JSON.stringify(metadata, null, 2));
 
         console.log(`[BACKUP] Success: ${backupFolder}`);
 
@@ -156,9 +200,10 @@ async function restoreBackup(config) {
 /**
  * Get list of available backup folders
  * @param {string} backupFolderPath - Base path for backups
+ * @param {string} autoBackupTime - Optional configured auto backup time (HH:mm) to infer type for legacy backups
  * @returns {Promise<Array>} List of backup folders with metadata
  */
-async function getBackupsList(backupFolderPath) {
+async function getBackupsList(backupFolderPath, autoBackupTime) {
     try {
         // Ensure backup directory exists
         await fs.mkdir(backupFolderPath, { recursive: true });
@@ -176,12 +221,51 @@ async function getBackupsList(backupFolderPath) {
                     // Calculate folder size
                     const size = await getFolderSize(fullPath);
 
+                    // Determine Type
+                    // 1. Try reading metadata file (New System)
+                    let type = null;
+                    try {
+                        const metaPath = path.join(fullPath, 'backup-info.json');
+                        const metaContent = await fs.readFile(metaPath, 'utf8');
+                        const meta = JSON.parse(metaContent);
+                        if (meta.type) type = meta.type.charAt(0).toUpperCase() + meta.type.slice(1);
+                    } catch (err) {
+                        // Metadata missing -> Legacy Backup
+                    }
+
+                    // 2. If no metadata, infer from time (Legacy Support)
+                    if (!type) {
+                        const createdAt = stats.birthtime || stats.mtime;
+                        // Format created time to HH:mm
+                        const createdHours = createdAt.getHours().toString().padStart(2, '0');
+                        const createdMinutes = createdAt.getMinutes().toString().padStart(2, '0');
+                        const createdTime = `${createdHours}:${createdMinutes}`;
+
+                        // Check if it matches autoBackupTime (allowing 1 min variance for execution delay)
+                        if (autoBackupTime) {
+                            const [autoH, autoM] = autoBackupTime.split(':');
+
+                            // Simple check: Exact match
+                            if (createdTime === autoBackupTime) {
+                                type = 'Auto';
+                            }
+                            // Fuzzy check: allow being 1 minute late (e.g. scheduled 03:00, ran 03:00:01 or 03:01)
+                            else if (autoH === createdHours && Math.abs(parseInt(createdMinutes) - parseInt(autoM)) <= 1) {
+                                type = 'Auto';
+                            }
+                        }
+
+                        // Default to Manual if inference failed
+                        if (!type) type = 'Manual';
+                    }
+
                     backups.push({
                         name: file,
                         path: fullPath,
                         createdAt: stats.birthtime || stats.mtime,
                         size: size,
-                        sizeFormatted: formatBytes(size)
+                        sizeFormatted: formatBytes(size),
+                        type: type
                     });
                 }
             }

@@ -41,7 +41,8 @@ exports.manualBackup = async (req, res) => {
         const backupConfig = {
             mongodbUri: settings.mongodbUri || process.env.MONGO_URI || 'mongodb://localhost:27017/sales-inventory',
             backupFolderPath: settings.backupFolderPath || './backups',
-            mongoToolsPath: settings.mongoToolsPath || ''
+            mongoToolsPath: settings.mongoToolsPath || '',
+            type: 'manual'
         };
 
         // Create backup
@@ -247,9 +248,10 @@ exports.getAvailableBackups = async (req, res) => {
         const settings = await Settings.findOne({});
 
         const backupFolderPath = settings?.backupFolderPath || './backups';
+        const autoBackupTime = settings?.autoBackupTime; // e.g. "03:00"
 
         // Get backups list
-        const backups = await getBackupsList(backupFolderPath);
+        const backups = await getBackupsList(backupFolderPath, autoBackupTime);
 
         res.status(200).json({
             success: true,
