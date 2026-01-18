@@ -147,9 +147,26 @@ async function restoreBackup(config) {
 
         // Determine the source database name from backup
         let sourceDbName = targetDbName;
-        if (dbFolders.length > 0) {
-            sourceDbName = dbFolders[0]; // Use first database folder found
-            console.log(`[RESTORE] Found database in backup: ${sourceDbName}`);
+
+        // Filter out system databases
+        const systemDbs = ['admin', 'config', 'local', 'test'];
+        const validDbFolders = dbFolders.filter(db => !systemDbs.includes(db));
+
+        if (validDbFolders.length > 0) {
+            // If the target DB name exists in the backup, use it
+            if (validDbFolders.includes(targetDbName)) {
+                sourceDbName = targetDbName;
+            } else {
+                // Otherwise use the first valid database folder found
+                sourceDbName = validDbFolders[0];
+            }
+            console.log(`[RESTORE] Found valid database in backup: ${sourceDbName}`);
+        } else if (dbFolders.length > 0) {
+            // Fallback: If only system DBs are found (unlikely for app backup), use the first one
+            sourceDbName = dbFolders[0];
+            console.log(`[RESTORE] Warning: Only system/unknown databases found in backup. Using: ${sourceDbName}`);
+        } else {
+            console.log(`[RESTORE] Warning: No database folders found in backup. Assuming flat backup or matching name.`);
         }
 
         // Build mongorestore command
@@ -157,16 +174,20 @@ async function restoreBackup(config) {
             ? path.join(mongoToolsPath, 'mongorestore')
             : 'mongorestore';
 
-        // If source and target database names are different, we need to rename during restore
-        let command;
-        if (sourceDbName !== targetDbName) {
-            console.log(`[RESTORE] Renaming database from ${sourceDbName} to ${targetDbName}`);
-            // Use --nsFrom and --nsTo to rename database during restore
-            command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop --nsFrom="${sourceDbName}.*" --nsTo="${targetDbName}.*" "${fullBackupPath}"`;
-        } else {
-            // Standard restore - use --drop to replace existing data
-            command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop "${fullBackupPath}"`;
+        // Explicit Restore Strategy:
+        // We point directly to the database folder inside the backup and use -d to specify the target.
+        // This handles both "same name" and "rename" scenarios reliably.
+
+        let pathToRestore = fullBackupPath;
+        if (sourceDbName) {
+            pathToRestore = path.join(fullBackupPath, sourceDbName);
         }
+
+        console.log(`[RESTORE] Source Path: ${pathToRestore}`);
+        console.log(`[RESTORE] Target Database: ${targetDbName}`);
+
+        // Construct command: mongorestore --uri="..." --drop -d targetDbName path/to/source/db
+        const command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop -d "${targetDbName}" "${pathToRestore}"`;
 
         console.log(`[RESTORE] Starting restore from: ${backupFolder}`);
         console.log(`[RESTORE] Command: ${command.replace(mongodbUri, 'HIDDEN_URI')}`);
@@ -179,6 +200,9 @@ async function restoreBackup(config) {
         if (stderr && !stderr.includes('done')) {
             console.error(`[RESTORE] Warning: ${stderr}`);
         }
+
+        // Log detailed output for debugging
+        console.log(`[RESTORE] Details:\n${stderr || stdout}`);
 
         console.log(`[RESTORE] Success: ${backupFolder}`);
         console.log(`[RESTORE] Restored to database: ${targetDbName}`);
