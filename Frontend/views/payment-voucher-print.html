@@ -370,13 +370,21 @@
         }
 
         function renderList(list) {
-            let totalAmount = list.reduce((sum, v) => sum + (v.totalDebit || 0), 0);
+            // Split into Cash and Bank
+            const cashList = list.filter(v => v.voucherType === 'CPV');
+            const bankList = list.filter(v => v.voucherType !== 'CPV');
 
-            const tableRows = list.map((v, i) => {
-                const mainEntry = v.entries.find(e => !e.detail || !e.detail.includes('Auto-balanced'));
-                return `
+            const totalCash = cashList.reduce((sum, v) => sum + (v.totalDebit || 0), 0);
+            const totalBank = bankList.reduce((sum, v) => sum + (v.totalDebit || 0), 0);
+            const grandTotal = totalCash + totalBank;
+
+            // Helper to generate rows
+            const generateRows = (items, startIndex) => {
+                return items.map((v, i) => {
+                    const mainEntry = v.entries.find(e => !e.detail || !e.detail.includes('Auto-balanced'));
+                    return `
                     <tr>
-                        <td>${i + 1}</td>
+                        <td>${startIndex + i + 1}</td>
                         <td>${v.voucherNo}</td>
                         <td>${v.branch || '-'}</td>
                         <td>${new Date(v.date).toLocaleDateString()}</td>
@@ -386,9 +394,10 @@
                         <td class="text-right">${(v.totalDebit || 0).toLocaleString()}</td>
                     </tr>
                 `;
-            }).join('');
+                }).join('');
+            };
 
-            const html = `
+            let html = `
                 <div class="list-voucher">
                     <div class="list-header">
                         <h1>D.Watson Group of Pharmacy</h1>
@@ -399,6 +408,12 @@
                         <div>Branch: <span>Multiple Branches</span></div>
                         <div>Supplier: <span>Multiple Suppliers</span></div>
                     </div>
+            `;
+
+            // 1. CASH TABLE
+            if (cashList.length > 0) {
+                html += `
+                    <div style="margin-top: 20px; text-transform:uppercase; font-weight:bold; padding:5px; background:#ddd;">Cash Vouchers</div>
                     <table class="list-table">
                         <thead>
                             <tr>
@@ -413,24 +428,56 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${tableRows}
+                            ${generateRows(cashList, 0)}
                             <tr class="subtotal-row">
                                 <td colspan="7" class="text-right">SUBTOTAL CASH PAID</td>
-                                <td class="text-right">${totalAmount.toLocaleString()}</td>
+                                <td class="text-right">${totalCash.toLocaleString()}</td>
                             </tr>
                         </tbody>
                     </table>
+                `;
+            }
 
+            // 2. BANK TABLE
+            if (bankList.length > 0) {
+                html += `
+                    <div style="margin-top: 20px; text-transform:uppercase; font-weight:bold; padding:5px; background:#ddd;">Bank / Other Vouchers</div>
+                    <table class="list-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>V.No</th>
+                                <th>Branch</th>
+                                <th>Date</th>
+                                <th>Supplier</th>
+                                <th>PM</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${generateRows(bankList, 0)}
+                            <tr class="subtotal-row">
+                                <td colspan="7" class="text-right">SUBTOTAL BANK PAID</td>
+                                <td class="text-right">${totalBank.toLocaleString()}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            // SUMMARY
+            html += `
                     <div class="summary-box">
-                        <div class="summary-title">Summary</div>
+                        <div class="summary-title">Grand Summary</div>
                         <div class="summary-grid">
                             <div class="summary-cell">
                                 <span>Total Vouchers:</span>
                                 <b>${list.length}</b>
                             </div>
                             <div class="summary-cell" style="border-right:none">
-                                <span>Total Amount:</span>
-                                <b>${totalAmount.toLocaleString()}</b>
+                                <span>Grand Total Amount:</span>
+                                <b>${grandTotal.toLocaleString()}</b>
                             </div>
                         </div>
                     </div>
