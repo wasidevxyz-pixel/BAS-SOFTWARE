@@ -82,7 +82,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+
     await loadInitialData();
+    // Use then/catch to ensure it doesn't block if something goes wrong, 
+    // though we await it to try to fill form before user sees it.
+    try {
+        await checkForEditMode();
+    } catch (e) {
+        console.error('Error checking edit mode:', e);
+    }
 
     // Navigation and tab handling - Use Bootstrap Tab API for reliability
     // Check if we are on the list page first
@@ -342,10 +350,11 @@ async function handleSupplierVoucherSave(e) {
 
     const paymentMethod = document.getElementById('paymentMethod').value;
     let contraAccount = 'Cash in Hand'; // Default
-    if (paymentMethod === 'Bank') contraAccount = 'Bank';
+    // Both Bank and Cheque should be treated as Bank payments
+    if (paymentMethod === 'Bank' || paymentMethod === 'Cheque') contraAccount = 'Bank';
 
     const payload = {
-        voucherType: paymentMethod === 'Bank' ? 'BPV' : 'CPV',
+        voucherType: (paymentMethod === 'Bank' || paymentMethod === 'Cheque') ? 'BPV' : 'CPV',
         date: document.getElementById('voucherDate').value,
         branch: document.getElementById('branchSelect').options[document.getElementById('branchSelect').selectedIndex].text,
         narration: document.getElementById('voucherDescription').value,
@@ -369,10 +378,10 @@ async function handleCategoryVoucherSave(e) {
 
     const paymentMethod = document.getElementById('catPaymentMethod').value;
     let contraAccount = 'Cash in Hand';
-    if (paymentMethod === 'Bank') contraAccount = 'Bank';
+    if (paymentMethod === 'Bank' || paymentMethod === 'Cheque') contraAccount = 'Bank';
 
     const payload = {
-        voucherType: paymentMethod === 'Bank' ? 'BPV' : 'CPV',
+        voucherType: (paymentMethod === 'Bank' || paymentMethod === 'Cheque') ? 'BPV' : 'CPV',
         date: document.getElementById('catVoucherDate').value,
         branch: document.getElementById('catBranchSelect').options[document.getElementById('catBranchSelect').selectedIndex].text,
         narration: document.getElementById('catVoucherDescription').value,
@@ -386,16 +395,179 @@ async function handleCategoryVoucherSave(e) {
     await saveVoucher(payload);
 }
 
+// Global state for edit mode
+window.currentEditVoucherId = null;
+
+// Call check at end of init
+// We will insert this call in DOMContentLoaded via a separate replace
+
+async function checkForEditMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    if (editId) {
+        await loadVoucherForEdit(editId);
+    }
+}
+
+async function loadVoucherForEdit(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`/api/v1/vouchers/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            alert('Error loading voucher details');
+            return;
+        }
+
+        const voucher = data.data;
+        window.currentEditVoucherId = id;
+
+        // Identify type: Find entry that is NOT "Auto-balanced" and NOT null detail
+        let mainEntry = voucher.entries.find(e => !e.detail || !e.detail.includes('Auto-balanced'));
+
+        // Fallback: if detailed logic failed, assume the Debit entry is the main one (for Payments)
+        if (!mainEntry) {
+            mainEntry = voucher.entries.find(e => e.debit > 0);
+        }
+
+        if (!mainEntry) {
+            console.error('Could not identify main entry for voucher', voucher);
+            return alert('Critical Error: Vourcher data is malformed (No main entry found).');
+        }
+
+        const isCategory = mainEntry.detail === 'Category Wise Payment';
+
+        if (isCategory) {
+            // Switch to Category Tab
+            const catTab = document.getElementById('category-tab');
+            if (catTab) {
+                const tab = new bootstrap.Tab(catTab);
+                tab.show();
+            }
+
+            if (document.getElementById('catVoucherNo')) document.getElementById('catVoucherNo').value = voucher.voucherNo;
+            if (document.getElementById('catVoucherDate')) document.getElementById('catVoucherDate').value = voucher.date ? voucher.date.split('T')[0] : '';
+
+            // Branch
+            const branchSelect = document.getElementById('catBranchSelect');
+            if (branchSelect) {
+                // Try to find by name, fallback to value
+                let branchOpt = Array.from(branchSelect.options).find(o => o.text === voucher.branch);
+                if (branchOpt) branchSelect.value = branchOpt.value;
+            }
+
+            // Category Selection
+            const catSelect = document.getElementById('catCustomerCategory');
+            if (catSelect) {
+                // Determine if option exists
+                let exists = Array.from(catSelect.options).some(o => o.value === mainEntry.account);
+                if (!exists) {
+                    // Create temp option to ensure value is shown
+                    const opt = document.createElement('option');
+                    opt.value = mainEntry.account;
+                    opt.textContent = mainEntry.account + ' (Archived/Hidden)';
+                    catSelect.appendChild(opt);
+                }
+                catSelect.value = mainEntry.account;
+            }
+
+            const pmSelect = document.getElementById('catPaymentMethod');
+            if (pmSelect) {
+                // Logic: If BPV, it's Bank. If Cheque type exists, use it.
+                // We cannot easily distinguish Bank vs Cheque if both are BPV without extra data, 
+                // but we ensure it doesn't show Cash.
+                if (voucher.voucherType === 'BPV' || voucher.voucherType === 'Bank') {
+                    pmSelect.value = 'Bank';
+                } else if (voucher.voucherType === 'Cheque') {
+                    pmSelect.value = 'Cheque';
+                } else {
+                    pmSelect.value = 'Cash';
+                }
+            }
+
+            if (document.getElementById('catVoucherAmount')) document.getElementById('catVoucherAmount').value = mainEntry.debit;
+            if (document.getElementById('catVoucherDescription')) document.getElementById('catVoucherDescription').value = voucher.narration || '';
+
+            // Change Button Text
+            const btn = document.querySelector('#categoryVoucherForm button[type="submit"]');
+            if (btn) btn.innerHTML = '<i class="fas fa-save me-2"></i> Update Voucher';
+
+        } else {
+            // Switch to Supplier Tab
+            const supTab = document.getElementById('supplier-tab');
+            if (supTab) {
+                const tab = new bootstrap.Tab(supTab);
+                tab.show();
+            }
+
+            if (document.getElementById('voucherNo')) document.getElementById('voucherNo').value = voucher.voucherNo;
+            if (document.getElementById('voucherDate')) document.getElementById('voucherDate').value = voucher.date ? voucher.date.split('T')[0] : '';
+
+            // Branch & Load Suppliers
+            const branchSelect = document.getElementById('branchSelect');
+            if (branchSelect) {
+                let branchOpt = Array.from(branchSelect.options).find(o => o.text === voucher.branch);
+                if (branchOpt) {
+                    branchSelect.value = branchOpt.value;
+                    // We MUST reload suppliers for this branch to ensure the supplier is in the list
+                    // Warning: safeWait to let it load? loadSuppliers is async.
+                    await loadSuppliers(voucher.branch);
+                }
+            }
+
+            // Supplier Selection
+            const supSelect = document.getElementById('supplierSelect');
+            if (supSelect) {
+                // Determine if option exists
+                let exists = Array.from(supSelect.options).some(o => o.value === mainEntry.account);
+                if (!exists) {
+                    // Create temp option
+                    const opt = document.createElement('option');
+                    opt.value = mainEntry.account;
+                    opt.textContent = mainEntry.account + ' (Missing from Filter)';
+                    supSelect.appendChild(opt);
+                }
+                supSelect.value = mainEntry.account;
+            }
+
+            const pmSelect = document.getElementById('paymentMethod');
+            if (pmSelect) {
+                if (voucher.voucherType === 'BPV' || voucher.voucherType === 'Bank') {
+                    pmSelect.value = 'Bank';
+                } else if (voucher.voucherType === 'Cheque') {
+                    pmSelect.value = 'Cheque';
+                } else {
+                    pmSelect.value = 'Cash';
+                }
+            }
+
+            if (document.getElementById('voucherAmount')) document.getElementById('voucherAmount').value = mainEntry.debit;
+            if (document.getElementById('voucherDescription')) document.getElementById('voucherDescription').value = voucher.narration || '';
+
+            // Change Button Text
+            const btn = document.querySelector('#supplierVoucherForm button[type="submit"]');
+            if (btn) btn.innerHTML = '<i class="fas fa-save me-2"></i> Update Voucher';
+        }
+
+    } catch (err) { console.error('Error loading edit voucher:', err); }
+}
+
 async function saveVoucher(payload) {
     let attempts = 0;
     const maxAttempts = 3;
+    const isEdit = window.currentEditVoucherId != null;
+    const url = isEdit ? `/api/v1/vouchers/${window.currentEditVoucherId}` : '/api/v1/vouchers';
+    const method = isEdit ? 'PUT' : 'POST';
 
     while (attempts < maxAttempts) {
         try {
             attempts++;
             const token = localStorage.getItem('token');
-            const res = await fetch('/api/v1/vouchers', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -405,19 +577,36 @@ async function saveVoucher(payload) {
             const data = await res.json();
 
             if (data.success) {
-                alert('Voucher Saved Successfully!');
+                alert(isEdit ? 'Voucher Updated Successfully!' : 'Voucher Saved Successfully!');
+
+                // Clear Edit Mode
+                window.currentEditVoucherId = null;
+                const btns = document.querySelectorAll('button[type="submit"]');
+                btns.forEach(b => b.innerHTML = '<i class="fas fa-save me-2"></i> Save Voucher');
+
                 await window.resetForm('supplierVoucherForm');
                 await window.resetForm('categoryVoucherForm');
-                await fetchVoucherList();
 
-                if (confirm('Do you want to print this voucher?')) {
+                // Remove edit param from URL if present without reloading
+                if (window.history.pushState) {
+                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                }
+
+                if (!isEdit && confirm('Do you want to print this voucher?')) {
                     printSingle(data.data._id);
                 }
+
+                // If we were editing, maybe redirect back to list?
+                if (isEdit) {
+                    // Optional: window.location.href = '/payment-vouchers-list.html';
+                }
+
                 return; // Success, exit function
             }
 
-            // Check for duplicate key error (E11000)
-            if (data.message && (data.message.includes('E11000') || data.message.includes('duplicate'))) {
+            // Check for duplicate key error (E11000) ONLY FOR NEW RECORDS
+            if (!isEdit && data.message && (data.message.includes('E11000') || data.message.includes('duplicate'))) {
                 console.warn(`Duplicate voucher number ${payload.voucherNo} detected. Retrying with new number (Attempt ${attempts})...`);
 
                 // Generate a fresh number for the current voucher type (CPV or BPV)
@@ -464,6 +653,18 @@ async function saveVoucher(payload) {
     }
 
     alert('Failed to save voucher after multiple attempts due to high traffic. Please try again.');
+}
+
+window.editVoucher = function (id) {
+    // If on list page, redirect to entry page with edit param
+    if (window.location.pathname.includes('payment-vouchers-list')) {
+        window.location.href = `/payment-vouchers.html?edit=${id}`;
+        return;
+    }
+
+    // If on entry page (or shared JS usage), enter edit mode directly
+    loadVoucherForEdit(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function fetchVoucherList() {
@@ -646,25 +847,6 @@ window.openQuickAddCategory = function () {
         window._quickAddTargetSelectId = 'catCustomerCategory';
     }, 100);
 };
-
-window.editVoucher = function (id) {
-    const v = loadedVouchers.find(x => x._id === id);
-    if (!v) return;
-
-    // Switch to appropriate tab
-    const mainEntry = v.entries.find(e => !e.detail || !e.detail.includes('Auto-balanced'));
-    if (mainEntry && mainEntry.detail === 'Category Wise Payment') {
-        document.getElementById('category-tab').click();
-        // Fill cat form...
-    } else {
-        document.getElementById('supplier-tab').click();
-        // Fill supplier form...
-    }
-
-    // For now simplistic filling
-    alert('Edit mode activated - showing data as reference.');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
 
 // Helper function to generate a fresh voucher number (CPV/BPV)
 // Explicitly needed for the retry mechanism in saveVoucher
