@@ -73,6 +73,17 @@ const exemptionInvoiceRoutes = require('./routes/exemptionInvoices');
 const zakatRoutes = require('./routes/zakats');
 const pendingChequeRoutes = require('./routes/pendingCheques');
 const incomeStatementRoutes = require('./routes/incomeStatement');
+const whSupplierRoutes = require('./routes/whSuppliers');
+const whCustomerRoutes = require('./routes/whCustomers');
+const whSupplierCategoryRoutes = require('./routes/whSupplierCategories');
+const whCustomerCategoryRoutes = require('./routes/whCustomerCategories');
+const whCityRoutes = require('./routes/whCities');
+const whCustomerTypeRoutes = require('./routes/whCustomerTypes');
+const whItemCompanyRoutes = require('./routes/whItemCompanies');
+const whItemCategoryRoutes = require('./routes/whItemCategories');
+const whItemClassRoutes = require('./routes/whItemClasses');
+const whItemSubClassRoutes = require('./routes/whItemSubClasses');
+const whItemRoutes = require('./routes/whItems');
 
 
 
@@ -369,6 +380,17 @@ app.use('/api/v1/exemption-invoices', exemptionInvoiceRoutes);
 app.use('/api/v1/zakats', zakatRoutes);
 app.use('/api/v1/pending-cheques', pendingChequeRoutes);
 app.use('/api/v1/income-statement', incomeStatementRoutes);
+app.use('/api/v1/wh-suppliers', whSupplierRoutes);
+app.use('/api/v1/wh-customers', whCustomerRoutes);
+app.use('/api/v1/wh-supplier-categories', whSupplierCategoryRoutes);
+app.use('/api/v1/wh-customer-categories', whCustomerCategoryRoutes);
+app.use('/api/v1/wh-cities', whCityRoutes);
+app.use('/api/v1/wh-customer-types', whCustomerTypeRoutes);
+app.use('/api/v1/wh-item-companies', whItemCompanyRoutes);
+app.use('/api/v1/wh-item-categories', whItemCategoryRoutes);
+app.use('/api/v1/wh-item-classes', whItemClassRoutes);
+app.use('/api/v1/wh-item-subclasses', whItemSubClassRoutes);
+app.use('/api/v1/wh-items', whItemRoutes);
 
 
 
@@ -619,6 +641,14 @@ app.get('/employee-clearance.html', (req, res) => {
 
 app.get('/employee-adjustment.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-adjustment.html'));
+});
+
+app.get('/wh-supplier.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-supplier.html'));
+});
+
+app.get('/wh-customer.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-customer.html'));
 });
 
 

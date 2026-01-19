@@ -145,7 +145,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Branch-wise Supplier Filtering
     document.getElementById('branchSelect')?.addEventListener('change', async (e) => {
         const branchName = e.target.options[e.target.selectedIndex].text;
-        await loadSuppliers(branchName);
+        const selectedBranch = e.target.value === "" ? "" : branchName;
+        await loadSuppliers(selectedBranch);
+    });
+
+    document.getElementById('listBranchFilter')?.addEventListener('change', async (e) => {
+        const branchName = e.target.options[e.target.selectedIndex].text;
+        const selectedBranch = e.target.value === "" ? "" : branchName;
+        await loadSuppliers(selectedBranch);
     });
 });
 
@@ -186,13 +193,23 @@ async function loadSuppliers(branchName = '') {
                 filteredSuppliers = data.data.filter(s => s.branch === branchName);
             }
 
-            suppliers = filteredSuppliers;
+            // Deduplicate by name to prevent multiple entries (e.g. same supplier in multiple branches if global view)
+            const uniqueSuppliers = [];
+            const seenNames = new Set();
+            filteredSuppliers.forEach(s => {
+                if (!seenNames.has(s.name)) {
+                    seenNames.add(s.name);
+                    uniqueSuppliers.push(s);
+                }
+            });
+
+            suppliers = uniqueSuppliers;
             const selects = ['supplierSelect', 'listSupplierFilter'];
             selects.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                el.innerHTML = '<option value="">Select Supplier</option>';
-                filteredSuppliers.forEach(s => {
+                el.innerHTML = `<option value="">${id.includes('list') ? 'All Suppliers' : 'Select Supplier'}</option>`;
+                uniqueSuppliers.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.name;
                     opt.textContent = s.name;

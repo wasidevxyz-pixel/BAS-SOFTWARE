@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize settings page
     initSettingsPage();
+
+    // Setup permission-based tab visibility (must run before tab parameter handling)
+    setupTabPermissions();
+
+    // Handle tab parameter (e.g., ?tab=company, ?tab=invoice, ?tab=tax, ?tab=backup)
+    // This runs AFTER permissions to ensure proper tab visibility
+    handleTabParameter();
 });
 
 // Set user name in navbar
@@ -19,6 +26,171 @@ function setUserName() {
     const userNameElement = document.getElementById('userName');
     if (userNameElement && user) {
         userNameElement.textContent = user.name || user.email;
+    }
+}
+
+// Setup permission-based tab visibility
+function setupTabPermissions() {
+    // Check if a specific tab is requested via query parameter
+    // If so, skip this entire function - handleTabParameter will handle everything
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedTab = urlParams.get('tab');
+
+    if (requestedTab) {
+        console.log('Specific tab requested, skipping permission setup:', requestedTab);
+        return; // Exit immediately
+    }
+
+    const user = getCurrentUser();
+    if (!user) return;
+
+    // Admin has full access
+    if (user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin)) {
+        return; // Show all tabs for admin
+    }
+
+    // Get user rights
+    let rights = user.rights || {};
+    if (Object.keys(rights).length === 0) {
+        if (user.group && user.group.rights) {
+            rights = user.group.rights;
+        } else if (user.groupId && user.groupId.rights) {
+            rights = user.groupId.rights;
+        }
+    }
+
+    console.log('User rights:', rights); // Debug log
+
+    // Hide tabs based on permissions
+    const tabItems = document.querySelectorAll('#settingsTabs .nav-item[data-permission]');
+    let firstVisibleTab = null;
+    let visibleCount = 0;
+
+    tabItems.forEach(tabItem => {
+        const permission = tabItem.getAttribute('data-permission');
+        console.log('Checking permission:', permission, 'Has access:', rights[permission]); // Debug log
+
+        if (permission && !rights[permission]) {
+            // Hide the tab - user doesn't have this specific permission
+            tabItem.style.display = 'none';
+        } else {
+            // Show the tab
+            tabItem.style.display = '';
+            visibleCount++;
+            if (!firstVisibleTab) {
+                // Track first visible tab
+                firstVisibleTab = tabItem.querySelector('button');
+            }
+        }
+    });
+
+    console.log('Visible tabs count:', visibleCount); // Debug log
+
+    // If no tabs are visible, hide the entire settings page or show a message
+    if (visibleCount === 0) {
+        const container = document.querySelector('.container-fluid.mt-4');
+        if (container) {
+            container.innerHTML = '<div class="alert alert-warning mt-4"><i class="fas fa-exclamation-triangle me-2"></i>You do not have permission to access any settings tabs. Please contact your administrator.</div>';
+        }
+        return;
+    }
+
+    // If the default active tab is hidden, activate the first visible tab
+    const activeTab = document.querySelector('#settingsTabs .nav-link.active');
+    const activeTabParent = activeTab ? activeTab.closest('.nav-item') : null;
+
+    if (activeTabParent && activeTabParent.style.display === 'none' && firstVisibleTab) {
+        // Remove active class from hidden tab
+        activeTab.classList.remove('active');
+
+        // Activate first visible tab
+        firstVisibleTab.classList.add('active');
+
+        // Show corresponding tab pane
+        const targetId = firstVisibleTab.getAttribute('data-bs-target');
+        if (targetId) {
+            // Hide all tab panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+
+            // Show target pane
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        }
+    }
+}
+
+// Handle tab parameter to show only selected tab
+function handleTabParameter() {
+    // Get the 'tab' query parameter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+
+    if (!tabParam) {
+        // No tab parameter - show all tabs (default behavior)
+        return;
+    }
+
+    // Map tab parameter to tab IDs and content IDs
+    const tabMap = {
+        'company': { tabId: 'company-tab', contentId: 'company' },
+        'invoice': { tabId: 'invoice-tab', contentId: 'invoice' },
+        'tax': { tabId: 'tax-tab', contentId: 'tax' },
+        'backup': { tabId: 'backup-tab', contentId: 'backup' }
+    };
+
+    const tabInfo = tabMap[tabParam];
+    if (tabInfo) {
+        const tabButton = document.getElementById(tabInfo.tabId);
+        const tabParent = tabButton ? tabButton.closest('.nav-item') : null;
+
+        if (tabButton && tabParent) {
+            // Remove the initial hiding style
+            const hideStyle = document.getElementById('tab-hide-style');
+            if (hideStyle) {
+                hideStyle.remove();
+            }
+
+            // Hide ALL tab buttons with !important
+            document.querySelectorAll('#settingsTabs .nav-item').forEach(item => {
+                item.style.setProperty('display', 'none', 'important');
+            });
+
+            // Hide ALL tab content panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+                pane.style.setProperty('display', 'none', 'important');
+            });
+
+            // Show ONLY the selected tab button
+            tabParent.style.setProperty('display', '', 'important');
+
+            // Show ONLY the selected tab content
+            const selectedContent = document.getElementById(tabInfo.contentId);
+            if (selectedContent) {
+                selectedContent.style.setProperty('display', 'block', 'important');
+                selectedContent.classList.add('show', 'active');
+            }
+
+            // Activate the tab using Bootstrap's tab API
+            const tab = new bootstrap.Tab(tabButton);
+            tab.show();
+
+            // Load backup configuration if backup tab is selected
+            if (tabParam === 'backup') {
+                // Use setTimeout to ensure DOM is ready
+                setTimeout(() => {
+                    if (typeof loadBackupInfo === 'function') loadBackupInfo();
+                    if (typeof loadAvailableBackups === 'function') loadAvailableBackups();
+                    if (typeof loadBackupConfiguration === 'function') loadBackupConfiguration();
+                }, 100);
+            }
+
+            console.log('Showing only tab:', tabParam, 'Content:', tabInfo.contentId); // Debug log
+        }
     }
 }
 

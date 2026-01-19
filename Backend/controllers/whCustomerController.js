@@ -1,0 +1,189 @@
+const WHCustomer = require('../models/WHCustomer');
+const Store = require('../models/Store');
+
+// @desc    Get next customer code
+// @route   GET /api/v1/wh-customers/next-code
+// @access  Private
+exports.getNextCode = async (req, res) => {
+    try {
+        const lastCustomer = await WHCustomer.findOne().sort({ code: -1 });
+        let nextCode = '01';
+
+        if (lastCustomer && lastCustomer.code) {
+            const currentCode = parseInt(lastCustomer.code);
+            if (!isNaN(currentCode)) {
+                nextCode = (currentCode + 1).toString().padStart(2, '0');
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            data: nextCode
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error generating next code',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Get all WH customers
+// @route   GET /api/v1/wh-customers
+// @access  Private
+exports.getWHCustomers = async (req, res) => {
+    try {
+        const { branch } = req.query;
+
+        let query = {};
+        if (branch) {
+            query.branch = branch;
+        }
+
+        const customers = await WHCustomer.find(query)
+            .populate('branch', 'name')
+            .populate('customerCategory', 'name')
+            .populate('city', 'name')
+            .populate('customerType', 'name')
+            .populate('createdBy', 'name email')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: customers.length,
+            data: customers
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching WH customers',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Get single WH customer
+// @route   GET /api/v1/wh-customers/:id
+// @access  Private
+exports.getWHCustomer = async (req, res) => {
+    try {
+        const customer = await WHCustomer.findById(req.params.id)
+            .populate('branch', 'name')
+            .populate('customerCategory', 'name')
+            .populate('city', 'name')
+            .populate('customerType', 'name')
+            .populate('createdBy', 'name email');
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: 'WH Customer not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: customer
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching WH customer',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Create new WH customer
+// @route   POST /api/v1/wh-customers
+// @access  Private
+exports.createWHCustomer = async (req, res) => {
+    try {
+        // Add user to req.body
+        req.body.createdBy = req.user.id;
+
+        const customer = await WHCustomer.create(req.body);
+
+        res.status(201).json({
+            success: true,
+            message: 'WH Customer created successfully',
+            data: customer
+        });
+    } catch (error) {
+        console.error('Create WH Customer Error:', error);
+        res.status(400).json({
+            success: false,
+            message: 'Error creating WH customer',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Update WH customer
+// @route   PUT /api/v1/wh-customers/:id
+// @access  Private
+exports.updateWHCustomer = async (req, res) => {
+    try {
+        let customer = await WHCustomer.findById(req.params.id);
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: 'WH Customer not found'
+            });
+        }
+
+        customer = await WHCustomer.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'WH Customer updated successfully',
+            data: customer
+        });
+    } catch (error) {
+        console.error('Update WH Customer Error:', error);
+        res.status(400).json({
+            success: false,
+            message: 'Error updating WH customer',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Delete WH customer
+// @route   DELETE /api/v1/wh-customers/:id
+// @access  Private
+exports.deleteWHCustomer = async (req, res) => {
+    try {
+        const customer = await WHCustomer.findById(req.params.id);
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: 'WH Customer not found'
+            });
+        }
+
+        await customer.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: 'WH Customer deleted successfully',
+            data: {}
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting WH customer',
+            error: error.message
+        });
+    }
+};

@@ -1,0 +1,961 @@
+// WH Item Registration JavaScript
+let items = [];
+let companies = [];
+let categories = [];
+let classes = [];
+let subClasses = [];
+let suppliers = [];
+let stores = [];
+let itemStockList = [];
+
+// Modals
+let companyModal, categoryModal, classModal, subClassModal, itemListModal;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!isAuthenticated()) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    // Initialize modals
+    companyModal = new bootstrap.Modal(document.getElementById('companyModal'));
+    categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+    classModal = new bootstrap.Modal(document.getElementById('classModal'));
+    subClassModal = new bootstrap.Modal(document.getElementById('subClassModal'));
+    itemListModal = new bootstrap.Modal(document.getElementById('itemListModal'));
+
+    await Promise.all([
+        loadCompanies(),
+        loadCategories(),
+        loadClasses(),
+        loadSubClasses(),
+        loadSuppliers(),
+        loadStores(),
+        getNextSeqId(),
+        loadItemsForSearch()
+    ]);
+
+    // Setup Top Search Bar Listeners
+    setupSearchListeners();
+
+    setUserName();
+});
+
+// Load Companies
+async function loadCompanies() {
+    try {
+        const response = await fetch('/api/v1/wh-item-companies', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            companies = data.data;
+            const select = document.getElementById('company');
+            if (select) {
+                select.innerHTML = '<option value="">Select Company</option>';
+                companies.forEach(c => {
+                    if (c.isActive) {
+                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading companies:', error); }
+}
+
+// Load Categories
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/v1/wh-item-categories', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            categories = data.data;
+            const select = document.getElementById('category');
+            if (select) {
+                select.innerHTML = '<option value="">Select Category</option>';
+                categories.forEach(c => {
+                    if (c.isActive) {
+                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading categories:', error); }
+}
+
+// Load Classes
+async function loadClasses() {
+    try {
+        const response = await fetch('/api/v1/wh-item-classes', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            classes = data.data;
+            const select = document.getElementById('itemClass');
+            if (select) {
+                select.innerHTML = '<option value="">Select Class</option>';
+                classes.forEach(c => {
+                    if (c.isActive) {
+                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading classes:', error); }
+}
+
+// Load SubClasses
+async function loadSubClasses() {
+    try {
+        const response = await fetch('/api/v1/wh-item-subclasses', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            subClasses = data.data;
+            const select = document.getElementById('subClass');
+            if (select) {
+                select.innerHTML = '<option value="">Select SubClass</option>';
+                subClasses.forEach(c => {
+                    if (c.isActive) {
+                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading subclasses:', error); }
+}
+
+// Load Suppliers
+async function loadSuppliers() {
+    try {
+        const response = await fetch('/api/v1/wh-suppliers', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            suppliers = data.data;
+            const select = document.getElementById('supplier');
+            if (select) {
+                select.innerHTML = '<option value="">Select Supplier</option>';
+                suppliers.forEach(s => {
+                    if (s.isActive) {
+                        select.innerHTML += `<option value="${s._id}">${s.supplierName}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading suppliers:', error); }
+}
+
+// Load Stores
+async function loadStores() {
+    try {
+        const response = await fetch('/api/v1/stores', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            stores = data.data;
+            const select = document.getElementById('stockStoreSelect');
+            if (select) {
+                select.innerHTML = '<option value="">Choose Store...</option>';
+                stores.forEach(s => {
+                    if (s.isActive !== false) { // Assuming stores have isActive
+                        select.innerHTML += `<option value="${s._id}">${s.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading stores:', error); }
+}
+async function loadItemsForSearch() {
+    try {
+        const response = await fetch('/api/v1/wh-items', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            allItems = data.data || [];
+            const select = document.getElementById('searchName');
+            if (select) {
+                select.innerHTML = '<option value="">Select Item</option>';
+                allItems.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item._id;
+                    opt.textContent = item.name;
+                    select.appendChild(opt);
+                });
+            }
+        }
+    } catch (error) { console.error('Error loading search items:', error); }
+}
+
+function setupSearchListeners() {
+    // Barcode Search (Enter Key)
+    const barInput = document.getElementById('searchBarcode');
+    if (barInput) {
+        barInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const code = e.target.value.trim();
+                if (!code) return;
+
+                const item = allItems.find(i => (i.barcode === code) || (i.itemsCode === code));
+                if (item) {
+                    selectItem(item._id);
+                } else {
+                    showAlert('Item not found for this Barcode/Item Code', 'warning');
+                }
+            }
+        });
+    }
+
+    // Name Search (Dropdown)
+    const nameSelect = document.getElementById('searchName');
+    if (nameSelect) {
+        nameSelect.addEventListener('change', (e) => {
+            const id = e.target.value;
+            if (id) {
+                selectItem(id);
+            }
+        });
+    }
+}
+// Add Stock Row
+function addStockRow() {
+    const storeId = document.getElementById('stockStoreSelect').value;
+    const opening = parseFloat(document.getElementById('stockOpeningInput').value) || 0;
+
+    if (!storeId) return showAlert('Please select a store', 'warning');
+
+    const store = stores.find(s => s._id === storeId);
+    if (!store) return;
+
+    // Check availability
+    const existing = itemStockList.find(i => i.store === storeId);
+    if (existing) {
+        existing.opening = opening; // Update existing
+    } else {
+        itemStockList.push({
+            store: storeId,
+            storeName: store.name,
+            quantity: 0,
+            opening: opening
+        });
+    }
+
+    renderStockTable();
+    // Reset inputs
+    document.getElementById('stockStoreSelect').value = '';
+    document.getElementById('stockOpeningInput').value = '0';
+}
+
+// Delete Stock Row
+function deleteStockRow(storeId) {
+    itemStockList = itemStockList.filter(i => i.store !== storeId);
+    renderStockTable();
+}
+
+// Render Stock Table
+function renderStockTable() {
+    const tbody = document.getElementById('stockTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    itemStockList.forEach((item, index) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.storeName}</td>
+                <td>${item.quantity}</td>
+                <td>${item.opening}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteStockRow('${item.store}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Get Next Seq ID
+async function getNextSeqId() {
+    try {
+        const response = await fetch('/api/v1/wh-items/next-seq', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            // Backend now returns { seqId, itemCode }
+            document.getElementById('seqId').value = data.data.seqId;
+            document.getElementById('itemCode').value = data.data.itemCode;
+            document.getElementById('searchBarcode').value = '';
+        }
+    } catch (error) { console.error('Error getting next ID:', error); }
+}
+
+// Save Item
+async function saveItem() {
+    const id = document.getElementById('itemId').value;
+
+    // Prepare Stock
+    const stockData = itemStockList.map(s => ({
+        store: s.store,
+        quantity: s.quantity,
+        opening: s.opening
+    }));
+
+    const formData = {
+        seqId: parseInt(document.getElementById('seqId').value),
+        itemsCode: document.getElementById('itemCode').value,
+        barcode: document.getElementById('searchBarcode').value,
+        name: document.getElementById('itemName').value,
+        costPrice: parseFloat(document.getElementById('costPrice').value) || 0,
+        salePrice: parseFloat(document.getElementById('salePrice').value) || 0,
+        retailPrice: parseFloat(document.getElementById('retailPrice').value) || 0,
+        incentive: parseFloat(document.getElementById('incentive').value) || 0,
+        company: document.getElementById('company').value || null,
+        category: document.getElementById('category').value || null,
+        itemClass: document.getElementById('itemClass').value || null,
+        subClass: document.getElementById('subClass').value || null,
+        supplier: document.getElementById('supplier').value || null,
+        stock: stockData,
+        isActive: document.getElementById('isActive').checked
+    };
+
+    if (!formData.name) {
+        return showAlert('Please enter item name', 'warning');
+    }
+
+    try {
+        const url = id ? `/api/v1/wh-items/${id}` : '/api/v1/wh-items';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showAlert(`Item ${id ? 'updated' : 'saved'} successfully`, 'success');
+            clearForm();
+            // Refresh list if open
+            if (document.getElementById('itemListModal').classList.contains('show')) {
+                showList();
+            }
+        } else {
+            showAlert(result.message || result.error || 'Error saving item', 'danger');
+        }
+    } catch (error) {
+        console.error('Error saving item:', error);
+        showAlert('Error saving item', 'danger');
+    }
+}
+
+// Delete Item
+async function deleteItem(id) {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+        const response = await fetch(`/api/v1/wh-items/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            showAlert('Item deleted successfully', 'success');
+            showList(); // Refresh list
+        } else {
+            showAlert('Delete failed: ' + (data.message || 'Unknown error'), 'danger');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        showAlert('Error deleting item', 'danger');
+    }
+}
+
+// Clear Form
+function clearForm() {
+    document.getElementById('itemForm').reset();
+    document.getElementById('itemId').value = '';
+    document.getElementById('isActive').checked = true;
+    document.getElementById('searchBarcode').value = '';
+    document.getElementById('searchName').value = '';
+    itemStockList = []; // Clear stock list
+    renderStockTable();
+    getNextSeqId();
+}
+
+// List Functions
+let allItems = [];
+
+async function showList() {
+    try {
+        console.log('List Button Triggered');
+
+        // Initialize if not already done
+        if (!itemListModal) {
+            const el = document.getElementById('itemListModal');
+            if (el) {
+                itemListModal = new bootstrap.Modal(el, { backdrop: 'static' });
+                console.log('itemListModal initialized');
+            }
+        }
+
+        // If allItems is empty, fetch it (otherwise loadItemsForSearch might have already filled it)
+        if (allItems.length === 0) {
+            const response = await fetch('/api/v1/wh-items', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                allItems = data.data || [];
+            }
+        }
+
+        renderItemList(allItems);
+
+        if (itemListModal) {
+            itemListModal.show();
+            // Ensure focus on search after slight delay
+            setTimeout(() => {
+                const searchBox = document.getElementById('itemListSearch');
+                if (searchBox) {
+                    searchBox.value = '';
+                    searchBox.focus();
+                }
+            }, 300);
+        }
+    } catch (error) {
+        console.error('showList error:', error);
+        showAlert('Network or rendering error', 'danger');
+    }
+}
+
+function renderItemList(items) {
+    const tbody = document.getElementById('itemListTableBody');
+    if (!tbody) return;
+
+    // Check rights
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const rights = user.rights || {};
+    const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin);
+    const canDelete = isAdmin || rights.wh_delete_item;
+
+    const htmlRows = items.map(item => {
+        const totalStock = (item.stock || []).reduce((acc, s) => acc + (s.quantity || 0), 0);
+
+        const bgBlue = 'background-color: #e3f2fd;';
+        const bgGreen = 'background-color: #d1e7dd;';
+        const bgRed = 'background-color: #f8d7da;';
+        const bgPink = 'background-color: #f1aeb5;';
+        const bgYellow = 'background-color: #fff3cd;';
+        const bgPurple = 'background-color: #e2d9f3;';
+        const bgPurpleLight = 'background-color: #f3e5f5;';
+        const bgCyan = 'background-color: #caf0f8;';
+
+        return `
+            <tr>
+                <td class="p-1">
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-primary btn-sm flex-grow-1" onclick="selectItem('${item._id}')" style="font-size: 0.7rem; padding: 2px 4px;">
+                            <i class="fas fa-edit"></i> Select
+                        </button>
+                        ${canDelete ? `
+                        <button class="btn btn-danger btn-sm" onclick="deleteItem('${item._id}')" style="font-size: 0.7rem; padding: 2px 4px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                </td>
+                <td style="${bgBlue}">${item.barcode || ''}</td>
+                <td style="${bgBlue} text-align: left; padding-left: 10px;">${item.name || ''}</td>
+                <td style="${bgGreen}">${item.costPrice || 0}</td>
+                <td style="${bgRed}">${item.salePrice || 0}</td>
+                <td style="${bgPink}">${totalStock}</td>
+                <td style="${bgYellow}">${getCompanyName(item.company)}</td>
+                <td style="${bgPurple}">${getCategoryName(item.category)}</td>
+                <td style="${bgPurpleLight}">${getClassName(item.itemClass)}</td>
+                <td style="${bgBlue}">${getSubClassName(item.subClass)}</td>
+                <td style="${bgCyan}">${getSupplierName(item.supplier)}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = htmlRows.length > 0 ? htmlRows.join('') : '<tr><td colspan="11" class="p-4 text-muted">No items found</td></tr>';
+}
+
+// Helpers to resolve Name from ID or Object
+function getCompanyName(val) {
+    if (val && typeof val === 'object') return val.name || '';
+    if (!val) return '';
+    const found = companies.find(c => c._id === val);
+    return found ? found.name : '';
+}
+function getCategoryName(val) {
+    if (val && typeof val === 'object') return val.name || '';
+    if (!val) return '';
+    const found = categories.find(c => c._id === val);
+    return found ? found.name : '';
+}
+function getClassName(val) {
+    if (val && typeof val === 'object') return val.name || '';
+    if (!val) return '';
+    const found = classes.find(c => c._id === val);
+    return found ? found.name : '';
+}
+function getSubClassName(val) {
+    if (val && typeof val === 'object') return val.name || '';
+    if (!val) return '';
+    const found = subClasses.find(c => c._id === val);
+    return found ? found.name : '';
+}
+function getSupplierName(val) {
+    if (val && typeof val === 'object') return val.supplierName || '';
+    if (!val) return '';
+    const found = suppliers.find(s => s._id === val);
+    return found ? found.supplierName : '';
+}
+
+// Search filtering logic
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('itemListSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allItems.filter(i =>
+                (i.name && i.name.toLowerCase().includes(term)) ||
+                (i.barcode && i.barcode.toLowerCase().includes(term))
+            );
+            renderItemList(filtered);
+        });
+    }
+});
+
+async function selectItem(id) {
+    try {
+        const response = await fetch(`/api/v1/wh-items/${id}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const item = data.data;
+
+            // Populate Form
+            document.getElementById('itemId').value = item._id;
+            document.getElementById('seqId').value = item.seqId;
+            document.getElementById('searchBarcode').value = item.barcode || '';
+            const nameSearch = document.getElementById('searchName');
+            if (nameSearch) nameSearch.value = item._id;
+
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCode').value = item.itemsCode || '';
+            document.getElementById('costPrice').value = item.costPrice;
+            document.getElementById('salePrice').value = item.salePrice;
+            document.getElementById('retailPrice').value = item.retailPrice;
+            document.getElementById('incentive').value = item.incentive;
+            document.getElementById('isActive').checked = item.isActive;
+
+            // Set Dropdowns
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val) el.value = (typeof val === 'object') ? val._id : val;
+            };
+            setVal('company', item.company);
+            setVal('category', item.category);
+            setVal('itemClass', item.itemClass);
+            setVal('subClass', item.subClass);
+            setVal('supplier', item.supplier);
+
+            // Populate Stock
+            itemStockList = (item.stock || []).map(s => {
+                const storeId = (typeof s.store === 'object') ? s.store._id : s.store;
+                const storeObj = stores.find(st => st._id === storeId);
+                return {
+                    store: storeId,
+                    storeName: storeObj ? storeObj.name : 'Unknown Store',
+                    quantity: s.quantity || 0,
+                    opening: s.opening || 0
+                };
+            });
+            renderStockTable();
+
+            if (itemListModal) itemListModal.hide();
+            showAlert('Item loaded successfully', 'success');
+        }
+    } catch (error) {
+        console.error('Error selecting item:', error);
+        showAlert('Error loading item details', 'danger');
+    }
+}
+
+// Modal Functions
+// ==========================================
+// COMPANY MANAGMENT
+function showCompanyModal() {
+    resetCompanyForm();
+    renderCompanyTable();
+    companyModal.show();
+}
+
+function resetCompanyForm() {
+    document.getElementById('companyId').value = '';
+    document.getElementById('modalCompanyName').value = '';
+    document.getElementById('modalCompanyActive').checked = true;
+}
+
+function renderCompanyTable() {
+    const tbody = document.getElementById('companyTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = companies.map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td><span class="badge bg-${c.isActive ? 'success' : 'danger'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editCompany('${c._id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCompany('${c._id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editCompany(id) {
+    const company = companies.find(c => c._id === id);
+    if (company) {
+        document.getElementById('companyId').value = company._id;
+        document.getElementById('modalCompanyName').value = company.name;
+        document.getElementById('modalCompanyActive').checked = company.isActive;
+    }
+}
+
+async function saveCompany() {
+    const id = document.getElementById('companyId').value;
+    const name = document.getElementById('modalCompanyName').value;
+    const isActive = document.getElementById('modalCompanyActive').checked;
+    if (!name) return showAlert('Please enter company name', 'warning');
+
+    try {
+        const url = id ? `/api/v1/wh-item-companies/${id}` : '/api/v1/wh-item-companies';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify({ name, isActive })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(`Company ${id ? 'updated' : 'added'} successfully`, 'success');
+            resetCompanyForm();
+            await loadCompanies();
+            renderCompanyTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error saving company', 'danger'); }
+}
+
+async function deleteCompany(id) {
+    if (!confirm('Are you sure you want to delete this company?')) return;
+    try {
+        const response = await fetch(`/api/v1/wh-item-companies/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert('Company deleted successfully', 'success');
+            await loadCompanies();
+            renderCompanyTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error deleting company', 'danger'); }
+}
+
+// ==========================================
+// CATEGORY MANAGMENT
+function showCategoryModal() {
+    resetCategoryForm();
+    renderCategoryTable();
+    categoryModal.show();
+}
+
+function resetCategoryForm() {
+    document.getElementById('categoryId').value = '';
+    document.getElementById('modalCategoryName').value = '';
+    document.getElementById('modalCategoryActive').checked = true;
+}
+
+function renderCategoryTable() {
+    const tbody = document.getElementById('categoryTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = categories.map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td><span class="badge bg-${c.isActive ? 'success' : 'danger'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editCategory('${c._id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCategory('${c._id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editCategory(id) {
+    const category = categories.find(c => c._id === id);
+    if (category) {
+        document.getElementById('categoryId').value = category._id;
+        document.getElementById('modalCategoryName').value = category.name;
+        document.getElementById('modalCategoryActive').checked = category.isActive;
+    }
+}
+
+async function saveCategory() {
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('modalCategoryName').value;
+    const isActive = document.getElementById('modalCategoryActive').checked;
+    if (!name) return showAlert('Please enter category name', 'warning');
+
+    try {
+        const url = id ? `/api/v1/wh-item-categories/${id}` : '/api/v1/wh-item-categories';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify({ name, isActive })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(`Category ${id ? 'updated' : 'added'} successfully`, 'success');
+            resetCategoryForm();
+            await loadCategories();
+            renderCategoryTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error saving category', 'danger'); }
+}
+
+async function deleteCategory(id) {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+    try {
+        const response = await fetch(`/api/v1/wh-item-categories/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert('Category deleted successfully', 'success');
+            await loadCategories();
+            renderCategoryTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error deleting category', 'danger'); }
+}
+
+// ==========================================
+// CLASS MANAGMENT
+function showClassModal() {
+    resetClassForm();
+    renderClassTable();
+    classModal.show();
+}
+
+function resetClassForm() {
+    document.getElementById('classId').value = '';
+    document.getElementById('modalClassName').value = '';
+    document.getElementById('modalClassActive').checked = true;
+}
+
+function renderClassTable() {
+    const tbody = document.getElementById('classTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = classes.map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td><span class="badge bg-${c.isActive ? 'success' : 'danger'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editClass('${c._id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteClass('${c._id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editClass(id) {
+    const cls = classes.find(c => c._id === id);
+    if (cls) {
+        document.getElementById('classId').value = cls._id;
+        document.getElementById('modalClassName').value = cls.name;
+        document.getElementById('modalClassActive').checked = cls.isActive;
+    }
+}
+
+async function saveClass() {
+    const id = document.getElementById('classId').value;
+    const name = document.getElementById('modalClassName').value;
+    const isActive = document.getElementById('modalClassActive').checked;
+    if (!name) return showAlert('Please enter class name', 'warning');
+
+    try {
+        const url = id ? `/api/v1/wh-item-classes/${id}` : '/api/v1/wh-item-classes';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify({ name, isActive })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(`Class ${id ? 'updated' : 'added'} successfully`, 'success');
+            resetClassForm();
+            await loadClasses();
+            renderClassTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error saving class', 'danger'); }
+}
+
+async function deleteClass(id) {
+    if (!confirm('Are you sure you want to delete this class?')) return;
+    try {
+        const response = await fetch(`/api/v1/wh-item-classes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert('Class deleted successfully', 'success');
+            await loadClasses();
+            renderClassTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error deleting class', 'danger'); }
+}
+
+// ==========================================
+// SUBCLASS MANAGMENT
+function showSubClassModal() {
+    resetSubClassForm();
+    renderSubClassTable();
+    subClassModal.show();
+}
+
+function resetSubClassForm() {
+    document.getElementById('subClassId').value = '';
+    document.getElementById('modalSubClassName').value = '';
+    document.getElementById('modalSubClassActive').checked = true;
+}
+
+function renderSubClassTable() {
+    const tbody = document.getElementById('subClassTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = subClasses.map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td><span class="badge bg-${c.isActive ? 'success' : 'danger'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editSubClass('${c._id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSubClass('${c._id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function editSubClass(id) {
+    const sub = subClasses.find(c => c._id === id);
+    if (sub) {
+        document.getElementById('subClassId').value = sub._id;
+        document.getElementById('modalSubClassName').value = sub.name;
+        document.getElementById('modalSubClassActive').checked = sub.isActive;
+    }
+}
+
+async function saveSubClass() {
+    const id = document.getElementById('subClassId').value;
+    const name = document.getElementById('modalSubClassName').value;
+    const isActive = document.getElementById('modalSubClassActive').checked;
+    if (!name) return showAlert('Please enter subclass name', 'warning');
+
+    try {
+        const url = id ? `/api/v1/wh-item-subclasses/${id}` : '/api/v1/wh-item-subclasses';
+        const method = id ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify({ name, isActive })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(`SubClass ${id ? 'updated' : 'added'} successfully`, 'success');
+            resetSubClassForm();
+            await loadSubClasses();
+            renderSubClassTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error saving subclass', 'danger'); }
+}
+
+async function deleteSubClass(id) {
+    if (!confirm('Are you sure you want to delete this subclass?')) return;
+    try {
+        const response = await fetch(`/api/v1/wh-item-subclasses/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert('SubClass deleted successfully', 'success');
+            await loadSubClasses();
+            renderSubClassTable();
+        } else {
+            showAlert(result.message, 'danger');
+        }
+    } catch (error) { showAlert('Error deleting subclass', 'danger'); }
+}
+
+function showSupplierModal() {
+    if (confirm('Redirect to Add Supplier page?')) {
+        window.open('/wh-supplier.html', '_blank');
+    }
+}
+
+// Alert Function
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => alertDiv.remove(), 3000);
+}
+
+// Set User Name
+function setUserName() {
+    const userNameElem = document.getElementById('userName');
+    if (userNameElem) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        userNameElem.textContent = user.name || 'User';
+    }
+}

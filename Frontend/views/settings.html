@@ -10,6 +10,25 @@
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+
+    <!-- Prevent flash of all tabs by hiding them immediately if ?tab= parameter exists -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                // Add style to hide all tabs and content initially
+                const style = document.createElement('style');
+                style.id = 'tab-hide-style';
+                style.innerHTML = `
+                    #settingsTabs .nav-item { display: none !important; }
+                    .tab-pane { display: none !important; }
+                `;
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
+
     <style>
         /* Modern Settings Tabs - FORCE Horizontal Layout with Maximum Specificity */
 
@@ -198,28 +217,28 @@
                         <div class="card-body p-2">
                             <ul class="nav nav-pills nav-fill" id="settingsTabs" role="tablist"
                                 style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; gap: 5px !important; white-space: nowrap !important;">
-                                <li class="nav-item" role="presentation">
+                                <li class="nav-item" role="presentation" data-permission="settings_company">
                                     <button class="nav-link active" id="company-tab" data-bs-toggle="tab"
                                         data-bs-target="#company" type="button" role="tab">
                                         <i class="fas fa-building me-2"></i>
                                         <span class="d-none d-md-inline">Company</span>
                                     </button>
                                 </li>
-                                <li class="nav-item" role="presentation">
+                                <li class="nav-item" role="presentation" data-permission="settings_invoice">
                                     <button class="nav-link" id="invoice-tab" data-bs-toggle="tab"
                                         data-bs-target="#invoice" type="button" role="tab">
                                         <i class="fas fa-file-invoice me-2"></i>
                                         <span class="d-none d-md-inline">Invoice</span>
                                     </button>
                                 </li>
-                                <li class="nav-item" role="presentation">
+                                <li class="nav-item" role="presentation" data-permission="settings_tax">
                                     <button class="nav-link" id="tax-tab" data-bs-toggle="tab" data-bs-target="#tax"
                                         type="button" role="tab">
                                         <i class="fas fa-percentage me-2"></i>
                                         <span class="d-none d-md-inline">Tax</span>
                                     </button>
                                 </li>
-                                <li class="nav-item" role="presentation">
+                                <li class="nav-item" role="presentation" data-permission="settings_backup">
                                     <button class="nav-link" id="backup-tab" data-bs-toggle="tab"
                                         data-bs-target="#backup" type="button" role="tab">
                                         <i class="fas fa-database me-2"></i>

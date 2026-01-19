@@ -1,0 +1,75 @@
+const mongoose = require('mongoose');
+
+const whSupplierSchema = new mongoose.Schema({
+    code: {
+        type: String,
+        trim: true
+    },
+    supplierName: {
+        type: String,
+        required: [true, 'Please provide supplier name'],
+        trim: true
+    },
+    supplierNTN: {
+        type: String,
+        required: [true, 'Please provide supplier NTN'],
+        trim: true
+    },
+    branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Store',
+        required: [true, 'Please select a branch']
+    },
+    address: {
+        type: String,
+        trim: true
+    },
+    city: {
+        type: String,
+        trim: true
+    },
+    phone: {
+        type: String,
+        trim: true
+    },
+    mobile: {
+        type: String,
+        trim: true
+    },
+    email: {
+        type: String,
+        trim: true
+    },
+    strn: {
+        type: String,
+        trim: true
+    },
+    openingBalance: {
+        type: Number,
+        default: 0
+    },
+    supplierCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'WHSupplierCategory'
+    },
+    whtPercentage: {
+        type: Number,
+        default: 0
+    },
+    advTaxPercentage: {
+        type: Number,
+        default: 0
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
+}, {
+    timestamps: true
+});
+
+module.exports = mongoose.model('WHSupplier', whSupplierSchema);

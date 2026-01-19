@@ -74,6 +74,14 @@ class SidebarNavigation {
                 ]
             },
             {
+                id: 'warehouse', icon: 'fa-warehouse', label: 'Warehouse', permission: 'warehouse',
+                children: [
+                    { label: 'WH Supplier', link: '/wh-supplier.html', permission: 'wh_supplier' },
+                    { label: 'WH Customer', link: '/wh-customer.html', permission: 'wh_customer' },
+                    { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' }
+                ]
+            },
+            {
                 id: 'overview', icon: 'fa-tachometer-alt', label: 'Overview', permission: 'dashboard',
                 children: [
                     { label: 'Dashboard', link: '/dashboard.html', permission: 'dashboard' }
@@ -228,7 +236,16 @@ class SidebarNavigation {
                 ]
             },
 
-            { id: 'settings', icon: 'fa-cog', label: 'Settings', link: '/settings.html', permission: 'settings' }
+
+            {
+                id: 'settings', icon: 'fa-cog', label: 'Settings', permission: 'settings',
+                children: [
+                    { label: 'Company Settings', link: '/settings.html?tab=company', permission: 'settings_company' },
+                    { label: 'Invoice Settings', link: '/settings.html?tab=invoice', permission: 'settings_invoice' },
+                    { label: 'Tax Settings', link: '/settings.html?tab=tax', permission: 'settings_tax' },
+                    { label: 'Backup Settings', link: '/settings.html?tab=backup', permission: 'settings_backup' }
+                ]
+            }
         ];
 
         let html = `
