@@ -79,7 +79,8 @@ class SidebarNavigation {
                     { label: 'WH Supplier', link: '/wh-supplier.html', permission: 'wh_supplier' },
                     { label: 'WH Customer', link: '/wh-customer.html', permission: 'wh_customer' },
                     { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' },
-                    { label: 'WH Purchase', link: '/wh-purchase.html', permission: 'wh_purchase' }
+                    { label: 'WH Purchase', link: '/wh-purchase.html', permission: 'wh_purchase' },
+                    { label: 'WH Purchase Return', link: '/wh-purchase-return.html', permission: 'wh_purchase_return' }
                 ]
             },
             {

@@ -85,6 +85,7 @@ const whItemClassRoutes = require('./routes/whItemClasses');
 const whItemSubClassRoutes = require('./routes/whItemSubClasses');
 const whItemRoutes = require('./routes/whItems');
 const whPurchaseRoutes = require('./routes/whPurchaseRoutes');
+const whPurchaseReturnRoutes = require('./routes/whPurchaseReturnRoutes');
 
 
 
@@ -394,6 +395,7 @@ app.use('/api/v1/wh-item-subclasses', whItemSubClassRoutes);
 
 app.use('/api/v1/wh-items', whItemRoutes);
 app.use('/api/v1/wh-purchases', whPurchaseRoutes);
+app.use('/api/v1/wh-purchase-returns', whPurchaseReturnRoutes);
 
 
 
@@ -656,6 +658,10 @@ app.get('/wh-customer.html', (req, res) => {
 
 app.get('/wh-purchase.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-purchase.html'));
+});
+
+app.get('/wh-purchase-return.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-purchase-return.html'));
 });
 
 

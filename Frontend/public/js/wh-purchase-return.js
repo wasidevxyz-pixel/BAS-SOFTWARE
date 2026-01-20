@@ -7,12 +7,13 @@ let rowCount = 0;
 
 async function initializePage() {
     // Set default date
-    document.getElementById('invoiceDate').valueAsDate = new Date();
+    document.getElementById('returnDate').valueAsDate = new Date();
 
     await Promise.all([
         loadSuppliers(),
         loadWHCategories(),
-        loadItems()
+        loadItems(),
+        loadPostedPurchases()
     ]);
 
     // Initial empty row
@@ -31,13 +32,13 @@ async function initializePage() {
         // Alt + S: Save Draft
         if (e.altKey && e.key.toLowerCase() === 's') {
             e.preventDefault();
-            savePurchase('Draft');
+            saveReturn('Draft');
         }
 
         // Ctrl + Q: Post
         if (e.ctrlKey && e.key.toLowerCase() === 'q') {
             e.preventDefault();
-            savePurchase('Posted');
+            saveReturn('Posted');
         }
     });
 
@@ -51,6 +52,76 @@ async function initializePage() {
             boxes.forEach(box => box.style.display = 'none');
         }
     });
+}
+
+async function loadPostedPurchases() {
+    try {
+        const response = await fetch('/api/v1/wh-purchases?status=Posted', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            const select = document.getElementById('originalPurchaseSelect');
+            select.innerHTML = '<option value="">Select Purchase Invoice...</option>';
+            result.data.forEach(purchase => {
+                const option = document.createElement('option');
+                option.value = purchase._id;
+                option.textContent = `${purchase.invoiceNo} - ${purchase.supplier.supplierName} - ${new Date(purchase.invoiceDate).toLocaleDateString()}`;
+                option.dataset.purchase = JSON.stringify(purchase);
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading purchases:', error);
+    }
+}
+
+function loadPurchaseItems() {
+    const select = document.getElementById('originalPurchaseSelect');
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (!selectedOption.value) {
+        alert('Please select a purchase invoice first');
+        return;
+    }
+
+    const purchase = JSON.parse(selectedOption.dataset.purchase);
+
+    // Populate supplier
+    document.getElementById('supplierSelect').value = purchase.supplier._id || purchase.supplier;
+    document.getElementById('originalPurchaseId').value = purchase._id; // Set hidden originalPurchaseId
+
+    // Clear existing rows
+    document.getElementById('purchaseTableBody').innerHTML = '';
+    rowCount = 0;
+
+    // Add all items from purchase
+    purchase.items.forEach(item => {
+        const itemData = {
+            _id: item.item._id || item.item,
+            name: item.item.name || itemsList.find(i => i._id === item.item)?.name || 'Unknown',
+            barcode: item.barcode,
+            costPrice: item.costPrice,
+            salePrice: item.salePrice,
+            retailPrice: item.retailPrice
+        };
+
+        addNewRow(itemData);
+
+        // Fill specific row data
+        const row = document.getElementById(`row-${rowCount}`);
+        row.querySelector('input[name="batch"]').value = item.batch || '';
+        if (item.expiry) row.querySelector('input[name="expiry"]').valueAsDate = new Date(item.expiry);
+        row.querySelector('input[name="quantity"]').value = item.quantity;
+        row.querySelector('input[name="bonus"]').value = item.bonus;
+        row.querySelector('input[name="discPercent"]').value = item.discountPercent;
+        row.querySelector('input[name="taxPercent"]').value = item.taxPercent;
+
+        calculateRow(rowCount);
+    });
+
+    alert(`Loaded ${purchase.items.length} items from purchase invoice ${purchase.invoiceNo}`);
 }
 
 async function loadSuppliers() {
@@ -602,9 +673,9 @@ function handleRowEnter(e) {
 }
 
 
-async function loadPurchaseList() {
+async function loadReturnList() {
     try {
-        const response = await fetch('/api/v1/wh-purchases', {
+        const response = await fetch('/api/v1/wh-purchase-returns', {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const result = await response.json();
@@ -625,16 +696,16 @@ async function loadPurchaseList() {
             // Admin override
             const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (rights && rights['admin']);
 
-            const canEdit = isAdmin || rights['wh_purchase_edit'];
-            const canDelete = isAdmin || rights['wh_purchase_delete'];
-            const canEditPosted = isAdmin || rights['wh_purchase_edit_posted'];
+            const canEdit = isAdmin || rights['wh_purchase_return_edit'];
+            const canDelete = isAdmin || rights['wh_purchase_return_delete'];
+            const canEditPosted = isAdmin || rights['wh_purchase_return_edit_posted'];
 
             const tbody = document.getElementById('purchaseListBody');
             tbody.innerHTML = result.data.map(p => `
                 <tr>
-                    <td>${p.invoiceNo}</td>
+                    <td>${p.returnNo}</td>
                     <td>${p.postingNumber ? String(p.postingNumber).padStart(2, '0') : '-'}</td>
-                    <td>${new Date(p.invoiceDate).toLocaleDateString()}</td>
+                    <td>${new Date(p.returnDate).toLocaleDateString()}</td>
                     <td>${p.supplier ? p.supplier.supplierName : 'N/A'}</td>
                     <td>${p.remarks || ''}</td>
                     <td>${p.totalQuantity}</td>
@@ -643,12 +714,12 @@ async function loadPurchaseList() {
                     <td>${p.createdBy ? p.createdBy.name : 'Unknown'}</td>
                     <td>
                         ${(canEdit || (p.status === 'Posted' && canEditPosted)) ?
-                    `<button class="btn btn-sm btn-primary" onclick="editPurchase('${p._id}', '${p.status}')">
+                    `<button class="btn btn-sm btn-primary" onclick="editReturn('${p._id}', '${p.status}')">
                             <i class="fas fa-edit"></i>
                         </button>` : ''}
                         
                         ${canDelete ?
-                    `<button class="btn btn-sm btn-danger ms-1" onclick="deletePurchase('${p._id}')">
+                    `<button class="btn btn-sm btn-danger ms-1" onclick="deleteReturn('${p._id}')">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
                     </td>
@@ -660,27 +731,27 @@ async function loadPurchaseList() {
     }
 }
 
-async function deletePurchase(id) {
+async function deleteReturn(id) {
     if (!confirm('Are you sure you want to delete this purchase?')) return;
 
     try {
-        const response = await fetch(`/api/v1/wh-purchases/${id}`, {
+        const response = await fetch(`/api/v1/wh-purchase-returns/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const result = await response.json();
         if (result.success) {
             alert('Purchase Deleted');
-            loadPurchaseList();
+            loadReturnList();
         } else {
             alert('Error: ' + result.error);
         }
     } catch (err) { console.error(err); }
 }
 
-async function editPurchase(id, status = 'Draft') {
+async function editReturn(id, status = 'Draft') {
     try {
-        const response = await fetch(`/api/v1/wh-purchases/${id}`, {
+        const response = await fetch(`/api/v1/wh-purchase-returns/${id}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const result = await response.json();
@@ -692,10 +763,18 @@ async function editPurchase(id, status = 'Draft') {
             switchTab('detail');
 
             // Populate Header
-            document.getElementById('purchaseId').value = p._id;
-            document.getElementById('invoiceNo').value = p.invoiceNo;
-            document.getElementById('invoiceDate').valueAsDate = new Date(p.invoiceDate);
+            document.getElementById('returnId').value = p._id;
+            document.getElementById('returnNo').value = p.returnNo;
+            document.getElementById('returnDate').valueAsDate = new Date(p.returnDate);
             document.getElementById('supplierSelect').value = p.supplier ? p.supplier._id : '';
+            if (p.originalPurchase) {
+                const originalId = p.originalPurchase._id || p.originalPurchase;
+                document.getElementById('originalPurchaseId').value = originalId;
+                const select = document.getElementById('originalPurchaseSelect');
+                if (select && select.querySelector(`option[value="${originalId}"]`)) {
+                    select.value = originalId;
+                }
+            }
             document.getElementById('remarks').value = p.remarks || '';
             document.getElementById('whCategoryFilter').value = p.whCategory || '';
             document.getElementById('statusBadge').textContent = p.status;
@@ -743,7 +822,7 @@ async function editPurchase(id, status = 'Draft') {
             }
 
             const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (rights && rights['admin']);
-            const canEditPosted = isAdmin || rights['wh_purchase_edit_posted'];
+            const canEditPosted = isAdmin || rights['wh_purchase_return_edit_posted'];
 
             if (p.status === 'Posted') {
                 if (canEditPosted) {
@@ -777,11 +856,12 @@ function disableForm(disabled) {
 
 function resetForm() {
     document.getElementById('purchaseForm').reset();
-    document.getElementById('purchaseId').value = '';
+    document.getElementById('returnId').value = '';
+    document.getElementById('originalPurchaseId').value = '';
     document.getElementById('purchaseTableBody').innerHTML = '';
     document.getElementById('statusBadge').textContent = 'DRAFT';
     document.getElementById('statusBadge').className = 'badge bg-secondary text-white';
-    document.getElementById('invoiceDate').valueAsDate = new Date();
+    document.getElementById('returnDate').valueAsDate = new Date();
 
     disableForm(false);
     rowCount = 0;
@@ -792,13 +872,13 @@ function resetForm() {
 
 let pendingSaveStatus = '';
 
-async function savePurchase(status = 'Draft') {
-    const invoiceNo = document.getElementById('invoiceNo').value;
+async function saveReturn(status = 'Draft') {
+    const returnNo = document.getElementById('returnNo').value;
     const supplier = document.getElementById('supplierSelect').value;
-    const invoiceDate = document.getElementById('invoiceDate').value;
+    const returnDate = document.getElementById('returnDate').value;
 
-    if (!invoiceNo || !supplier || !invoiceDate) {
-        alert('Please fill all required header fields (Invoice No, Date, Supplier)');
+    if (!returnNo || !supplier || !returnDate) {
+        alert('Please fill all required header fields (Return No, Date, Supplier)');
         return;
     }
 
@@ -886,10 +966,10 @@ async function confirmAndSave() {
 }
 
 async function executeSave(status) {
-    const purchaseId = document.getElementById('purchaseId').value;
-    const invoiceNo = document.getElementById('invoiceNo').value;
+    const purchaseId = document.getElementById('returnId').value;
+    const returnNo = document.getElementById('returnNo').value;
     const supplier = document.getElementById('supplierSelect').value;
-    const invoiceDate = document.getElementById('invoiceDate').value;
+    const returnDate = document.getElementById('returnDate').value;
 
     const items = [];
     document.querySelectorAll('#purchaseTableBody tr').forEach(row => {
@@ -906,17 +986,18 @@ async function executeSave(status) {
                 salePrice: parseFloat(row.querySelector('input[name="salePrice"]').value) || 0,
                 retailPrice: parseFloat(row.querySelector('input[name="retailPrice"]').value) || 0,
                 discountPercent: parseFloat(row.querySelector('input[name="discPercent"]').value) || 0,
-                discountAmount: parseFloat(row.querySelector('input[name="discVal"]').value) || 0,
+                discountValue: parseFloat(row.querySelector('input[name="discVal"]').value) || 0,
                 taxPercent: parseFloat(row.querySelector('input[name="taxPercent"]').value) || 0,
-                taxAmount: parseFloat(row.querySelector('input[name="taxVal"]').value) || 0,
-                totalAmount: parseFloat(row.querySelector('input[name="netTotal"]').value) || 0
+                taxValue: parseFloat(row.querySelector('input[name="taxVal"]').value) || 0,
+                netTotal: parseFloat(row.querySelector('input[name="netTotal"]').value) || 0
             });
         }
     });
 
     const purchaseData = {
-        invoiceNo,
-        invoiceDate,
+        returnNo: returnNo,
+        returnDate: returnDate,
+        originalPurchase: document.getElementById('originalPurchaseId').value || null,
         supplier,
         whCategory: document.getElementById('whCategoryFilter').value || null,
         remarks: document.getElementById('remarks').value,
@@ -930,7 +1011,7 @@ async function executeSave(status) {
     };
 
     try {
-        const url = purchaseId ? `/api/v1/wh-purchases/${purchaseId}` : '/api/v1/wh-purchases';
+        const url = purchaseId ? `/api/v1/wh-purchase-returns/${purchaseId}` : '/api/v1/wh-purchase-returns';
         const method = purchaseId ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
@@ -952,7 +1033,7 @@ async function executeSave(status) {
             } else {
                 alert(`Purchase ${status === 'Posted' ? 'Posted' : 'Saved'} Successfully!`);
                 if (status !== 'Posted' && !purchaseId && result.data && result.data._id) {
-                    document.getElementById('purchaseId').value = result.data._id;
+                    document.getElementById('returnId').value = result.data._id;
                 }
             }
         } else {
@@ -982,5 +1063,8 @@ function switchTab(tabName) {
 
         document.getElementById('list-tab').classList.add('active');
         document.getElementById('detail-tab').classList.remove('active');
+
+        loadReturnList();
     }
 }
+
