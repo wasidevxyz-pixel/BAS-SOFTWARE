@@ -232,7 +232,7 @@ function addNewRow(itemData = null) {
         </td>
         <td><input type="text" class="form-control form-control-sm" name="batch"></td>
         <td><input type="date" class="form-control form-control-sm" name="expiry" value="${new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString().split('T')[0]}"></td>
-        <td><input type="number" class="form-control form-control-sm calc-input" name="quantity" value="1" min="1" step="0.01" oninput="calculateRow(${rowCount})" onkeydown="handleRowEnter(event)"></td>
+        <td><input type="number" class="form-control form-control-sm calc-input" name="quantity" value="" min="0" step="0.01" oninput="calculateRow(${rowCount})" onkeydown="handleRowEnter(event)" placeholder="Qty"></td>
         <td><input type="number" class="form-control form-control-sm" name="bonus" value="0" min="0" step="0.01"></td>
         <td><input type="number" class="form-control form-control-sm calc-input" name="costPrice" value="${costPrice}" step="0.01" oninput="calculateRow(${rowCount})"></td>
         <td><input type="number" class="form-control form-control-sm calc-input" name="discPercent" value="0" step="0.01" oninput="calculateRow(${rowCount})"></td>
@@ -533,8 +533,8 @@ function selectItemForRow(item, id) {
     row.querySelector('input[name="salePrice"]').value = item.salePrice || 0;
     row.querySelector('input[name="retailPrice"]').value = item.retailPrice || 0;
 
-    // Default quantity 1
-    row.querySelector('input[name="quantity"]').value = 1;
+    // Default quantity empty - user will enter
+    row.querySelector('input[name="quantity"]').value = '';
     calculateRow(id);
     // Focus quantity and select content
     row.querySelector('input[name="quantity"]').focus();
