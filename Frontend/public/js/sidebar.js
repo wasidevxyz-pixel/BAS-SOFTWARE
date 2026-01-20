@@ -80,7 +80,8 @@ class SidebarNavigation {
                     { label: 'WH Customer', link: '/wh-customer.html', permission: 'wh_customer' },
                     { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' },
                     { label: 'WH Purchase', link: '/wh-purchase.html', permission: 'wh_purchase' },
-                    { label: 'WH Purchase Return', link: '/wh-purchase-return.html', permission: 'wh_purchase_return' }
+                    { label: 'WH Purchase Return', link: '/wh-purchase-return.html', permission: 'wh_purchase_return' },
+                    { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
                 ]
             },
             {
@@ -233,7 +234,7 @@ class SidebarNavigation {
             {
                 id: 'stock', icon: 'fa-warehouse', label: 'Stock', permission: 'stock',
                 children: [
-                    { label: 'Stock Audit', link: '/stock-audit.html', permission: 'stock_audit' },
+
                     { label: 'Stock Adjustments', link: '/stock-adjustments.html', permission: 'stock_adjustments' }
                 ]
             },

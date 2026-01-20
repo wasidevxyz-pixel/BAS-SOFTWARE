@@ -1,5 +1,6 @@
 const WHPurchaseReturn = require('../models/WHPurchaseReturn');
 const WHItem = require('../models/WHItem');
+const WHStockLog = require('../models/WHStockLog');
 
 // Create Purchase Return
 exports.createWHPurchaseReturn = async (req, res) => {
@@ -22,15 +23,30 @@ exports.createWHPurchaseReturn = async (req, res) => {
             for (const item of returnData.items) {
                 const whItem = await WHItem.findById(item.item);
                 if (whItem) {
-                    // Find stock entry for the store (assuming store info is in whCategory or default)
-                    // For now, we'll update the first stock entry or create one
-                    // TODO: Implement proper store-based stock management
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const returnQty = parseFloat(item.quantity) || 0;
+                    const newQty = previousQty - returnQty;
 
-                    // REDUCE stock (opposite of purchase)
                     if (whItem.stock && whItem.stock.length > 0) {
-                        whItem.stock[0].quantity -= item.quantity;
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
                     }
+                    whItem.markModified('stock');
                     await whItem.save();
+
+                    // Create Stock Log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'out',
+                        qty: returnQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase_return',
+                        refId: purchaseReturn._id,
+                        remarks: `Purchase Return #${purchaseReturn.postingNumber || 'Draft'}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
                 }
             }
         }
@@ -128,9 +144,31 @@ exports.updateWHPurchaseReturn = async (req, res) => {
             // Update stock (REDUCE)
             for (const item of returnData.items) {
                 const whItem = await WHItem.findById(item.item);
-                if (whItem && whItem.stock && whItem.stock.length > 0) {
-                    whItem.stock[0].quantity -= item.quantity;
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const returnQty = parseFloat(item.quantity) || 0;
+                    const newQty = previousQty - returnQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
                     await whItem.save();
+
+                    // Create Stock Log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'out',
+                        qty: returnQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase_return',
+                        refId: existingReturn._id,
+                        remarks: `Purchase Return #${returnData.postingNumber}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
                 }
             }
         }
@@ -170,19 +208,44 @@ exports.deleteWHPurchaseReturn = async (req, res) => {
             });
         }
 
-        // Don't allow deletion of Posted returns (or reverse stock first)
+        // Reverse stock if Posted
         if (purchaseReturn.status === 'Posted') {
-            return res.status(400).json({
-                success: false,
-                error: 'Cannot delete posted purchase return'
-            });
+            for (const item of purchaseReturn.items) {
+                const whItem = await WHItem.findById(item.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const returnQty = parseFloat(item.quantity) || 0;
+                    const newQty = previousQty + returnQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    // Create reversal log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'in',
+                        qty: returnQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase_return',
+                        refId: purchaseReturn._id,
+                        remarks: `DELETED: Purchase Return #${purchaseReturn.postingNumber || 'Draft'} (REVERSED)`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
+            }
         }
 
         await WHPurchaseReturn.findByIdAndDelete(req.params.id);
 
         res.json({
             success: true,
-            message: 'Purchase return deleted successfully'
+            message: 'Purchase return deleted and stock reversed'
         });
     } catch (error) {
         console.error('Error deleting purchase return:', error);

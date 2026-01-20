@@ -226,6 +226,7 @@ function addNewRow(itemData = null) {
             <input type="hidden" name="itemId" value="${itemId}">
             <input type="text" class="item-search form-control form-control-sm border-0 bg-transparent" 
                    value="${itemName}" placeholder="Search Name..." 
+                   onfocus="updateCurrentStockDisplay(this.previousElementSibling.value)"
                    oninput="filterRowItem(this, ${rowCount})" 
                    onkeydown="handleRowItemKeydown(event, ${rowCount})">
             <div class="list-group position-absolute" id="suggestions-${rowCount}" style="z-index: 1000; display:none; max-height: 200px; overflow-y: auto; width: 250px;"></div>
@@ -539,6 +540,8 @@ function selectItemForRow(item, id) {
     // Focus quantity and select content
     row.querySelector('input[name="quantity"]').focus();
     row.querySelector('input[name="quantity"]').select();
+
+    updateCurrentStockDisplay(item._id);
 }
 
 function calculateRow(id) {
@@ -787,6 +790,7 @@ function resetForm() {
     rowCount = 0;
     addNewRow();
     switchTab('detail');
+    if (window.updateCurrentStockDisplay) updateCurrentStockDisplay(null);
 }
 
 
@@ -984,3 +988,33 @@ function switchTab(tabName) {
         document.getElementById('detail-tab').classList.remove('active');
     }
 }
+
+window.updateCurrentStockDisplay = async function (itemId) {
+    const display = document.getElementById('currentStockDisplay');
+    if (!display) return;
+
+    if (!itemId) {
+        display.textContent = '0';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/wh-items/${itemId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success && result.data.stock && result.data.stock.length > 0) {
+            display.textContent = result.data.stock[0].quantity || 0;
+        } else {
+            display.textContent = '0';
+        }
+    } catch (e) {
+        console.error('Stock fetch error:', e);
+        const item = (typeof itemsList !== 'undefined') ? itemsList.find(i => i._id === itemId) : null;
+        if (item && item.stock && item.stock.length > 0) {
+            display.textContent = item.stock[0].quantity || 0;
+        } else {
+            display.textContent = '0';
+        }
+    }
+};

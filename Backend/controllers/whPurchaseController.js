@@ -1,6 +1,7 @@
 const WHPurchase = require('../models/WHPurchase');
 const WHItem = require('../models/WHItem');
 const WHSupplier = require('../models/WHSupplier');
+const WHStockLog = require('../models/WHStockLog');
 
 // @desc    Create new WH Purchase
 // @route   POST /api/v1/wh-purchases
@@ -21,16 +22,36 @@ exports.createWHPurchase = async (req, res) => {
 
         const purchase = await WHPurchase.create(purchaseData);
 
-        // Update Stock (Optional: typically on 'Posted' status)
-        // For simplicity, we assume strictly transactional recording for now
-        // Or we can increment WHItem stock here if needed. 
-        // Let's implement stock update logic if status is Posted
+        // Update Stock if Status is Posted
         if (purchase.status === 'Posted') {
             for (const line of purchase.items) {
-                // Find item and update stock
-                // Assuming WHItem has a simplified stock field or specific store logic
-                // For now, we'll just log or skip specific stock logic until specified
-                // as WHItem schema has a 'stock' array for stores.
+                const whItem = await WHItem.findById(line.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const purchaseQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty + purchaseQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    // Create Stock Log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'in',
+                        qty: purchaseQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase',
+                        refId: purchase._id,
+                        remarks: `Purchase #${purchase.invoiceNo || 'Draft'}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
             }
         }
 
@@ -104,6 +125,7 @@ exports.getWHPurchase = async (req, res) => {
 exports.updateWHPurchase = async (req, res) => {
     try {
         let purchase = await WHPurchase.findById(req.params.id);
+        const existingStatus = purchase ? purchase.status : '';
 
         if (!purchase) {
             return res.status(404).json({
@@ -123,6 +145,39 @@ exports.updateWHPurchase = async (req, res) => {
             new: true,
             runValidators: true
         });
+
+        // Update stock if status changed to Posted
+        if (req.body.status === 'Posted' && (existingStatus !== 'Posted')) {
+            for (const line of purchase.items) {
+                const whItem = await WHItem.findById(line.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const purchaseQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty + purchaseQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    // Create Stock Log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'in',
+                        qty: purchaseQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase',
+                        refId: purchase._id,
+                        remarks: `Purchase #${purchase.postingNumber || purchase.invoiceNo}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -150,12 +205,41 @@ exports.deleteWHPurchase = async (req, res) => {
             });
         }
 
-        await purchase.deleteOne();
+        // Reverse stock if Posted
+        if (purchase.status === 'Posted') {
+            for (const line of purchase.items) {
+                const whItem = await WHItem.findById(line.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const purchaseQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty - purchaseQty;
 
-        res.status(200).json({
-            success: true,
-            data: {}
-        });
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    // Create reversal log
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'out',
+                        qty: purchaseQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase',
+                        refId: purchase._id,
+                        remarks: `DELETED: Purchase #${purchase.postingNumber || purchase.invoiceNo} (REVERSED)`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
+            }
+        }
+
+        await purchase.deleteOne();
+        res.status(200).json({ success: true, message: 'Purchase deleted and stock reversed' });
     } catch (error) {
         res.status(500).json({
             success: false,
