@@ -39,6 +39,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup Top Search Bar Listeners
     setupSearchListeners();
 
+    // Global Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S: Save
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveItem();
+        }
+    });
+
     setUserName();
 });
 
@@ -205,7 +214,12 @@ function setupSearchListeners() {
                 const code = e.target.value.trim();
                 if (!code) return;
 
-                const item = allItems.find(i => (i.barcode === code) || (i.itemsCode === code));
+                // Prioritize Given Pcs Barcode over default Item Code
+                let item = allItems.find(i => i.barcode === code);
+                if (!item) {
+                    item = allItems.find(i => i.itemsCode === code);
+                }
+
                 if (item) {
                     selectItem(item._id);
                 } else {
@@ -313,7 +327,7 @@ async function saveItem() {
     const formData = {
         seqId: parseInt(document.getElementById('seqId').value),
         itemsCode: document.getElementById('itemCode').value,
-        barcode: document.getElementById('searchBarcode').value,
+        barcode: document.getElementById('grossPerBarCode').value,
         name: document.getElementById('itemName').value,
         costPrice: parseFloat(document.getElementById('costPrice').value) || 0,
         salePrice: parseFloat(document.getElementById('salePrice').value) || 0,
@@ -478,7 +492,7 @@ function renderItemList(items) {
                         ` : ''}
                     </div>
                 </td>
-                <td style="${bgBlue}">${item.barcode || ''}</td>
+                <td style="${bgBlue}">${item.barcode || item.itemsCode || ''}</td>
                 <td style="${bgBlue} text-align: left; padding-left: 10px;">${item.name || ''}</td>
                 <td style="${bgGreen}">${item.costPrice || 0}</td>
                 <td style="${bgRed}">${item.salePrice || 0}</td>
@@ -535,7 +549,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const term = e.target.value.toLowerCase();
             const filtered = allItems.filter(i =>
                 (i.name && i.name.toLowerCase().includes(term)) ||
-                (i.barcode && i.barcode.toLowerCase().includes(term))
+                (i.barcode && i.barcode.toLowerCase().includes(term)) ||
+                (i.itemsCode && i.itemsCode.toLowerCase().includes(term))
             );
             renderItemList(filtered);
         });
@@ -554,7 +569,8 @@ async function selectItem(id) {
             // Populate Form
             document.getElementById('itemId').value = item._id;
             document.getElementById('seqId').value = item.seqId;
-            document.getElementById('searchBarcode').value = item.barcode || '';
+            document.getElementById('grossPerBarCode').value = item.barcode || '';
+            document.getElementById('searchBarcode').value = ''; // Clear search bar
             const nameSearch = document.getElementById('searchName');
             if (nameSearch) nameSearch.value = item._id;
 

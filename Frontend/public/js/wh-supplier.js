@@ -17,6 +17,15 @@ document.addEventListener('DOMContentLoaded', function () {
     loadBranches();
     loadCategories();
     loadSuppliers();
+
+    // Global Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S: Save
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveSupplier();
+        }
+    });
 });
 
 // Load branches

@@ -84,6 +84,7 @@ const whItemCategoryRoutes = require('./routes/whItemCategories');
 const whItemClassRoutes = require('./routes/whItemClasses');
 const whItemSubClassRoutes = require('./routes/whItemSubClasses');
 const whItemRoutes = require('./routes/whItems');
+const whPurchaseRoutes = require('./routes/whPurchaseRoutes');
 
 
 
@@ -390,7 +391,9 @@ app.use('/api/v1/wh-item-companies', whItemCompanyRoutes);
 app.use('/api/v1/wh-item-categories', whItemCategoryRoutes);
 app.use('/api/v1/wh-item-classes', whItemClassRoutes);
 app.use('/api/v1/wh-item-subclasses', whItemSubClassRoutes);
+
 app.use('/api/v1/wh-items', whItemRoutes);
+app.use('/api/v1/wh-purchases', whPurchaseRoutes);
 
 
 
@@ -649,6 +652,10 @@ app.get('/wh-supplier.html', (req, res) => {
 
 app.get('/wh-customer.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-customer.html'));
+});
+
+app.get('/wh-purchase.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-purchase.html'));
 });
 
 

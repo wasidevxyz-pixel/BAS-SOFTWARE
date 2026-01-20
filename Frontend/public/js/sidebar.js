@@ -78,7 +78,8 @@ class SidebarNavigation {
                 children: [
                     { label: 'WH Supplier', link: '/wh-supplier.html', permission: 'wh_supplier' },
                     { label: 'WH Customer', link: '/wh-customer.html', permission: 'wh_customer' },
-                    { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' }
+                    { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' },
+                    { label: 'WH Purchase', link: '/wh-purchase.html', permission: 'wh_purchase' }
                 ]
             },
             {

@@ -31,6 +31,15 @@ document.addEventListener('DOMContentLoaded', function () {
     loadCities();
     loadCustomerTypes();
     loadCustomers();
+
+    // Global Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S: Save
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveCustomer();
+        }
+    });
 });
 
 // Set user name safely
