@@ -142,23 +142,33 @@ async function loadSubClasses() {
 // Load Suppliers
 async function loadSuppliers() {
     try {
+        console.log('Fetching WH Suppliers...');
         const response = await fetch('/api/v1/wh-suppliers', {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await response.json();
-        if (data.success) {
+        console.log('WH Suppliers Response:', data);
+
+        if (data.success && data.data) {
             suppliers = data.data;
             const select = document.getElementById('supplier');
             if (select) {
                 select.innerHTML = '<option value="">Select Supplier</option>';
                 suppliers.forEach(s => {
-                    if (s.isActive) {
-                        select.innerHTML += `<option value="${s._id}">${s.supplierName}</option>`;
+                    if (s.isActive !== false) {
+                        const name = s.supplierName || s.name || 'Unknown Supplier';
+                        select.innerHTML += `<option value="${s._id}">${name}</option>`;
                     }
                 });
+                console.log(`Loaded ${suppliers.length} suppliers into dropdown.`);
             }
+        } else {
+            console.error('Failed to load suppliers:', data);
         }
-    } catch (error) { console.error('Error loading suppliers:', error); }
+    } catch (error) {
+        console.error('Error loading suppliers:', error);
+        if (typeof showAlert === 'function') showAlert('Error loading suppliers', 'danger');
+    }
 }
 
 // Load Stores
@@ -342,9 +352,14 @@ async function saveItem() {
         isActive: document.getElementById('isActive').checked
     };
 
-    if (!formData.name) {
-        return showAlert('Please enter item name', 'warning');
-    }
+    if (!formData.name) return showAlert('Please enter item name', 'warning');
+    if (!formData.company) return showAlert('Please select a company', 'warning');
+    if (!formData.category) return showAlert('Please select a category', 'warning');
+    if (!formData.itemClass) return showAlert('Please select a class', 'warning');
+    if (!formData.subClass) return showAlert('Please select a subclass', 'warning');
+    if (!formData.supplier) return showAlert('Please select a supplier', 'warning');
+    if (!formData.costPrice || formData.costPrice <= 0) return showAlert('Please enter a valid cost price', 'warning');
+    if (!formData.retailPrice || formData.retailPrice <= 0) return showAlert('Please enter a valid retail price', 'warning');
 
     try {
         const url = id ? `/api/v1/wh-items/${id}` : '/api/v1/wh-items';

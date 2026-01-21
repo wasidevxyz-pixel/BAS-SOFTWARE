@@ -27,6 +27,10 @@ exports.createWHPurchaseReturn = async (req, res) => {
                     const returnQty = parseFloat(item.quantity) || 0;
                     const newQty = previousQty - returnQty;
 
+                    if (newQty < 0) {
+                        throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Returning: ${returnQty}`);
+                    }
+
                     if (whItem.stock && whItem.stock.length > 0) {
                         whItem.stock[0].quantity = newQty;
                     } else {
@@ -96,10 +100,16 @@ exports.getWHPurchaseReturns = async (req, res) => {
 exports.getWHPurchaseReturnById = async (req, res) => {
     try {
         const purchaseReturn = await WHPurchaseReturn.findById(req.params.id)
-            .populate('supplier', 'supplierName')
+            .populate('supplier')
             .populate('createdBy', 'name')
             .populate('originalPurchase', 'invoiceNo')
-            .populate('items.item', 'name itemsCode barcode');
+            .populate({
+                path: 'items.item',
+                populate: [
+                    { path: 'itemClass' },
+                    { path: 'company' }
+                ]
+            });
 
         if (!purchaseReturn) {
             return res.status(404).json({
@@ -134,20 +144,68 @@ exports.updateWHPurchaseReturn = async (req, res) => {
             });
         }
 
+        const existingStatus = existingReturn.status;
+        const oldItems = JSON.parse(JSON.stringify(existingReturn.items)); // Deep copy old items
+
         // Generate posting number if changing to Posted
         if (returnData.status === 'Posted' && existingReturn.status !== 'Posted') {
             const lastPosted = await WHPurchaseReturn.findOne({ status: 'Posted' })
                 .sort({ postingNumber: -1 })
                 .select('postingNumber');
             returnData.postingNumber = lastPosted ? lastPosted.postingNumber + 1 : 1;
+        }
 
-            // Update stock (REDUCE)
-            for (const item of returnData.items) {
-                const whItem = await WHItem.findById(item.item);
+        const updated = await WHPurchaseReturn.findByIdAndUpdate(
+            req.params.id,
+            returnData,
+            { new: true, runValidators: true }
+        );
+
+        // CASE 1: Transitioning to Posted OR already Posted (Modifying)
+        if (updated.status === 'Posted') {
+            // If it was already Posted, reverse the OLD impact first
+            if (existingStatus === 'Posted') {
+                for (const line of oldItems) {
+                    const whItem = await WHItem.findById(line.item);
+                    if (whItem) {
+                        const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                        const oldReturnQty = parseFloat(line.quantity) || 0;
+                        const newQty = previousQty + oldReturnQty; // Reverse Return: ADD back
+
+                        if (whItem.stock && whItem.stock.length > 0) {
+                            whItem.stock[0].quantity = newQty;
+                        } else {
+                            whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        }
+                        whItem.markModified('stock');
+                        await whItem.save();
+
+                        await WHStockLog.create({
+                            item: whItem._id,
+                            type: 'in',
+                            qty: oldReturnQty,
+                            previousQty: previousQty,
+                            newQty: newQty,
+                            refType: 'purchase_return',
+                            refId: updated._id,
+                            remarks: `REVERSED (Update) Purchase Return #${updated.postingNumber}`,
+                            createdBy: req.user ? req.user._id : null
+                        });
+                    }
+                }
+            }
+
+            // Apply NEW impact
+            for (const line of updated.items) {
+                const whItem = await WHItem.findById(line.item);
                 if (whItem) {
                     const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                    const returnQty = parseFloat(item.quantity) || 0;
-                    const newQty = previousQty - returnQty;
+                    const returnQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty - returnQty; // Subtract return
+
+                    if (newQty < 0) {
+                        throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Returning: ${returnQty}`);
+                    }
 
                     if (whItem.stock && whItem.stock.length > 0) {
                         whItem.stock[0].quantity = newQty;
@@ -157,7 +215,6 @@ exports.updateWHPurchaseReturn = async (req, res) => {
                     whItem.markModified('stock');
                     await whItem.save();
 
-                    // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
                         type: 'out',
@@ -165,19 +222,47 @@ exports.updateWHPurchaseReturn = async (req, res) => {
                         previousQty: previousQty,
                         newQty: newQty,
                         refType: 'purchase_return',
-                        refId: existingReturn._id,
-                        remarks: `Purchase Return #${returnData.postingNumber}`,
+                        refId: updated._id,
+                        remarks: `Updated Purchase Return #${updated.postingNumber}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
+            }
+        }
+        // CASE 2: Transitioning from Posted to Draft
+        else if (existingStatus === 'Posted') {
+            for (const line of oldItems) {
+                const whItem = await WHItem.findById(line.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const oldReturnQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty + oldReturnQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'in',
+                        qty: oldReturnQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase_return',
+                        refId: updated._id,
+                        remarks: `Unposted Purchase Return #${updated.postingNumber}`,
                         createdBy: req.user ? req.user._id : null
                     });
                 }
             }
         }
 
-        const updated = await WHPurchaseReturn.findByIdAndUpdate(
-            req.params.id,
-            returnData,
-            { new: true, runValidators: true }
-        )
+        // Final population for response
+        const finalPopulated = await WHPurchaseReturn.findById(updated._id)
             .populate('supplier', 'supplierName')
             .populate('createdBy', 'name')
             .populate('items.item', 'name itemsCode');
@@ -185,8 +270,9 @@ exports.updateWHPurchaseReturn = async (req, res) => {
         res.json({
             success: true,
             message: 'Purchase return updated successfully',
-            data: updated
+            data: finalPopulated
         });
+        return; // Fixed double res.json below if it existed
     } catch (error) {
         console.error('Error updating purchase return:', error);
         res.status(500).json({
@@ -253,5 +339,22 @@ exports.deleteWHPurchaseReturn = async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+};
+
+exports.getNextReturnNumber = async (req, res) => {
+    try {
+        const year = new Date().getFullYear();
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year + 1, 0, 1);
+
+        const count = await WHPurchaseReturn.countDocuments({
+            createdAt: { $gte: startOfYear, $lt: endOfYear }
+        });
+
+        const nextNo = `PR-WS-${year}-${String(count + 1).padStart(4, '0')}`;
+        res.status(200).json({ success: true, data: nextNo });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 };

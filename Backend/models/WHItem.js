@@ -39,23 +39,28 @@ const whItemSchema = new mongoose.Schema({
     // Relations
     company: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHItemCompany'
+        ref: 'WHItemCompany',
+        required: [true, 'Please select a company']
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHItemCategory'
+        ref: 'WHItemCategory',
+        required: [true, 'Please select a category']
     },
     itemClass: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHItemClass'
+        ref: 'WHItemClass',
+        required: [true, 'Please select a class']
     },
     subClass: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHItemSubClass'
+        ref: 'WHItemSubClass',
+        required: [true, 'Please select a subclass']
     },
     supplier: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHSupplier'
+        ref: 'WHSupplier',
+        required: [true, 'Please select a supplier']
     },
 
     // Stock Data

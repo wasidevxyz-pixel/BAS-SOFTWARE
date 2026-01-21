@@ -72,12 +72,6 @@
                 <div class="card-body p-3">
                     <div class="row g-2 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label mb-1">Branch</label>
-                            <select class="form-select form-select-sm" id="filterBranch">
-                                <option value="">All Branches</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
                             <button class="btn btn-primary btn-sm" onclick="loadCustomers()">
                                 <i class="fas fa-filter me-1"></i> Filter
                             </button>
@@ -109,7 +103,6 @@
                                 <th class="text-center">City</th>
                                 <th class="text-center">Mobile</th>
                                 <th class="text-center">NTN</th>
-                                <th class="text-center">Branch</th>
                                 <th class="text-center">WHT %</th>
                                 <th class="text-center">Adv Tax %</th>
                                 <th class="text-center">Status</th>
@@ -174,12 +167,6 @@
                             </div>
                             <!-- Column 2 -->
                             <div class="col-md-3">
-                                <div class="mb-2">
-                                    <label class="form-label">Branch <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="branch" required>
-                                        <option value="">Select Branch</option>
-                                    </select>
-                                </div>
                                 <div class="mb-2">
                                     <label class="form-label">Province</label>
                                     <select class="form-select" id="province">

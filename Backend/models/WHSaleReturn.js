@@ -1,37 +1,40 @@
 const mongoose = require('mongoose');
 
-const whPurchaseSchema = new mongoose.Schema({
-    invoiceNo: {
+const whSaleReturnSchema = new mongoose.Schema({
+    returnNo: { // Inv.No in return screen
         type: String,
         required: true,
         trim: true
     },
-    invoiceDate: {
+    returnDate: {
         type: Date,
         required: true,
         default: Date.now
     },
-    supplier: {
+    customer: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHSupplier',
+        ref: 'WHCustomer',
         required: true
+    },
+    whCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'WHItemCategory'
+    },
+    dcNo: {
+        type: String,
+        trim: true
+    },
+    biltyNo: {
+        type: String,
+        trim: true
+    },
+    transporter: {
+        type: String,
+        trim: true
     },
     remarks: {
         type: String,
         trim: true
-    },
-
-    // Check if user meant Group/Category for the purchase classification
-    group: { // Optional classification
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Group'
-    },
-    whCategory: { // Optional classification
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'WHItemCategory'
-    },
-    postingNumber: {
-        type: Number
     },
 
     // Line Items
@@ -45,37 +48,25 @@ const whPurchaseSchema = new mongoose.Schema({
             type: String,
             trim: true
         },
-        batch: {
+        store: {
             type: String,
             trim: true
         },
-        expiry: {
-            type: Date
-        },
-        quantity: {
+        quantity: { // Pack
             type: Number,
             required: true,
             min: 0
         },
-        bonus: {
-            type: Number,
-            default: 0,
-            min: 0
-        },
-        costPrice: { // P.Price
+        pcsPrice: { // was price
             type: Number,
             required: true,
             min: 0
         },
-        salePrice: {
+        retailPrice: {
             type: Number,
             default: 0
         },
-        discountPercent: {
-            type: Number,
-            default: 0
-        },
-        discountAmount: {
+        subTotal: {
             type: Number,
             default: 0
         },
@@ -87,13 +78,29 @@ const whPurchaseSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
-        totalAmount: { // Net Total for line
+        totalBeforeIncentive: { // was totalBeforeDiscount
             type: Number,
             default: 0
         },
-        retailPrice: {
+        incentive: {
             type: Number,
             default: 0
+        },
+        discountPercent: {
+            type: Number,
+            default: 0
+        },
+        discountAmount: {
+            type: Number,
+            default: 0
+        },
+        netTotal: {
+            type: Number,
+            default: 0
+        },
+        itemRemarks: {
+            type: String,
+            trim: true
         }
     }],
 
@@ -102,21 +109,63 @@ const whPurchaseSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    subTotal: {
+    totalAmount: {
         type: Number,
         default: 0
     },
-    totalDiscount: {
+    globalDiscountPercent: {
         type: Number,
         default: 0
     },
-    totalTax: {
+    globalDiscountAmount: {
         type: Number,
         default: 0
     },
-    grandTotal: {
+    globalTaxPercent: {
         type: Number,
         default: 0
+    },
+    globalTaxAmount: {
+        type: Number,
+        default: 0
+    },
+    miscCharges: {
+        type: Number,
+        default: 0
+    },
+    freightCharges: {
+        type: Number,
+        default: 0
+    },
+    netTotal: {
+        type: Number,
+        default: 0
+    },
+    paidAmount: {
+        type: Number,
+        default: 0
+    },
+    returnBalance: {
+        type: Number,
+        default: 0
+    },
+    previousBalance: {
+        type: Number,
+        default: 0
+    },
+    newBalance: {
+        type: Number,
+        default: 0
+    },
+
+    payMode: {
+        type: String,
+        enum: ['Cash', 'Bank', 'Credit'],
+        default: 'Credit'
+    },
+    printSize: {
+        type: String,
+        default: 'A4'
     },
 
     status: {
@@ -127,26 +176,14 @@ const whPurchaseSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    },
-    history: [{
-        action: String, // 'Created', 'Updated', 'Status Change'
-        changedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        changedAt: {
-            type: Date,
-            default: Date.now
-        },
-        details: String
-    }]
+    }
 }, {
     timestamps: true
 });
 
-// Pre-save middleware for invoice number generation
-whPurchaseSchema.pre('save', async function (next) {
-    if (!this.invoiceNo || this.invoiceNo === 'AUTO') {
+// Pre-save middleware for return number generation
+whSaleReturnSchema.pre('save', async function (next) {
+    if (!this.returnNo || this.returnNo === 'AUTO') {
         const year = new Date().getFullYear();
         const startOfYear = new Date(year, 0, 1);
         const endOfYear = new Date(year + 1, 0, 1);
@@ -154,7 +191,7 @@ whPurchaseSchema.pre('save', async function (next) {
             const count = await this.constructor.countDocuments({
                 createdAt: { $gte: startOfYear, $lt: endOfYear }
             });
-            this.invoiceNo = `PUR-${year}-${String(count + 1).padStart(4, '0')}`;
+            this.returnNo = `SR-WS-${year}-${String(count + 1).padStart(4, '0')}`;
             next();
         } catch (err) {
             next(err);
@@ -164,4 +201,4 @@ whPurchaseSchema.pre('save', async function (next) {
     }
 });
 
-module.exports = mongoose.model('WHPurchase', whPurchaseSchema);
+module.exports = mongoose.model('WHSaleReturn', whSaleReturnSchema);

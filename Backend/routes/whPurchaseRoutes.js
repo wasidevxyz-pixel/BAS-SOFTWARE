@@ -4,7 +4,8 @@ const {
     getWHPurchases,
     getWHPurchase,
     updateWHPurchase,
-    deleteWHPurchase
+    deleteWHPurchase,
+    getNextInvoiceNumber
 } = require('../controllers/whPurchaseController');
 
 const { protect } = require('../middleware/auth');
@@ -12,6 +13,7 @@ const { protect } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(protect);
+router.get('/next-number', getNextInvoiceNumber);
 
 router.route('/')
     .get(getWHPurchases)

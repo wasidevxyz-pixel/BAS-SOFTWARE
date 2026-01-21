@@ -43,7 +43,13 @@ exports.getStockAudits = async (req, res, next) => {
 exports.getStockAudit = async (req, res, next) => {
     try {
         const audit = await WHStockAudit.findById(req.params.id)
-            .populate('items.item', 'name code')
+            .populate({
+                path: 'items.item',
+                populate: [
+                    { path: 'itemClass' },
+                    { path: 'company' }
+                ]
+            })
             .populate('createdBy', 'name');
 
         if (!audit) {
@@ -85,12 +91,8 @@ exports.updateStockAudit = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Stock audit not found' });
         }
 
-        // Allowing update even if posted as per user request for "rights"
-        /*
-        if (audit.status === 'posted') {
-            return res.status(400).json({ success: false, message: 'Cannot update posted audit' });
-        }
-        */
+        const existingStatus = audit.status;
+        const oldItems = JSON.parse(JSON.stringify(audit.items)); // Deep copy old items
 
         // Update fields
         if (req.body.items) audit.items = req.body.items;
@@ -98,6 +100,72 @@ exports.updateStockAudit = async (req, res, next) => {
         if (req.body.remarks) audit.remarks = req.body.remarks;
 
         await audit.save();
+
+        // If it was already posted, we need to update the stock to match the NEW audit
+        if (existingStatus === 'posted') {
+            console.log(`Updating stock for Modified Posted Audit: ${audit.auditNo}`);
+
+            // 1. Reverse OLD impact
+            for (const oldLine of oldItems) {
+                const whItem = await WHItem.findById(oldLine.item);
+                if (whItem) {
+                    const currentQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const oldDiff = (oldLine.physicalQty || 0) - (oldLine.systemQty || 0);
+                    const reversedQty = currentQty - oldDiff;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = reversedQty;
+                    } else {
+                        whItem.stock = [{ quantity: reversedQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'audit',
+                        qty: -oldDiff,
+                        previousQty: currentQty,
+                        newQty: reversedQty,
+                        refType: 'audit',
+                        refId: audit._id,
+                        remarks: `REVERSED (Update) Audit #${audit.auditNo}`,
+                        createdBy: req.user ? req.user.id : null
+                    });
+                }
+            }
+
+            // 2. Apply NEW impact
+            for (const newLine of audit.items) {
+                const whItem = await WHItem.findById(newLine.item);
+                if (whItem) {
+                    const currentQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const newDiff = (newLine.physicalQty || 0) - (newLine.systemQty || 0);
+                    const finalQty = currentQty + newDiff;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = finalQty;
+                    } else {
+                        whItem.stock = [{ quantity: finalQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'audit',
+                        qty: newDiff,
+                        previousQty: currentQty,
+                        newQty: finalQty,
+                        refType: 'audit',
+                        refId: audit._id,
+                        remarks: `Updated Audit #${audit.auditNo}`,
+                        createdBy: req.user ? req.user.id : null
+                    });
+                }
+            }
+        }
+
         res.status(200).json({ success: true, data: audit });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

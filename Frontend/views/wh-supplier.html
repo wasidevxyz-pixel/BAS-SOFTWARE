@@ -68,12 +68,6 @@
                 <div class="card-body p-3">
                     <div class="row g-2 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label mb-1">Branch</label>
-                            <select class="form-select form-select-sm" id="filterBranch">
-                                <option value="">All Branches</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
                             <button class="btn btn-primary btn-sm" onclick="loadSuppliers()">
                                 <i class="fas fa-filter me-1"></i> Filter
                             </button>
@@ -106,7 +100,6 @@
                                     <th class="text-center">City</th>
                                     <th class="text-center">Phone/Mobile</th>
                                     <th class="text-center">NTN</th>
-                                    <th class="text-center">Branch</th>
                                     <th class="text-center">WHT %</th>
                                     <th class="text-center">Adv Tax %</th>
                                     <th class="text-center">Status</th>
@@ -142,13 +135,6 @@
                                 <div class="mb-3">
                                     <label for="code" class="form-label">Code</label>
                                     <input type="text" class="form-control" id="code">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="branch" class="form-label">Branch <span
-                                            class="text-danger">*</span></label>
-                                    <select class="form-select" id="branch" required>
-                                        <option value="">Select Branch</option>
-                                    </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="address" class="form-label">Address</label>

@@ -81,6 +81,8 @@ class SidebarNavigation {
                     { label: 'Item Registration', link: '/wh-item.html', permission: 'wh_item' },
                     { label: 'WH Purchase', link: '/wh-purchase.html', permission: 'wh_purchase' },
                     { label: 'WH Purchase Return', link: '/wh-purchase-return.html', permission: 'wh_purchase_return' },
+                    { label: 'WH Sale Entry', link: '/wh-sale.html', permission: 'wh_sale' },
+                    { label: 'WH Sale Entry Return', link: '/wh-sale-return.html', permission: 'wh_sale_return' },
                     { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
                 ]
             },

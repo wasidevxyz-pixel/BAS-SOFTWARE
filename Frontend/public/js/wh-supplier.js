@@ -1,6 +1,5 @@
 // WH Supplier Management
 let suppliers = [];
-let branches = [];
 let categories = [];
 let supplierModal, categoryModal;
 
@@ -14,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function () {
     supplierModal = new bootstrap.Modal(document.getElementById('supplierModal'));
     categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
 
-    loadBranches();
     loadCategories();
     loadSuppliers();
 
@@ -28,32 +26,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// Load branches
-async function loadBranches() {
-    try {
-        const response = await fetch('/api/v1/stores', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            branches = data.data;
-            const branchSelect = document.getElementById('branch');
-            const filterBranch = document.getElementById('filterBranch');
-
-            // Clear existing options except first
-            branchSelect.innerHTML = '<option value="">Select Branch</option>';
-            filterBranch.innerHTML = '<option value="">All Branches</option>';
-
-            branches.forEach(branch => {
-                branchSelect.innerHTML += `<option value="${branch._id}">${branch.name}</option>`;
-                filterBranch.innerHTML += `<option value="${branch._id}">${branch.name}</option>`;
-            });
-        }
-    } catch (error) {
-        console.error('Error loading branches:', error);
-    }
-}
 
 // Load supplier categories
 async function loadCategories() {
@@ -103,9 +75,7 @@ async function loadCategories() {
 // Load suppliers
 async function loadSuppliers() {
     try {
-        const branchFilter = document.getElementById('filterBranch').value;
         let url = '/api/v1/wh-suppliers';
-        if (branchFilter) url += `?branch=${branchFilter}`;
 
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -127,7 +97,7 @@ function renderTable() {
     const tbody = document.getElementById('suppliersTableBody');
 
     if (suppliers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No suppliers found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No suppliers found</td></tr>';
         return;
     }
 
@@ -139,7 +109,6 @@ function renderTable() {
             <td class="text-center">${supplier.city || '-'}</td>
             <td class="text-center">${supplier.mobile || supplier.phone || '-'}</td>
             <td class="text-center">${supplier.supplierNTN || '-'}</td>
-            <td class="text-center">${supplier.branch?.name || 'N/A'}</td>
             <td class="text-center">${supplier.whtPercentage}%</td>
             <td class="text-center">${supplier.advTaxPercentage}%</td>
             <td class="text-center"><span class="badge ${supplier.isActive ? 'bg-success' : 'bg-danger'}">${supplier.isActive ? 'Active' : 'Inactive'}</span></td>
@@ -188,7 +157,6 @@ function editSupplier(id) {
     document.getElementById('code').value = supplier.code || '';
     document.getElementById('supplierName').value = supplier.supplierName;
     document.getElementById('supplierNTN').value = supplier.supplierNTN;
-    document.getElementById('branch').value = supplier.branch?._id || '';
     document.getElementById('isActive').checked = supplier.isActive;
 
     // New fields
@@ -215,7 +183,6 @@ async function saveSupplier() {
         code: document.getElementById('code').value,
         supplierName: document.getElementById('supplierName').value,
         supplierNTN: document.getElementById('supplierNTN').value,
-        branch: document.getElementById('branch').value || null,
         isActive: document.getElementById('isActive').checked,
 
         // Optional string fields

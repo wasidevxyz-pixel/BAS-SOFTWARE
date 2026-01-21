@@ -118,7 +118,7 @@ async function loadBranches() {
         const data = await response.json();
         if (data.success) {
             const select = document.getElementById('branch');
-            select.innerHTML = '<option value="">Select Branch</option>'; // Clear default options
+            select.innerHTML = ''; // Start empty
 
             // Get Logged In User
             const user = JSON.parse(localStorage.getItem('user')) || {};
@@ -126,6 +126,9 @@ async function loadBranches() {
 
             // Filter stores
             const validStores = data.data.filter(store => {
+                // Must be active
+                if (store.isActive === false) return false;
+
                 const uBranch = String(userBranch || '').trim().toLowerCase();
                 if (!uBranch || uBranch.includes('all branches')) return true;
 

@@ -634,9 +634,8 @@ window.saveAudit = async function (statusArg) {
         const data = await response.json();
 
         if (data.success) {
+            const auditId = data.data._id || id;
             if (status === 'posted') {
-                // Call post endpoint
-                const auditId = data.data._id || id;
                 const postResponse = await fetch(`/api/v1/wh-stock-audits/${auditId}/post`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -652,12 +651,15 @@ window.saveAudit = async function (statusArg) {
                 alert('Stock Audit Saved as Draft');
             }
             resetForm();
+            return auditId;
         } else {
             alert('Error: ' + data.message);
+            return null;
         }
     } catch (error) {
         console.error('Error saving audit:', error);
         alert('Failed to save audit: ' + error.message);
+        return null;
     }
 };
 
@@ -680,7 +682,10 @@ window.loadAuditList = async function () {
                     <td>${audit.remarks || ''}</td>
                     <td>${audit.createdBy ? audit.createdBy.name : 'Unknown'}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="editAudit('${audit._id}')">
+                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${audit._id}')">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary ms-1" onclick="editAudit('${audit._id}')">
                             <i class="fas fa-edit"></i> Edit
                         </button>
                         <button class="btn btn-sm btn-danger ms-1" onclick="deleteAudit('${audit._id}')">
@@ -760,7 +765,10 @@ window.openDraftList = async function () {
                     <td>${audit.remarks || ''}</td>
                     <td>${audit.createdBy ? audit.createdBy.name : 'Unknown'}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="editAudit('${audit._id}')">
+                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${audit._id}')">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary ms-1" onclick="editAudit('${audit._id}')">
                             <i class="fas fa-edit"></i> Edit
                         </button>
                         <button class="btn btn-sm btn-danger ms-1" onclick="deleteAudit('${audit._id}')">
@@ -803,7 +811,10 @@ window.openPostedList = async function () {
                     <td>${audit.remarks || ''}</td>
                     <td>${audit.createdBy ? audit.createdBy.name : 'Unknown'}</td>
                     <td>
-                        <button class="btn btn-sm btn-info text-white" onclick="viewAudit('${audit._id}')">
+                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${audit._id}')">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info text-white ms-1" onclick="viewAudit('${audit._id}')">
                             <i class="fas fa-eye"></i> View
                         </button>
                         <button class="btn btn-sm btn-primary ms-1" onclick="editAudit('${audit._id}')">
@@ -887,3 +898,15 @@ window.deleteAudit = async function (id) {
         alert('Failed to delete audit');
     }
 };
+function printInvoice(id) {
+    const finalId = id || currentAuditId || document.getElementById('auditId').value;
+    if (!finalId) return alert('No audit selected to print');
+    window.open(`/wh-print.html?type=stock-audit&id=${finalId}`, '_blank');
+}
+
+async function saveAndPrint() {
+    const savedId = await saveAudit('posted');
+    if (savedId) {
+        printInvoice(savedId);
+    }
+}

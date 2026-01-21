@@ -1,6 +1,5 @@
 // WH Customer Management
 let customers = [];
-let branches = [];
 let categories = [];
 let cities = [];
 let customerTypes = [];
@@ -26,7 +25,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (customerTypeModalElem) customerTypeModal = new bootstrap.Modal(customerTypeModalElem);
 
     setUserName();
-    loadBranches();
     loadCategories();
     loadCities();
     loadCustomerTypes();
@@ -58,29 +56,6 @@ function setUserName() {
     }
 }
 
-// Load branches
-async function loadBranches() {
-    try {
-        const response = await fetch('/api/v1/stores', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        if (data.success) {
-            branches = data.data;
-            const branchSelectors = ['filterBranch', 'branch'];
-            branchSelectors.forEach(id => {
-                const select = document.getElementById(id);
-                if (!select) return;
-                const currentValue = select.value;
-                select.innerHTML = id === 'filterBranch' ? '<option value="">All Branches</option>' : '<option value="">Select Branch</option>';
-                branches.forEach(branch => {
-                    select.innerHTML += `<option value="${branch._id}">${branch.name}</option>`;
-                });
-                if (currentValue) select.value = currentValue;
-            });
-        }
-    } catch (error) { console.error('Error loading branches:', error); }
-}
 
 // Load categories
 async function loadCategories() {
@@ -167,8 +142,7 @@ async function loadCustomerTypes() {
 // Load customers
 async function loadCustomers() {
     try {
-        const branchId = document.getElementById('filterBranch').value;
-        const url = branchId ? `/api/v1/wh-customers?branch=${branchId}` : '/api/v1/wh-customers';
+        const url = '/api/v1/wh-customers';
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
@@ -189,7 +163,7 @@ function renderTable() {
     if (!tbody) return;
 
     if (customers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center">No customers found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No customers found</td></tr>';
         return;
     }
 
@@ -201,7 +175,6 @@ function renderTable() {
             <td class="text-center">${customer.city?.name || '-'}</td>
             <td class="text-center">${customer.mobile || customer.phone || '-'}</td>
             <td class="text-center">${customer.customerNTN || '-'}</td>
-            <td class="text-center">${customer.branch?.name || 'N/A'}</td>
             <td class="text-center">${customer.whtPercentage}%</td>
             <td class="text-center">${customer.advTaxPercentage}%</td>
             <td class="text-center"><span class="badge ${customer.isActive ? 'bg-success' : 'bg-danger'}">${customer.isActive ? 'Active' : 'Inactive'}</span></td>
@@ -256,7 +229,6 @@ async function editCustomer(id) {
             document.getElementById('mobile').value = customer.mobile || '';
             document.getElementById('phone').value = customer.phone || '';
             document.getElementById('address').value = customer.address || '';
-            document.getElementById('branch').value = customer.branch?._id || customer.branch || '';
             document.getElementById('customerCategory').value = customer.customerCategory?._id || customer.customerCategory || '';
             document.getElementById('city').value = customer.city?._id || customer.city || '';
             document.getElementById('customerType').value = customer.customerType?._id || customer.customerType || '';
@@ -286,7 +258,6 @@ async function saveCustomer() {
         mobile: document.getElementById('mobile').value,
         phone: document.getElementById('phone').value,
         address: document.getElementById('address').value,
-        branch: document.getElementById('branch').value || null,
         customerCategory: document.getElementById('customerCategory').value || null,
         city: document.getElementById('city').value || null,
         customerType: document.getElementById('customerType').value || null,
@@ -301,7 +272,7 @@ async function saveCustomer() {
         isCash: document.getElementById('isCash').checked
     };
 
-    if (!formData.customerName || !formData.customerNTN || !formData.branch) {
+    if (!formData.customerName || !formData.customerNTN) {
         return showAlert('Please fill all required fields', 'warning');
     }
 

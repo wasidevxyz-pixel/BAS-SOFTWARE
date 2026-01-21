@@ -25,8 +25,7 @@ const whCustomerSchema = new mongoose.Schema({
     },
     branch: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Store',
-        required: [true, 'Please select a branch']
+        ref: 'Store'
     },
     address: {
         type: String,

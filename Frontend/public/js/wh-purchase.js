@@ -12,7 +12,8 @@ async function initializePage() {
     await Promise.all([
         loadSuppliers(),
         loadWHCategories(),
-        loadItems()
+        loadItems(),
+        loadNextInvoiceNumber()
     ]);
 
     // Initial empty row
@@ -645,8 +646,11 @@ async function loadPurchaseList() {
                     <td><span class="badge ${p.status === 'Posted' ? 'bg-success' : 'bg-warning'}">${p.status}</span></td>
                     <td>${p.createdBy ? p.createdBy.name : 'Unknown'}</td>
                     <td>
+                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${p._id}')">
+                            <i class="fas fa-print"></i>
+                        </button>
                         ${(canEdit || (p.status === 'Posted' && canEditPosted)) ?
-                    `<button class="btn btn-sm btn-primary" onclick="editPurchase('${p._id}', '${p.status}')">
+                    `<button class="btn btn-sm btn-primary ms-1" onclick="editPurchase('${p._id}', '${p.status}')">
                             <i class="fas fa-edit"></i>
                         </button>` : ''}
                         
@@ -781,6 +785,7 @@ function disableForm(disabled) {
 function resetForm() {
     document.getElementById('purchaseForm').reset();
     document.getElementById('purchaseId').value = '';
+    loadNextInvoiceNumber();
     document.getElementById('purchaseTableBody').innerHTML = '';
     document.getElementById('statusBadge').textContent = 'DRAFT';
     document.getElementById('statusBadge').className = 'badge bg-secondary text-white';
@@ -949,22 +954,25 @@ async function executeSave(status) {
         const result = await response.json();
 
         if (result.success) {
+            const savedId = result.data._id;
             if (status === 'Posted' && result.data && result.data.postingNumber) {
-                // Show Posting Number Popup
                 alert(`Purchase Posted Successfully!\n\nPosting Number: ${String(result.data.postingNumber).padStart(2, '0')}`);
                 resetForm();
             } else {
                 alert(`Purchase ${status === 'Posted' ? 'Posted' : 'Saved'} Successfully!`);
-                if (status !== 'Posted' && !purchaseId && result.data && result.data._id) {
-                    document.getElementById('purchaseId').value = result.data._id;
+                if (status !== 'Posted' && !purchaseId) {
+                    document.getElementById('purchaseId').value = savedId;
                 }
             }
+            return savedId;
         } else {
             alert('Error saving purchase: ' + (result.error || 'Unknown error'));
+            return null;
         }
     } catch (error) {
         console.error('Error saving purchase:', error);
         alert('System Error during save');
+        return null;
     }
 }
 
@@ -1018,3 +1026,32 @@ window.updateCurrentStockDisplay = async function (itemId) {
         }
     }
 };
+function printInvoice(id) {
+    const finalId = id || document.getElementById('purchaseId').value;
+    if (!finalId) return alert('No purchase selected to print');
+    window.open(`/wh-print.html?type=purchase&id=${finalId}`, '_blank');
+}
+
+// Ensure ID is globally available for header button
+window.currentPurchaseId = null;
+// Proxy to watch purchaseId input
+const originalPid = document.getElementById('purchaseId');
+if (originalPid) {
+    Object.defineProperty(window, 'currentPurchaseId', {
+        get: () => originalPid.value
+    });
+}
+
+async function loadNextInvoiceNumber() {
+    try {
+        const res = await fetch('/api/v1/wh-purchases/next-number', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await res.json();
+        if (result.success) {
+            document.getElementById('invoiceNo').value = result.data;
+        }
+    } catch (error) {
+        console.error('Error loading next Purchase number:', error);
+    }
+}

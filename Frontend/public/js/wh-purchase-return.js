@@ -13,7 +13,8 @@ async function initializePage() {
         loadSuppliers(),
         loadWHCategories(),
         loadItems(),
-        loadPostedPurchases()
+        loadPostedPurchases(),
+        loadNextReturnNumber()
     ]);
 
     // Initial empty row
@@ -295,6 +296,7 @@ function addNewRow(itemData = null) {
         </td>
         <td class="position-relative">
             <input type="hidden" name="itemId" value="${itemId}">
+            <input type="hidden" name="currentStock" value="0">
             <input type="text" class="item-search form-control form-control-sm border-0 bg-transparent" 
                    value="${itemName}" placeholder="Search Name..." 
                    onfocus="updateCurrentStockDisplay(this.previousElementSibling.value)"
@@ -320,6 +322,11 @@ function addNewRow(itemData = null) {
     `;
 
     tbody.appendChild(tr);
+
+    if (itemId) {
+        fetchUpdateRowStock(rowCount, itemId);
+    }
+
     calculateRow(rowCount);
 
     // Focus logic
@@ -613,6 +620,7 @@ function selectItemForRow(item, id) {
     row.querySelector('input[name="quantity"]').select();
 
     updateCurrentStockDisplay(item._id);
+    fetchUpdateRowStock(id, item._id);
 }
 
 function calculateRow(id) {
@@ -716,8 +724,11 @@ async function loadReturnList() {
                     <td><span class="badge ${p.status === 'Posted' ? 'bg-success' : 'bg-warning'}">${p.status}</span></td>
                     <td>${p.createdBy ? p.createdBy.name : 'Unknown'}</td>
                     <td>
+                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${p._id}')">
+                            <i class="fas fa-print"></i>
+                        </button>
                         ${(canEdit || (p.status === 'Posted' && canEditPosted)) ?
-                    `<button class="btn btn-sm btn-primary" onclick="editReturn('${p._id}', '${p.status}')">
+                    `<button class="btn btn-sm btn-primary ms-1" onclick="editReturn('${p._id}', '${p.status}')">
                             <i class="fas fa-edit"></i>
                         </button>` : ''}
                         
@@ -899,6 +910,24 @@ async function saveReturn(status = 'Draft') {
         return;
     }
 
+    // Stock Validation
+    let stockError = false;
+    document.querySelectorAll('#purchaseTableBody tr').forEach(row => {
+        if (stockError) return;
+        const qty = parseFloat(row.querySelector('input[name="quantity"]').value) || 0;
+        const stock = parseFloat(row.querySelector('input[name="currentStock"]').value) || 0;
+        const name = row.querySelector('.item-search').value;
+        const barcode = row.querySelector('input[name="barcode"]').value;
+
+        if (qty > stock) {
+            alert(`Insufficient Stock for item: ${name} (${barcode}).\nAvailable: ${stock}, Returned: ${qty}`);
+            stockError = true;
+            row.querySelector('input[name="quantity"]').focus();
+        }
+    });
+
+    if (stockError) return;
+
     // Open Authorization Modal
     pendingSaveStatus = status;
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1030,22 +1059,25 @@ async function executeSave(status) {
         const result = await response.json();
 
         if (result.success) {
+            const savedId = result.data._id;
             if (status === 'Posted' && result.data && result.data.postingNumber) {
-                // Show Posting Number Popup
-                alert(`Purchase Posted Successfully!\n\nPosting Number: ${String(result.data.postingNumber).padStart(2, '0')}`);
+                alert(`Purchase Return Posted Successfully!\n\nPosting Number: ${String(result.data.postingNumber).padStart(2, '0')}`);
                 resetForm();
             } else {
-                alert(`Purchase ${status === 'Posted' ? 'Posted' : 'Saved'} Successfully!`);
-                if (status !== 'Posted' && !purchaseId && result.data && result.data._id) {
-                    document.getElementById('returnId').value = result.data._id;
+                alert(`Purchase Return ${status === 'Posted' ? 'Posted' : 'Saved'} Successfully!`);
+                if (status !== 'Posted' && !purchaseId) {
+                    document.getElementById('returnId').value = savedId;
                 }
             }
+            return savedId;
         } else {
-            alert('Error saving purchase: ' + (result.error || 'Unknown error'));
+            alert('Error saving return: ' + (result.error || 'Unknown error'));
+            return null;
         }
     } catch (error) {
-        console.error('Error saving purchase:', error);
+        console.error('Error saving return:', error);
         alert('System Error during save');
+        return null;
     }
 }
 
@@ -1102,3 +1134,52 @@ window.updateCurrentStockDisplay = async function (itemId) {
     }
 };
 
+async function fetchUpdateRowStock(rowId, itemId) {
+    if (!itemId) return;
+    try {
+        const response = await fetch(`/api/v1/wh-items/${itemId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        const row = document.getElementById(`row-${rowId}`);
+        if (row) {
+            const stockInput = row.querySelector('input[name="currentStock"]');
+            if (stockInput) {
+                if (result.success && result.data.stock && result.data.stock.length > 0) {
+                    stockInput.value = result.data.stock[0].quantity || 0;
+                } else {
+                    stockInput.value = '0';
+                }
+            }
+        }
+    } catch (e) { console.error('Stock fetch error:', e); }
+}
+function printInvoice(id) {
+    const finalId = id || document.getElementById('returnId').value;
+    if (!finalId) return alert('No return selected to print');
+    window.open(`/wh-print.html?type=purchase-return&id=${finalId}`, '_blank');
+}
+
+// Ensure ID is globally available for header button
+window.currentReturnId = null;
+// Proxy to watch returnId input
+const originalPid = document.getElementById('returnId');
+if (originalPid) {
+    Object.defineProperty(window, 'currentReturnId', {
+        get: () => originalPid.value
+    });
+}
+
+async function loadNextReturnNumber() {
+    try {
+        const res = await fetch('/api/v1/wh-purchase-returns/next-number', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await res.json();
+        if (result.success) {
+            document.getElementById('returnNo').value = result.data;
+        }
+    } catch (error) {
+        console.error('Error loading next return number:', error);
+    }
+}

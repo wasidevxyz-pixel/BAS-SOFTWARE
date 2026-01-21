@@ -98,7 +98,13 @@ exports.getWHPurchase = async (req, res) => {
     try {
         const purchase = await WHPurchase.findById(req.params.id)
             .populate('supplier')
-            .populate('items.item');
+            .populate({
+                path: 'items.item',
+                populate: [
+                    { path: 'itemClass' },
+                    { path: 'company' }
+                ]
+            });
 
         if (!purchase) {
             return res.status(404).json({
@@ -141,19 +147,54 @@ exports.updateWHPurchase = async (req, res) => {
             req.body.postingNumber = nextNumber;
         }
 
+        const oldItems = JSON.parse(JSON.stringify(purchase.items)); // Deep copy old items
+
         purchase = await WHPurchase.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
 
-        // Update stock if status changed to Posted
-        if (req.body.status === 'Posted' && (existingStatus !== 'Posted')) {
+        // CASE 1: Transitioning to Posted OR already Posted (Modifying)
+        if (purchase.status === 'Posted') {
+            // If it was already Posted, reverse the OLD impact first
+            if (existingStatus === 'Posted') {
+                for (const line of oldItems) {
+                    const whItem = await WHItem.findById(line.item);
+                    if (whItem) {
+                        const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                        const oldPurchaseQty = parseFloat(line.quantity) || 0;
+                        const newQty = previousQty - oldPurchaseQty; // Reverse Purchase: SUBTRACT
+
+                        if (whItem.stock && whItem.stock.length > 0) {
+                            whItem.stock[0].quantity = newQty;
+                        } else {
+                            whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        }
+                        whItem.markModified('stock');
+                        await whItem.save();
+
+                        await WHStockLog.create({
+                            item: whItem._id,
+                            type: 'out',
+                            qty: oldPurchaseQty,
+                            previousQty: previousQty,
+                            newQty: newQty,
+                            refType: 'purchase',
+                            refId: purchase._id,
+                            remarks: `REVERSED (Update) Purchase #${purchase.postingNumber || purchase.invoiceNo}`,
+                            createdBy: req.user ? req.user._id : null
+                        });
+                    }
+                }
+            }
+
+            // Apply NEW impact
             for (const line of purchase.items) {
                 const whItem = await WHItem.findById(line.item);
                 if (whItem) {
                     const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
                     const purchaseQty = parseFloat(line.quantity) || 0;
-                    const newQty = previousQty + purchaseQty;
+                    const newQty = previousQty + purchaseQty; // Add purchase
 
                     if (whItem.stock && whItem.stock.length > 0) {
                         whItem.stock[0].quantity = newQty;
@@ -163,7 +204,6 @@ exports.updateWHPurchase = async (req, res) => {
                     whItem.markModified('stock');
                     await whItem.save();
 
-                    // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
                         type: 'in',
@@ -172,7 +212,38 @@ exports.updateWHPurchase = async (req, res) => {
                         newQty: newQty,
                         refType: 'purchase',
                         refId: purchase._id,
-                        remarks: `Purchase #${purchase.postingNumber || purchase.invoiceNo}`,
+                        remarks: `Updated Purchase #${purchase.postingNumber || purchase.invoiceNo}`,
+                        createdBy: req.user ? req.user._id : null
+                    });
+                }
+            }
+        }
+        // CASE 2: Transitioning from Posted to Draft
+        else if (existingStatus === 'Posted') {
+            for (const line of oldItems) {
+                const whItem = await WHItem.findById(line.item);
+                if (whItem) {
+                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                    const oldPurchaseQty = parseFloat(line.quantity) || 0;
+                    const newQty = previousQty - oldPurchaseQty;
+
+                    if (whItem.stock && whItem.stock.length > 0) {
+                        whItem.stock[0].quantity = newQty;
+                    } else {
+                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                    }
+                    whItem.markModified('stock');
+                    await whItem.save();
+
+                    await WHStockLog.create({
+                        item: whItem._id,
+                        type: 'out',
+                        qty: oldPurchaseQty,
+                        previousQty: previousQty,
+                        newQty: newQty,
+                        refType: 'purchase',
+                        refId: purchase._id,
+                        remarks: `Unposted Purchase #${purchase.postingNumber || purchase.invoiceNo}`,
                         createdBy: req.user ? req.user._id : null
                     });
                 }
@@ -245,5 +316,24 @@ exports.deleteWHPurchase = async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+};
+
+// @desc    Get next invoice number
+// @route   GET /api/v1/wh-purchases/next-number
+exports.getNextInvoiceNumber = async (req, res) => {
+    try {
+        const year = new Date().getFullYear();
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year + 1, 0, 1);
+
+        const count = await WHPurchase.countDocuments({
+            createdAt: { $gte: startOfYear, $lt: endOfYear }
+        });
+
+        const nextNo = `PUR-${year}-${String(count + 1).padStart(4, '0')}`;
+        res.status(200).json({ success: true, data: nextNo });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 };

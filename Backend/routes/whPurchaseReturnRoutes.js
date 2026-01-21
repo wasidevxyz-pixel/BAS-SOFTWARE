@@ -6,11 +6,14 @@ const {
     getWHPurchaseReturns,
     getWHPurchaseReturnById,
     updateWHPurchaseReturn,
-    deleteWHPurchaseReturn
+    deleteWHPurchaseReturn,
+    getNextReturnNumber
 } = require('../controllers/whPurchaseReturnController');
 
 // All routes require authentication
 router.use(protect);
+
+router.get('/next-number', getNextReturnNumber);
 
 // Routes
 router.route('/')
