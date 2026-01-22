@@ -83,6 +83,7 @@ class SidebarNavigation {
                     { label: 'WH Purchase Return', link: '/wh-purchase-return.html', permission: 'wh_purchase_return' },
                     { label: 'WH Sale Entry', link: '/wh-sale.html', permission: 'wh_sale' },
                     { label: 'WH Sale Entry Return', link: '/wh-sale-return.html', permission: 'wh_sale_return' },
+                    { label: 'WH Customer Payment', link: '/wh-customer-payment.html', permission: 'wh_customer_payment' },
                     { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
                 ]
             },
@@ -101,7 +102,9 @@ class SidebarNavigation {
                             { label: 'Sales Report', link: '/sales-report.html', permission: 'sales_report_link' },
                             { label: 'Sales Comparison', link: '/sales-comparison-report.html', permission: 'sales_comparison_link' },
                             { label: 'Date-Wise Sales', link: '/date-wise-sales-report.html', permission: 'date_wise_sales_link' },
-                            { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' }
+                            { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' },
+                            { label: 'WH Customer Ledger', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
+                            { label: 'WH Customer Balance', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' }
                         ]
                     },
                     {

@@ -308,7 +308,10 @@
                     <select id="filterAccountType" class="form-select form-select-sm" onchange="loadAccounts()">
                         <option value="customer">Customer</option>
                         <option value="supplier">Supplier</option>
+                        <option value="wh-customer">WH Customer</option>
+                        <option value="wh-supplier">WH Supplier</option>
                         <option value="bank">Bank</option>
+
                         <option value="cash">Cash</option>
                         <option value="expense">Expense Head</option>
                     </select>
@@ -418,8 +421,13 @@
                 let endpoint = '';
                 if (accountType === 'customer' || accountType === 'supplier') {
                     endpoint = `/api/v1/parties?partyType=${accountType}&limit=500`;
+                } else if (accountType === 'wh-customer') {
+                    endpoint = '/api/v1/wh-customers';
+                } else if (accountType === 'wh-supplier') {
+                    endpoint = '/api/v1/wh-suppliers';
                 } else if (accountType === 'bank') {
                     endpoint = '/api/v1/banks';
+
                 } else if (accountType === 'expense') {
                     endpoint = '/api/v1/expense-heads?parentId=null';
                 } else {
@@ -516,7 +524,32 @@
                             });
                         });
                     }
+                } else if (accountType === 'wh-customer') {
+                    // Fetch WH Sales
+                    const salesRes = await fetch(`/api/v1/wh-sales?customer=${accountId}&from=${startDate}&to=${endDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (salesRes.ok) {
+                        const d = await salesRes.json();
+                        (d.data || []).forEach(s => {
+                            transactions.push({ date: s.date || s.createdAt, ref: s.invoiceNo, desc: 'WH Sale Invoice', debit: s.grandTotal || 0, credit: 0 });
+                        });
+                    }
+                    // Fetch WH Payments
+                    const payRes = await fetch(`/api/v1/wh-customer-payments?customer=${accountId}&from=${startDate}&to=${endDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (payRes.ok) {
+                        const d = await payRes.json();
+                        (d.data || []).forEach(p => {
+                            const isReceived = p.paymentType === 'Received';
+                            transactions.push({
+                                date: p.date || p.createdAt,
+                                ref: p.receiptNo,
+                                desc: `WH Payment ${p.paymentType}`,
+                                debit: !isReceived ? p.amount : 0,
+                                credit: isReceived ? p.amount : 0
+                            });
+                        });
+                    }
                 }
+
 
                 // Sort by date
                 transactions.sort((a, b) => new Date(a.date) - new Date(b.date));

@@ -88,6 +88,10 @@ const whPurchaseRoutes = require('./routes/whPurchaseRoutes');
 const whPurchaseReturnRoutes = require('./routes/whPurchaseReturnRoutes');
 const whSaleRoutes = require('./routes/whSaleRoutes');
 const whSaleReturnRoutes = require('./routes/whSaleReturnRoutes');
+const whCustomerPaymentRoutes = require('./routes/whCustomerPaymentRoutes');
+const whLedgerRoutes = require('./routes/whLedgerRoutes');
+
+
 
 
 
@@ -400,6 +404,10 @@ app.use('/api/v1/wh-purchases', whPurchaseRoutes);
 app.use('/api/v1/wh-purchase-returns', whPurchaseReturnRoutes);
 app.use('/api/v1/wh-sales', whSaleRoutes);
 app.use('/api/v1/wh-sale-returns', whSaleReturnRoutes);
+app.use('/api/v1/wh-customer-payments', whCustomerPaymentRoutes);
+app.use('/api/v1/wh-ledger', whLedgerRoutes);
+
+
 
 
 
@@ -679,6 +687,11 @@ app.get('/wh-sale-return.html', (req, res) => {
 app.get('/wh-stock-audit.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-stock-audit.html'));
 });
+
+app.get('/wh-customer-payment.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-customer-payment.html'));
+});
+
 
 
 app.get('/print-invoice.html', (req, res) => {

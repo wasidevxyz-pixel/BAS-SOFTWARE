@@ -2,6 +2,8 @@ const WHSaleReturn = require('../models/WHSaleReturn');
 const WHItem = require('../models/WHItem');
 const WHCustomer = require('../models/WHCustomer');
 const WHStockLog = require('../models/WHStockLog');
+const { addLedgerEntry, deleteLedgerEntry } = require('../utils/whLedgerUtils');
+
 
 // @desc    Create new WH Sale Return
 // @route   POST /api/v1/wh-sale-returns
@@ -45,7 +47,20 @@ exports.createWHSaleReturn = async (req, res) => {
                     });
                 }
             }
+
+            // Add Ledger Entry for Posted Sale Return
+            await addLedgerEntry({
+                customer: saleReturn.customer,
+                date: saleReturn.date,
+                description: `Sale Return - Memo #${saleReturn.returnNo}`,
+                refType: 'SaleReturn',
+                refId: saleReturn._id,
+                debit: 0,
+                credit: saleReturn.netTotal,
+                createdBy: req.user ? req.user._id : null
+            });
         }
+
 
         res.status(201).json({ success: true, data: saleReturn });
     } catch (error) {
@@ -163,10 +178,34 @@ exports.updateWHSaleReturn = async (req, res) => {
                     });
                 }
             }
+
+            // Sync Ledger for Posted Sale Return
+            await deleteLedgerEntry(saleReturn._id, {
+                customer: saleReturn.customer,
+                debit: 0,
+                credit: saleReturn.netTotal
+            });
+            await addLedgerEntry({
+                customer: saleReturn.customer,
+                date: saleReturn.date,
+                description: `Sale Return (Updated) - Memo #${saleReturn.returnNo}`,
+                refType: 'SaleReturn',
+                refId: saleReturn._id,
+                debit: 0,
+                credit: saleReturn.netTotal,
+                createdBy: req.user ? req.user._id : null
+            });
         }
+
         // CASE 2: Transitioning from Posted to Draft
         else if (existingStatus === 'Posted') {
+            await deleteLedgerEntry(saleReturn._id, {
+                customer: saleReturn.customer,
+                debit: 0,
+                credit: saleReturn.netTotal
+            });
             for (const line of oldItems) {
+
                 const whItem = await WHItem.findById(line.item);
                 if (whItem) {
                     const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
@@ -237,7 +276,13 @@ exports.deleteWHSaleReturn = async (req, res) => {
                     });
                 }
             }
+            await deleteLedgerEntry(saleReturn._id, {
+                customer: saleReturn.customer,
+                debit: 0,
+                credit: saleReturn.netTotal
+            });
         }
+
         await saleReturn.deleteOne();
         res.status(200).json({ success: true, message: 'Return deleted and stock reversed' });
     } catch (error) {

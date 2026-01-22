@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WH Customer Balances - BAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        .report-container {
+            padding: 15px;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-panel {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-panel {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table th {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 12px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .data-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9rem;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .balance-debit {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .balance-credit {
+            color: #16a34a;
+            font-weight: 700;
+        }
+
+        @media print {
+
+            .page-header,
+            .header-panel .btn {
+                display: none !important;
+            }
+
+            .report-container {
+                padding: 0;
+                height: auto;
+            }
+
+            .data-panel {
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar-container"></div>
+
+    <div class="main-content">
+        <div class="page-header px-3">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer;"></i>
+                <h6 class="mb-0 fw-bold"><i class="fas fa-list-ul me-2"></i>WH CUSTOMER BALANCE LIST</h6>
+            </div>
+        </div>
+
+        <div class="report-container">
+            <div class="header-panel">
+                <div>
+                    <h5 class="mb-0 fw-bold text-white">Customer Balances</h5>
+                    <p class="mb-0 small opacity-75">Summary of all outstanding warehouse customer balances</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light fw-bold px-4" onclick="loadBalances()">
+                        <i class="fas fa-sync-alt me-1"></i>REFRESH
+                    </button>
+                    <button class="btn btn-warning text-white fw-bold px-4" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>PRINT
+                    </button>
+                </div>
+            </div>
+
+            <div class="data-panel">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px">Code</th>
+                                <th>Customer Name</th>
+                                <th>Phone</th>
+                                <th style="width: 150px" class="text-end">Balance</th>
+                                <th style="width: 100px" class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balanceTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="spinner-border text-primary"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="bg-light border-top-2">
+                            <tr>
+                                <th colspan="3" class="text-end py-3">GRAND TOTAL</th>
+                                <th id="grandTotal" class="text-end py-3 fs-5">0.00</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBalances();
+        });
+
+        async function loadBalances() {
+            const tbody = document.getElementById('balanceTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+            try {
+                const res = await fetch('/api/v1/wh-ledger/balances', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                let html = '';
+                let total = 0;
+
+                data.data.forEach(c => {
+                    total += c.balance;
+                    const balanceClass = c.balance > 0 ? 'balance-debit' : (c.balance < 0 ? 'balance-credit' : '');
+                    const balanceText = Math.abs(c.balance).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                    const suffix = c.balance > 0 ? ' Dr' : (c.balance < 0 ? ' Cr' : '');
+
+                    html += `
+                        <tr>
+                            <td class="fw-bold text-muted">${c.code || '-'}</td>
+                            <td class="fw-bold">${c.customerName}</td>
+                            <td>${c.phone || '-'}</td>
+                            <td class="text-end ${balanceClass}">${balanceText}${suffix}</td>
+                            <td class="text-center">
+                                <span class="badge ${c.balance !== 0 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}">
+                                    ${c.balance !== 0 ? 'Pending' : 'Clear'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html || '<tr><td colspan="5" class="text-center py-5 text-muted">No customers found</td></tr>';
+                document.getElementById('grandTotal').textContent = total.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger">${err.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

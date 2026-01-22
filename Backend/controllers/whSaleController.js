@@ -2,6 +2,8 @@ const WHSale = require('../models/WHSale');
 const WHItem = require('../models/WHItem');
 const WHCustomer = require('../models/WHCustomer');
 const WHStockLog = require('../models/WHStockLog');
+const { addLedgerEntry, deleteLedgerEntry } = require('../utils/whLedgerUtils');
+
 
 // @desc    Create new WH Sale
 // @route   POST /api/v1/wh-sales
@@ -49,7 +51,20 @@ exports.createWHSale = async (req, res) => {
                     });
                 }
             }
+
+            // Add Ledger Entry for Posted Sale
+            await addLedgerEntry({
+                customer: sale.customer,
+                date: sale.invoiceDate,
+                description: `Credit Sale - Invoice #${sale.invoiceNo}`,
+                refType: 'Sale',
+                refId: sale._id,
+                debit: sale.netTotal,
+                credit: (sale.payMode === 'Cash' || sale.payMode === 'Bank') ? sale.paidAmount : 0,
+                createdBy: req.user ? req.user._id : null
+            });
         }
+
 
         res.status(201).json({ success: true, data: sale });
     } catch (error) {
@@ -171,10 +186,34 @@ exports.updateWHSale = async (req, res) => {
                     });
                 }
             }
+
+            // Sync Ledger for Posted Sale
+            await deleteLedgerEntry(sale._id, {
+                customer: sale.customer,
+                debit: sale.netTotal,
+                credit: (sale.payMode === 'Cash' || sale.payMode === 'Bank') ? sale.paidAmount : 0
+            });
+            await addLedgerEntry({
+                customer: sale.customer,
+                date: sale.invoiceDate,
+                description: `Credit Sale (Updated) - Invoice #${sale.invoiceNo}`,
+                refType: 'Sale',
+                refId: sale._id,
+                debit: sale.netTotal,
+                credit: (sale.payMode === 'Cash' || sale.payMode === 'Bank') ? sale.paidAmount : 0,
+                createdBy: req.user ? req.user._id : null
+            });
         }
+
         // CASE 2: Transitioning from Posted to Draft
         else if (existingStatus === 'Posted') {
+            await deleteLedgerEntry(sale._id, {
+                customer: sale.customer,
+                debit: sale.netTotal,
+                credit: (sale.payMode === 'Cash' || sale.payMode === 'Bank') ? sale.paidAmount : 0
+            });
             for (const line of oldItems) {
+
                 const whItem = await WHItem.findById(line.item);
                 if (whItem) {
                     const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
@@ -245,7 +284,13 @@ exports.deleteWHSale = async (req, res) => {
                     });
                 }
             }
+            await deleteLedgerEntry(sale._id, {
+                customer: sale.customer,
+                debit: sale.netTotal,
+                credit: (sale.payMode === 'Cash' || sale.payMode === 'Bank') ? sale.paidAmount : 0
+            });
         }
+
         await sale.deleteOne();
         res.status(200).json({ success: true, message: 'Sale deleted and stock reversed' });
     } catch (error) {

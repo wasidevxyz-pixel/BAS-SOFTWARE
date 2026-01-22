@@ -1,5 +1,8 @@
 const WHCustomer = require('../models/WHCustomer');
 const Store = require('../models/Store');
+const WHLedger = require('../models/WHLedger');
+const asyncHandler = require('../middleware/async');
+
 
 // @desc    Get next customer code
 // @route   GET /api/v1/wh-customers/next-code
@@ -187,3 +190,32 @@ exports.deleteWHCustomer = async (req, res) => {
         });
     }
 };
+
+// @desc    Sync customer balance with ledger
+// @route   POST /api/v1/wh-customers/:id/sync
+// @access  Private
+exports.syncWHCustomerBalance = asyncHandler(async (req, res) => {
+    const customer = await WHCustomer.findById(req.params.id);
+    if (!customer) {
+        return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    // Get all ledger entries
+    const ledgerEntries = await WHLedger.find({ customer: req.params.id });
+
+    // Sum them up
+    // Note: We don't include an initial opening balance here because 
+    // we assume the ledger system captures all changes. 
+    // If there was a manual start balance, it should be in the ledger as 'Opening'
+    const total = ledgerEntries.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.credit || 0), 0);
+
+    customer.openingBalance = total;
+    await customer.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Balance synced with ledger',
+        newBalance: total
+    });
+});
+

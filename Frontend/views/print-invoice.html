@@ -366,7 +366,12 @@
                         endpoint = `/api/v1/customer-demands/${id}`;
                         title = 'CUSTOMER DEMAND';
                         break;
+                    case 'wh-customer-payment':
+                        endpoint = `/api/v1/wh-customer-payments/${id}`;
+                        title = 'WH RECEIPT VOUCHER';
+                        break;
                     default:
+
                         throw new Error('Invalid document type');
                 }
 
@@ -449,9 +454,10 @@
             let items = doc.items || [];
 
             // Normalize Items for Voucher/Expense/Payment
-            if (type === 'supplier-payment' || type === 'customer-payment') {
+            if (type === 'supplier-payment' || type === 'customer-payment' || type === 'wh-customer-payment') {
                 items = [{
                     name: 'Payment Amount',
+
                     quantity: 1,
                     price: doc.amount,
                     total: doc.amount

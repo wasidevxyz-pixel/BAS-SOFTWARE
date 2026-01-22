@@ -6,7 +6,8 @@ const {
     createWHCustomer,
     updateWHCustomer,
     deleteWHCustomer,
-    getNextCode
+    getNextCode,
+    syncWHCustomerBalance
 } = require('../controllers/whCustomerController');
 
 const { protect } = require('../middleware/auth');
@@ -24,5 +25,7 @@ router.route('/:id')
     .get(getWHCustomer)
     .put(updateWHCustomer)
     .delete(deleteWHCustomer);
+
+router.post('/:id/sync', syncWHCustomerBalance);
 
 module.exports = router;
