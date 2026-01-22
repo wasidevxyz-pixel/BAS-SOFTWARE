@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WH Item Ledger - BAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <style>
+        .report-container {
+            padding: 15px;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-panel {
+            background: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-panel label {
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        .filter-panel .form-control,
+        .filter-panel .form-select {
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .data-panel {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table th {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 10px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .data-table td {
+            padding: 8px 15px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.85rem;
+            color: #4b5563;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        @media print {
+
+            .page-header,
+            .filter-panel {
+                display: none !important;
+            }
+
+            .report-container {
+                padding: 0;
+                height: auto;
+            }
+
+            .data-panel {
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar-container"></div>
+    <div class="main-content">
+        <div class="page-header px-3">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer;"></i>
+                <h6 class="mb-0 fw-bold"><i class="fas fa-list-alt me-2"></i>WH ITEM LEDGER</h6>
+            </div>
+        </div>
+
+        <div class="report-container">
+            <div class="filter-panel">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label>Item</label>
+                        <select id="filterItem" class="form-select">
+                            <option value="">Select Item</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>From Date</label>
+                        <input type="date" id="filterFrom" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label>To Date</label>
+                        <input type="date" id="filterTo" class="form-control">
+                    </div>
+                    <div class="col-md-5 d-flex gap-2">
+                        <button class="btn btn-light flex-fill fw-bold" onclick="generateReport()">
+                            <i class="fas fa-sync-alt me-1"></i>GENERATE
+                        </button>
+                        <button class="btn btn-warning text-white fw-bold" onclick="window.print()">
+                            <i class="fas fa-print me-1"></i>PRINT
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-panel">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 100px">Date</th>
+                                <th style="width: 120px">Ref #</th>
+                                <th>Description</th>
+                                <th style="width: 100px" class="text-end">Qty In</th>
+                                <th style="width: 100px" class="text-end">Qty Out</th>
+                                <th style="width: 120px" class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportContent">
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">Select item and click Generate</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        document.addEventListener('DOMContentLoaded', async () => {
+            const today = new Date().toISOString().split('T')[0];
+            const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            document.getElementById('filterFrom').value = firstOfMonth;
+            document.getElementById('filterTo').value = today;
+        });
+
+        async function generateReport() {
+            alert('WH Item Ledger report logic to be implemented');
+        }
+    </script>
+</body>
+
+</html>

@@ -427,3 +427,107 @@ function exportToExcel() {
     const wb = XLSX.utils.table_to_book(document.getElementById('customersTable'));
     XLSX.writeFile(wb, 'Customers.xlsx');
 }
+
+// Handle Excel Import
+async function handleExcelImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                showAlert('Excel file is empty', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to import ${jsonData.length} customers?`)) {
+                event.target.value = '';
+                return;
+            }
+
+            let importCount = 0;
+            let errorCount = 0;
+
+            for (const row of jsonData) {
+                // Mapping based on the headers in "WH CUSTOMER.xlsx"
+                const customerData = {
+                    code: row['Code'] || '',
+                    customerName: row['WH Customer Name'] || row['Customer Name'] || '',
+                    phone: row['Phone No'] || '',
+                    mobile: row['Mobile No'] || '',
+                    address: row['Address'] || '',
+                    customerNTN: row['NTN'] || row['CNIC'] || 'N/A', // NTN is required
+                    strn: row['STRN'] || '',
+                    cnic: row['CNIC'] || '',
+                    province: row['Province'] || '',
+                    iTax: row['I_Tax'] || '',
+                    sTax: row['S_Tax'] || '',
+                    openingBalance: parseFloat(row['Opening']) || 0,
+                    creditLimit: parseFloat(row['CLimit']) || 0,
+                    isActive: row['Active'] !== undefined ? (row['Active'] === true || row['Active'] === 'true' || row['Active'] === 1) : true,
+                    isCash: false
+                };
+
+                // Match Category
+                const catName = row['WH Customer Category'] || row['Category'];
+                if (catName) {
+                    const matchedCat = categories.find(c => c.name.toLowerCase() === catName.toString().toLowerCase());
+                    if (matchedCat) {
+                        customerData.customerCategory = matchedCat._id;
+                    }
+                }
+
+                // Match City
+                const cityName = row['City'];
+                if (cityName) {
+                    const matchedCity = cities.find(c => c.name.toLowerCase() === cityName.toString().toLowerCase());
+                    if (matchedCity) {
+                        customerData.city = matchedCity._id;
+                    }
+                }
+
+                if (!customerData.customerName) {
+                    console.warn('Skipping row due to missing name:', row);
+                    continue;
+                }
+
+                try {
+                    const response = await fetch('/api/v1/wh-customers', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(customerData)
+                    });
+                    const result = await response.json();
+                    if (result.success) importCount++;
+                    else {
+                        console.error('Failed to import row:', customerData.customerName, result.error || result.message);
+                        errorCount++;
+                    }
+                } catch (err) {
+                    console.error('Error importing row:', err);
+                    errorCount++;
+                }
+            }
+
+            showAlert(`Import completed: ${importCount} success, ${errorCount} errors`, importCount > 0 ? 'success' : 'danger');
+            loadCustomers();
+            event.target.value = '';
+
+        } catch (error) {
+            console.error('Excel processing error:', error);
+            showAlert('Error processing Excel file', 'danger');
+            event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}

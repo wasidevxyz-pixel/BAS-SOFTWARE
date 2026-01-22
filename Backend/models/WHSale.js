@@ -162,7 +162,7 @@ const whSaleSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware for invoice number generation
-whSaleSchema.pre('save', async function (next) {
+whSaleSchema.pre('save', async function () {
     if (!this.invoiceNo || this.invoiceNo === 'AUTO') {
         const year = new Date().getFullYear();
         const startOfYear = new Date(year, 0, 1);
@@ -173,12 +173,10 @@ whSaleSchema.pre('save', async function (next) {
                 createdAt: { $gte: startOfYear, $lt: endOfYear }
             });
             this.invoiceNo = `INV-WS-${year}-${String(count + 1).padStart(4, '0')}`;
-            next();
         } catch (err) {
-            next(err);
+            console.error('Error generating sale invoice number:', err);
+            throw err;
         }
-    } else {
-        next();
     }
 });
 

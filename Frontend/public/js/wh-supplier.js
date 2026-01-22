@@ -350,6 +350,98 @@ function exportToExcel() {
     XLSX.writeFile(wb, 'WH_Suppliers.xlsx');
 }
 
+// Handle Excel Import
+async function handleExcelImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                showAlert('Excel file is empty', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to import ${jsonData.length} suppliers?`)) {
+                event.target.value = '';
+                return;
+            }
+
+            let importCount = 0;
+            let errorCount = 0;
+
+            for (const row of jsonData) {
+                // Mapping based on the headers found in "WH CUSTOMER.xlsx"
+                const supplierData = {
+                    code: row['Code'] || '',
+                    supplierName: row['WH Customer Name'] || row['Supplier Name'] || '',
+                    phone: row['Phone No'] || '',
+                    mobile: row['Mobile No'] || '',
+                    address: row['Address'] || '',
+                    supplierNTN: row['NTN'] || row['CNIC'] || 'N/A', // NTN is required, fallback to CNIC or N/A
+                    strn: row['STRN'] || '',
+                    city: row['City'] || '',
+                    whtPercentage: parseFloat(row['I_Tax']) || 0,
+                    advTaxPercentage: parseFloat(row['S_Tax']) || 0,
+                    isActive: row['Active'] !== undefined ? (row['Active'] === true || row['Active'] === 'true' || row['Active'] === 1) : true,
+                    openingBalance: parseFloat(row['Opening']) || 0
+                };
+
+                // Match Category
+                const catName = row['WH Customer Category'] || row['Category'];
+                if (catName) {
+                    const matchedCat = categories.find(c => c.name.toLowerCase() === catName.toString().toLowerCase());
+                    if (matchedCat) {
+                        supplierData.supplierCategory = matchedCat._id;
+                    }
+                }
+
+                if (!supplierData.supplierName) {
+                    console.warn('Skipping row due to missing name:', row);
+                    continue;
+                }
+
+                try {
+                    const response = await fetch('/api/v1/wh-suppliers', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(supplierData)
+                    });
+                    const result = await response.json();
+                    if (result.success) importCount++;
+                    else {
+                        console.error('Failed to import row:', supplierData.supplierName, result.error);
+                        errorCount++;
+                    }
+                } catch (err) {
+                    console.error('Error importing row:', err);
+                    errorCount++;
+                }
+            }
+
+            showAlert(`Import completed: ${importCount} success, ${errorCount} errors`, importCount > 0 ? 'success' : 'danger');
+            loadSuppliers();
+            event.target.value = '';
+
+        } catch (error) {
+            console.error('Excel processing error:', error);
+            showAlert('Error processing Excel file', 'danger');
+            event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 // Show alert
 function showAlert(message, type) {
     const alertDiv = document.createElement('div');

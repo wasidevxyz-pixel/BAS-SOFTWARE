@@ -182,7 +182,7 @@ const whSaleReturnSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware for return number generation
-whSaleReturnSchema.pre('save', async function (next) {
+whSaleReturnSchema.pre('save', async function () {
     if (!this.returnNo || this.returnNo === 'AUTO') {
         const year = new Date().getFullYear();
         const startOfYear = new Date(year, 0, 1);
@@ -192,12 +192,10 @@ whSaleReturnSchema.pre('save', async function (next) {
                 createdAt: { $gte: startOfYear, $lt: endOfYear }
             });
             this.returnNo = `SR-WS-${year}-${String(count + 1).padStart(4, '0')}`;
-            next();
         } catch (err) {
-            next(err);
+            console.error('Error generating sale return number:', err);
+            throw err;
         }
-    } else {
-        next();
     }
 });
 

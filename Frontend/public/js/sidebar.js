@@ -104,7 +104,13 @@ class SidebarNavigation {
                             { label: 'Date-Wise Sales', link: '/date-wise-sales-report.html', permission: 'date_wise_sales_link' },
                             { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' },
                             { label: 'WH Customer Ledger', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
-                            { label: 'WH Customer Balance', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' }
+                            { label: 'WH Customer Balance', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' },
+                            { label: 'WH Stock Position', link: '/wh-stock-position-report.html', permission: 'wh_stock_position_rpt' },
+                            { label: 'WH Item Ledger', link: '/wh-item-ledger-report.html', permission: 'wh_item_ledger_rpt' },
+                            { label: 'WH Cost of Stock', link: '/wh-cost-stock-report.html', permission: 'wh_cost_stock_rpt' },
+                            { label: 'WH Stock Activity', link: '/wh-stock-activity-report.html', permission: 'wh_stock_activity_rpt' },
+                            { label: 'WH Date-Wise Stock', link: '/wh-date-wise-stock-report.html', permission: 'wh_date_wise_stock_rpt' },
+                            { label: 'WH Stock In Hand', link: '/wh-stock-in-hand-report.html', permission: 'wh_stock_in_hand_rpt' }
                         ]
                     },
                     {

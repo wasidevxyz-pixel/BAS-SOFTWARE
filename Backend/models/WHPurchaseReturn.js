@@ -145,7 +145,7 @@ const WHPurchaseReturnSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware for return number generation
-WHPurchaseReturnSchema.pre('save', async function (next) {
+WHPurchaseReturnSchema.pre('save', async function () {
     if (!this.returnNo || this.returnNo === 'AUTO') {
         const year = new Date().getFullYear();
         const startOfYear = new Date(year, 0, 1);
@@ -155,12 +155,10 @@ WHPurchaseReturnSchema.pre('save', async function (next) {
                 createdAt: { $gte: startOfYear, $lt: endOfYear }
             });
             this.returnNo = `PR-WS-${year}-${String(count + 1).padStart(4, '0')}`;
-            next();
         } catch (err) {
-            next(err);
+            console.error('Error generating purchase return number:', err);
+            throw err;
         }
-    } else {
-        next();
     }
 });
 
