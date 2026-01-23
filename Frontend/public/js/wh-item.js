@@ -405,7 +405,6 @@ async function saveItem() {
         barcode: document.getElementById('grossPerBarCode').value,
         name: document.getElementById('itemName').value,
         costPrice: parseFloat(document.getElementById('costPrice').value) || 0,
-        salePrice: parseFloat(document.getElementById('salePrice').value) || 0,
         retailPrice: parseFloat(document.getElementById('retailPrice').value) || 0,
         incentive: parseFloat(document.getElementById('incentive').value) || 0,
         company: document.getElementById('company').value || null,
@@ -590,7 +589,7 @@ function renderItemList(items) {
                 <td style="${bgBlue}">${item.barcode || item.itemsCode || ''}</td>
                 <td style="${bgBlue} text-align: left; padding-left: 10px;">${item.name || ''}</td>
                 <td style="${bgGreen}">${item.costPrice || 0}</td>
-                <td style="${bgRed}">${item.salePrice || 0}</td>
+                <td style="${bgRed}">${item.retailPrice || 0}</td>
                 <td style="${bgOrange}">${item.incentive || 0}</td>
                 <td style="${bgPink}">${totalStock}</td>
                 <td style="${bgYellow}">${getCompanyName(item.company)}</td>
@@ -673,7 +672,6 @@ async function selectItem(id) {
             document.getElementById('itemName').value = item.name;
             document.getElementById('itemCode').value = item.itemsCode || '';
             document.getElementById('costPrice').value = item.costPrice;
-            document.getElementById('salePrice').value = item.salePrice;
             document.getElementById('retailPrice').value = item.retailPrice;
             document.getElementById('incentive').value = item.incentive;
             document.getElementById('isActive').checked = item.isActive;

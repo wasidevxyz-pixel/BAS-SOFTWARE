@@ -104,7 +104,6 @@ function loadPurchaseItems() {
             name: item.item.name || itemsList.find(i => i._id === item.item)?.name || 'Unknown',
             barcode: item.barcode,
             costPrice: item.costPrice,
-            salePrice: item.salePrice,
             retailPrice: item.retailPrice
         };
 
@@ -284,7 +283,6 @@ function addNewRow(itemData = null) {
     const itemId = itemData ? itemData._id : '';
     const itemName = itemData ? itemData.name : '';
     const costPrice = itemData ? itemData.costPrice || 0 : 0;
-    const salePrice = itemData ? itemData.salePrice || 0 : 0;
     const retailPrice = itemData ? itemData.retailPrice || 0 : 0;
     const itemBarcode = itemData ? itemData.barcode || '' : '';
 
@@ -314,7 +312,6 @@ function addNewRow(itemData = null) {
         <td><input type="number" class="form-control form-control-sm calc-input" name="taxPercent" value="0" step="0.01" oninput="calculateRow(${rowCount})"></td>
         <td><input type="number" class="form-control form-control-sm calc-input" name="taxVal" value="0" step="0.01" readonly></td>
         <td><input type="number" class="form-control form-control-sm fw-bold border-0 bg-light" name="netTotal" value="0" readonly></td>
-        <td><input type="number" class="form-control form-control-sm" name="salePrice" value="${salePrice}" step="0.01"></td>
         <td><input type="number" class="form-control form-control-sm" name="retailPrice" value="${retailPrice}" step="0.01"></td>
         <td class="text-center">
             <button type="button" class="btn btn-danger btn-sm p-0 px-1" onclick="removeRow(${rowCount})"><i class="fas fa-trash"></i></button>
@@ -609,7 +606,6 @@ function selectItemForRow(item, id) {
     row.querySelector('input[name="barcode"]').value = item.barcode || item.itemsCode || '';
     row.querySelector('.item-search').value = item.name;
     row.querySelector('input[name="costPrice"]').value = item.costPrice || 0;
-    row.querySelector('input[name="salePrice"]').value = item.salePrice || 0;
     row.querySelector('input[name="retailPrice"]').value = item.retailPrice || 0;
 
     // Default quantity empty - user will enter

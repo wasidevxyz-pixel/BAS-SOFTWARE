@@ -873,7 +873,7 @@ function renderLookupItemList(items) {
             <td><button class="btn btn-sm btn-primary" onclick="selectLookupItem('${it._id}')">Select</button></td>
             <td>${it.barcode || it.itemsCode || ''}</td>
             <td>${it.name}</td>
-            <td>${it.salePrice.toFixed(2)}</td>
+            <td>${it.retailPrice.toFixed(2)}</td>
             <td>${it.costPrice.toFixed(2)}</td>
             <td>${(it.stock && it.stock.length > 0) ? it.stock[0].quantity : 0}</td>
             <td>${it.category ? it.category.name : ''}</td>

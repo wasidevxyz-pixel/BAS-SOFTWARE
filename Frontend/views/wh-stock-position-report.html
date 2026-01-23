@@ -327,13 +327,13 @@
             document.getElementById('printDate').textContent = new Date().toLocaleString();
             await loadFilters();
 
-            // Auto-check Show Incentive when "With Incentive" criteria is selected
+            // Auto-check Show Incentive when "With Incentive" criteria is selected, uncheck otherwise
             document.getElementById('filterCriteria').addEventListener('change', function () {
                 if (this.value === 'incentive') {
                     document.getElementById('showIncentive').checked = true;
+                } else {
+                    document.getElementById('showIncentive').checked = false;
                 }
-                // Optional: Re-render if we want immediate feedback based on criteria change without fetch (but data might not match)
-                // For now, only fetch updates data.
             });
 
             // Re-render table when checkbox is toggled (client-side toggle)
@@ -341,6 +341,25 @@
                 if (currentRepoData.length > 0) {
                     renderData(currentRepoData);
                 }
+            });
+
+            // Implement Auto Search (Live Filtering) with Debounce
+            let filterTimeout;
+            document.getElementById('filterSearch').addEventListener('input', () => {
+                clearTimeout(filterTimeout);
+                filterTimeout = setTimeout(() => {
+                    const query = document.getElementById('filterSearch').value.toLowerCase().trim();
+                    if (currentRepoData.length > 0) {
+                        const filtered = currentRepoData.filter(item =>
+                            (item.name && item.name.toLowerCase().includes(query)) ||
+                            (item.itemsCode && String(item.itemsCode).toLowerCase().includes(query)) ||
+                            (item.barcode && String(item.barcode).toLowerCase().includes(query))
+                        );
+                        renderData(filtered);
+                    } else if (query.length >= 3) {
+                        generateReport();
+                    }
+                }, 300);
             });
         });
 

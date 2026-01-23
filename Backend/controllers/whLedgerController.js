@@ -99,6 +99,7 @@ exports.getWHStockPosition = asyncHandler(async (req, res) => {
     if (search) {
         query.$or = [
             { itemsCode: { $regex: search, $options: 'i' } },
+            { barcode: { $regex: search, $options: 'i' } },
             { name: { $regex: search, $options: 'i' } }
         ];
     }

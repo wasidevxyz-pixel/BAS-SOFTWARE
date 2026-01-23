@@ -639,7 +639,7 @@
                 <th>Physical Qty</th>
                 <th>Diff</th>
                 <th>Cost</th>
-                <th>Sale</th>
+                <th>Retail</th>
             `;
 
             items.forEach((line, index) => {
@@ -659,7 +659,7 @@
                     <td class="text-center fw-bold">${line.physicalQty || 0}</td>
                     <td class="text-center ${diff < 0 ? 'text-danger' : (diff > 0 ? 'text-success' : '')} fw-bold">${diff}</td>
                     <td class="text-end">${(line.costPrice || 0).toFixed(2)}</td>
-                    <td class="text-end">${(line.salePrice || 0).toFixed(2)}</td>
+                    <td class="text-end">${(line.retailPrice || 0).toFixed(2)}</td>
                 `;
                 tbody.appendChild(tr);
             });
