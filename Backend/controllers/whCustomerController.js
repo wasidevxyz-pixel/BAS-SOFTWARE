@@ -272,3 +272,34 @@ exports.syncWHCustomerBalance = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Sync ALL customer balances with ledger
+// @route   POST /api/v1/wh-customers/sync-all
+// @access  Private
+exports.syncAllWHCustomerBalances = asyncHandler(async (req, res) => {
+    const customers = await WHCustomer.find();
+    let updatedCount = 0;
+    const WHLedger = require('../models/WHLedger'); // Ensure model is available
+
+    for (const customer of customers) {
+        const ledgerEntries = await WHLedger.find({ customer: customer._id });
+        const total = ledgerEntries.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.credit || 0), 0);
+        const openingEntry = ledgerEntries.find(e => e.refType === 'Opening');
+
+        if (openingEntry) {
+            customer.openingBalance = (openingEntry.debit || 0) - (openingEntry.credit || 0);
+        } else {
+            customer.openingBalance = 0;
+        }
+
+        customer.currentBalance = total;
+        await customer.save();
+        updatedCount++;
+    }
+
+    res.status(200).json({
+        success: true,
+        message: `Synced ${updatedCount} customers`,
+        count: updatedCount
+    });
+});
+

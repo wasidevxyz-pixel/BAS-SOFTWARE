@@ -7,7 +7,8 @@ const {
     updateWHCustomer,
     deleteWHCustomer,
     getNextCode,
-    syncWHCustomerBalance
+    syncWHCustomerBalance,
+    syncAllWHCustomerBalances
 } = require('../controllers/whCustomerController');
 
 const { protect } = require('../middleware/auth');
@@ -15,6 +16,7 @@ const { protect } = require('../middleware/auth');
 // All routes require authentication
 router.use(protect);
 
+router.post('/sync-all', syncAllWHCustomerBalances);
 router.get('/next-code', getNextCode);
 
 router.route('/')

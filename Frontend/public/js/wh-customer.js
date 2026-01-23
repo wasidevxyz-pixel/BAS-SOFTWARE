@@ -313,6 +313,22 @@ async function deleteCustomer(id) {
     } catch (error) { showAlert('Error deleting customer', 'danger'); }
 }
 
+async function syncAllBalances() {
+    if (!confirm('This will recalculate all customer balances from their ledgers. Continue?')) return;
+
+    try {
+        const response = await fetch('/api/v1/wh-customers/sync-all', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(result.message, 'success');
+            await loadCustomers();
+        }
+    } catch (e) { showAlert('Error syncing balances', 'danger'); }
+}
+
 // Handle Category/City/Type Modals
 function showCategoryModal() {
     resetCategoryForm();
