@@ -679,7 +679,11 @@
                                                     <span class="server-info-value" id="dbName">--</span>
                                                 </li>
                                                 <li>
-                                                    <span class="server-info-label">Storage Size</span>
+                                                    <span class="server-info-label">Actual Data Size</span>
+                                                    <span class="server-info-value" id="dbDataSize">--</span>
+                                                </li>
+                                                <li>
+                                                    <span class="server-info-label">Storage Size (Compressed)</span>
                                                     <span class="server-info-value" id="dbSpace">--</span>
                                                 </li>
                                                 <li>
@@ -1219,8 +1223,10 @@
 
                 // New: Database Space/Storage Size
                 const dbSpace = document.getElementById('dbSpace');
+                const dbDataSize = document.getElementById('dbDataSize');
                 const dbFreeSpace = document.getElementById('dbFreeSpace');
                 if (data.database.stats) {
+                    if (dbDataSize) dbDataSize.textContent = data.database.stats.size || 'N/A';
                     if (dbSpace) dbSpace.textContent = data.database.stats.storageSize || 'N/A (Restart Required)';
                     if (dbFreeSpace) dbFreeSpace.textContent = data.database.stats.freeSize || 'N/A (Restart Required)';
                 }
