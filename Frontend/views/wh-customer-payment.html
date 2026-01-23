@@ -238,6 +238,28 @@
         .btn-action-warning:hover {
             background: #e0a800;
         }
+
+        /* Autocomplete Styles */
+        .suggestion-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.active {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .suggestion-item:hover .text-muted,
+        .suggestion-item.active .text-muted {
+            color: #d1d1d1 !important;
+        }
     </style>
 </head>
 
@@ -283,14 +305,26 @@
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label">Customer</label>
-                                    <div class="input-group">
-                                        <select class="form-select" id="customer" required>
+                                    <div class="input-group position-relative">
+                                        <!-- Hidden Select to maintain compatibility with existing JS logic -->
+                                        <select class="form-select d-none" id="customer" required>
                                             <option value="">Select Customer</option>
                                         </select>
+
+                                        <!-- Search Input -->
+                                        <input type="text" class="form-control" id="customerSearch"
+                                            placeholder="Type to search customer..." autocomplete="off">
+
                                         <button type="button" class="btn btn-outline-secondary btn-sm"
                                             onclick="loadCustomers()">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
+
+                                        <!-- Suggestions Dropdown -->
+                                        <div id="customerSuggestions"
+                                            class="list-group position-absolute w-100 shadow-sm"
+                                            style="top: 100%; left: 0; z-index: 1050; max-height: 200px; overflow-y: auto; display: none;">
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="mb-2">

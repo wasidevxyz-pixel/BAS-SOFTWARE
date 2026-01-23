@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
 let selectedCustomer = null;
 let currentEditId = null;
 const token = localStorage.getItem('token');
+let allCustomers = []; // Store customers for search
+let currentFocus = -1; // For autocomplete navigation
 
 async function initializePage() {
     // Set default dates
@@ -19,15 +21,6 @@ async function initializePage() {
     await loadPayments();
     await loadCashInHand();
 
-
-    // Shortcut Key: Alt + S for Save
-    document.addEventListener('keydown', (e) => {
-        if (e.altKey && e.key.toLowerCase() === 's') {
-            e.preventDefault();
-            document.getElementById('paymentForm').requestSubmit();
-        }
-    });
-
     // Event listeners
     document.getElementById('customer').addEventListener('change', handleCustomerChange);
     document.getElementById('amount').addEventListener('input', calculateBalance);
@@ -40,8 +33,30 @@ async function initializePage() {
 
     // Filter listener
     document.getElementById('filterSearch').addEventListener('input', debounce(loadPayments, 500));
-}
 
+    // Autocomplete Listeners
+    const searchInput = document.getElementById('customerSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleCustomerSearch);
+        searchInput.addEventListener('keydown', handleCustomerSearchKeydown);
+    }
+
+    // Close suggestions on click outside
+    document.addEventListener('click', (e) => {
+        const suggs = document.getElementById('customerSuggestions');
+        if (suggs && !e.target.closest('#customerSearch') && !e.target.closest('#customerSuggestions')) {
+            suggs.style.display = 'none';
+        }
+    });
+
+    // Shortcut Key: Alt + S for Save
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            document.getElementById('paymentForm').requestSubmit();
+        }
+    });
+}
 
 async function loadCustomers() {
     try {
@@ -54,6 +69,8 @@ async function loadCustomers() {
 
         select.innerHTML = '<option value="">Select Customer</option>';
         if (data.success) {
+            allCustomers = data.data; // Store for search
+
             data.data.forEach(cust => {
                 const option = document.createElement('option');
                 option.value = cust._id;
@@ -63,18 +80,23 @@ async function loadCustomers() {
             });
             if (currentValue) {
                 select.value = currentValue;
-                // Manually trigger the balance update to show the new balance from DB
+                // Sync Search Input
+                const found = allCustomers.find(c => c._id === currentValue);
+                if (found) {
+                    const si = document.getElementById('customerSearch');
+                    if (si) si.value = `${found.customerName} (${found.code})`;
+                }
                 handleCustomerChange({ target: select });
             }
         }
-
     } catch (error) {
         console.error('Error loading customers:', error);
     }
 }
 
 function handleCustomerChange(e) {
-    const option = e.target.options[e.target.selectedIndex];
+    const select = document.getElementById('customer');
+    const option = select.options[select.selectedIndex];
     if (option && option.value) {
         const balance = parseFloat(option.dataset.balance || 0);
         document.getElementById('previousBalance').value = balance;
@@ -93,9 +115,6 @@ function calculateBalance() {
 
     let discAmount = parseFloat(document.getElementById('discountAmount').value || 0);
 
-    // If discount percent changed, update discount amount
-    // If discount amount changed manually, we don't update percent here to avoid loops
-    // In this simple implementation, we'll favor percent if it's > 0
     if (discPercent > 0) {
         discAmount = (amount * discPercent) / 100;
         document.getElementById('discountAmount').value = discAmount.toFixed(2);
@@ -123,7 +142,6 @@ function handlePaymentModeChange(e) {
 
 async function handleSave(e) {
     e.preventDefault();
-
     const formData = {
         paymentType: document.getElementById('paymentType').value,
         date: document.getElementById('date').value,
@@ -157,8 +175,7 @@ async function handleSave(e) {
             loadPayments();
             loadCustomers();
             loadCashInHand();
-        }
-        else {
+        } else {
             alert('Error: ' + data.error);
         }
     } catch (error) {
@@ -172,10 +189,8 @@ async function loadPayments() {
     const to = document.getElementById('filterTo').value;
     const search = document.getElementById('filterSearch').value;
 
-    let url = `/api/v1/wh-customer-payments?from=${from}&to=${to}`;
-
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`/api/v1/wh-customer-payments?from=${from}&to=${to}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -212,21 +227,14 @@ async function loadPayments() {
                     <td>${p.paymentMode}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary" onclick="editPayment('${p._id}')" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-info" onclick="printVoucher('${p._id}')" title="Print">
-                                <i class="fas fa-print"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" onclick="deletePayment('${p._id}')" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <button class="btn btn-outline-primary" onclick="editPayment('${p._id}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-outline-info" onclick="printVoucher('${p._id}')"><i class="fas fa-print"></i></button>
+                            <button class="btn btn-outline-danger" onclick="deletePayment('${p._id}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-
             document.getElementById('totalAmountSum').textContent = totalAmount.toFixed(2);
             document.getElementById('totalDiscountSum').textContent = totalDisc.toFixed(2);
         }
@@ -244,7 +252,6 @@ async function editPayment(id) {
         if (data.success) {
             const p = data.data;
             currentEditId = id;
-            document.getElementById('paymentId').value = id;
             document.getElementById('paymentType').value = p.paymentType;
             document.getElementById('date').value = p.date.split('T')[0];
             document.getElementById('customer').value = p.customer._id || p.customer;
@@ -257,19 +264,22 @@ async function editPayment(id) {
             document.getElementById('bankName').value = p.bankName || '';
             document.getElementById('remarks').value = p.remarks || '';
 
+            const custId = p.customer._id || p.customer;
+            const found = allCustomers.find(c => c._id === custId);
+            if (found) {
+                const si = document.getElementById('customerSearch');
+                if (si) si.value = `${found.customerName} (${found.code})`;
+            }
             handlePaymentModeChange({ target: { value: p.paymentMode } });
-
-            // UI Update
             document.getElementById('btnSave').innerHTML = '<i class="fas fa-check me-1"></i>UPDATE';
         }
-
     } catch (error) {
         console.error('Error editing payment:', error);
     }
 }
 
 async function deletePayment(id) {
-    if (!confirm('Are you sure you want to delete this payment voucher?')) return;
+    if (!confirm('Are you sure?')) return;
     try {
         const response = await fetch(`/api/v1/wh-customer-payments/${id}`, {
             method: 'DELETE',
@@ -278,11 +288,8 @@ async function deletePayment(id) {
         const data = await response.json();
         if (data.success) {
             alert('Voucher deleted');
-            loadPayments();
-            loadCustomers();
-            loadCashInHand();
+            loadPayments(); loadCustomers(); loadCashInHand();
         }
-
     } catch (error) {
         console.error('Error deleting payment:', error);
     }
@@ -290,7 +297,6 @@ async function deletePayment(id) {
 
 async function loadCashInHand() {
     try {
-        // Using existing cash transactions summary if available
         const response = await fetch('/api/v1/cash-transactions/summary', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -305,8 +311,9 @@ async function loadCashInHand() {
 
 function resetForm() {
     currentEditId = null;
-    document.getElementById('paymentId').value = '';
     document.getElementById('paymentForm').reset();
+    const si = document.getElementById('customerSearch');
+    if (si) si.value = '';
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
     document.getElementById('btnSave').innerHTML = '<i class="fas fa-save me-1"></i>SAVE';
     document.getElementById('bankInfo').classList.add('d-none');
@@ -315,60 +322,103 @@ function resetForm() {
 }
 
 function printVoucher(id) {
-    const voucherId = id || currentEditId;
-    if (!voucherId) {
-        alert('Please save the voucher first or select one from the list');
-        return;
-    }
-    const url = `/print-invoice.html?type=wh-customer-payment&id=${voucherId}`;
-    window.open(url, '_blank');
+    const vid = id || currentEditId;
+    if (!vid) return alert('Select voucher');
+    window.open(`/print-invoice.html?type=wh-customer-payment&id=${vid}`, '_blank');
 }
 
 async function syncBalance() {
-    const customerId = document.getElementById('customer').value;
-    if (!customerId) return alert('Please select a customer first');
-
+    const cid = document.getElementById('customer').value;
+    if (!cid) return alert('Select customer');
     const btn = event.currentTarget;
-    const originalHtml = btn.innerHTML;
+    const old = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
-
     try {
-        const res = await fetch(`/api/v1/wh-customers/${customerId}/sync`, {
+        const res = await fetch(`/api/v1/wh-customers/${cid}/sync`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data.success) {
-            alert('Balance synced successfully');
-            await loadCustomers(); // Re-fetch all customers to get the new balance
-        } else {
-            alert(data.message || 'Error syncing balance');
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Connection error');
-    } finally {
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
-    }
+        if (data.success) { alert('Synced'); await loadCustomers(); }
+        else { alert(data.message || 'Error'); }
+    } catch (err) { console.error(err); } finally { btn.innerHTML = old; btn.disabled = false; }
 }
+
 function viewLedger() {
-    const customerId = document.getElementById('customer').value;
-    if (!customerId) return alert('Please select a customer first');
-    window.location.href = `/wh-customer-ledger-report.html?id=${customerId}`;
+    const cid = document.getElementById('customer').value;
+    if (!cid) return alert('Select customer');
+    window.location.href = `/wh-customer-ledger-report.html?id=${cid}`;
 }
 
-
-// Helper: Debounce
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+        const later = () => { clearTimeout(timeout); func(...args); };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+function handleCustomerSearch(e) {
+    const val = e.target.value;
+    const list = document.getElementById('customerSuggestions');
+    if (!list) return;
+    list.innerHTML = '';
+    currentFocus = -1;
+    if (!val) { list.style.display = 'none'; document.getElementById('customer').value = ''; return; }
+    const matches = allCustomers.filter(c =>
+        (c.customerName || '').toLowerCase().includes(val.toLowerCase()) ||
+        (c.code || '').toLowerCase().includes(val.toLowerCase())
+    );
+    if (matches.length === 0) { list.style.display = 'none'; return; }
+    matches.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'list-group-item list-group-item-action suggestion-item';
+        div.innerHTML = `<div class="d-flex justify-content-between align-items-center"><span>${highlightMatch(c.customerName, val)}</span><small class="text-muted">${c.code || ''}</small></div>`;
+        div.onclick = function () { selectCustomerFromSearch(c); };
+        list.appendChild(div);
+    });
+    list.style.display = 'block';
+}
+
+function handleCustomerSearchKeydown(e) {
+    let list = document.getElementById('customerSuggestions');
+    if (!list) return;
+    let items = list.getElementsByClassName('suggestion-item');
+    if (e.key === 'ArrowDown') { currentFocus++; addActive(items); }
+    else if (e.key === 'ArrowUp') { currentFocus--; addActive(items); }
+    else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentFocus > -1 && items[currentFocus]) items[currentFocus].click();
+        else if (items.length > 0) items[0].click();
+    }
+}
+
+function addActive(items) {
+    if (!items) return; removeActive(items);
+    if (currentFocus >= items.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = items.length - 1;
+    items[currentFocus].classList.add('active');
+    items[currentFocus].scrollIntoView({ block: 'nearest' });
+}
+
+function removeActive(items) {
+    for (let i = 0; i < items.length; i++) items[i].classList.remove('active');
+}
+
+function selectCustomerFromSearch(c) {
+    const si = document.getElementById('customerSearch');
+    if (si) si.value = `${c.customerName} (${c.code})`;
+    const list = document.getElementById('customerSuggestions');
+    if (list) list.style.display = 'none';
+    const select = document.getElementById('customer');
+    select.value = c._id;
+    handleCustomerChange({ target: select });
+}
+
+function highlightMatch(text, search) {
+    if (!text) return '';
+    if (!search) return text;
+    return text.replace(new RegExp(`(${search})`, 'gi'), '<b>$1</b>');
 }
