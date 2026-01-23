@@ -16,7 +16,7 @@ const whLedgerSchema = new mongoose.Schema({
     },
     refType: {
         type: String,
-        enum: ['Sale', 'SaleReturn', 'Payment'],
+        enum: ['Sale', 'SaleReturn', 'Payment', 'Opening'],
         required: true
     },
     refId: {

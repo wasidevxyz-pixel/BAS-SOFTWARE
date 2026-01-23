@@ -174,6 +174,7 @@ function renderTable() {
             <td class="text-center">${customer.customerCategory?.name || '-'}</td>
             <td class="text-center">${customer.city?.name || '-'}</td>
             <td class="text-center">${customer.mobile || customer.phone || '-'}</td>
+            <td class="text-end fw-bold">${(customer.openingBalance || 0).toLocaleString()}</td>
             <td class="text-center">${customer.customerNTN || '-'}</td>
             <td class="text-center">${customer.whtPercentage}%</td>
             <td class="text-center">${customer.advTaxPercentage}%</td>

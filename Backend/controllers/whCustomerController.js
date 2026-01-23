@@ -108,6 +108,20 @@ exports.createWHCustomer = async (req, res) => {
 
         const customer = await WHCustomer.create(req.body);
 
+        // Create Opening Ledger Entry if balance is set
+        if (req.body.openingBalance && req.body.openingBalance !== 0) {
+            await WHLedger.create({
+                customer: customer._id,
+                date: new Date('2000-01-01'), // Old date to ensure it's always opening balance
+                description: 'Opening Balance',
+                refType: 'Opening',
+                refId: customer._id,
+                debit: req.body.openingBalance > 0 ? req.body.openingBalance : 0,
+                credit: req.body.openingBalance < 0 ? Math.abs(req.body.openingBalance) : 0,
+                createdBy: req.user.id
+            });
+        }
+
         res.status(201).json({
             success: true,
             message: 'WH Customer created successfully',
@@ -146,6 +160,28 @@ exports.updateWHCustomer = async (req, res) => {
             }
         );
 
+        // Update or Create Opening Ledger Entry
+        const openingAmount = req.body.openingBalance || 0;
+        let openingEntry = await WHLedger.findOne({ customer: customer._id, refType: 'Opening' });
+
+        if (openingEntry) {
+            openingEntry.debit = openingAmount > 0 ? openingAmount : 0;
+            openingEntry.credit = openingAmount < 0 ? Math.abs(openingAmount) : 0;
+            openingEntry.date = new Date('2000-01-01'); // Ensure date is always in the past
+            await openingEntry.save();
+        } else if (openingAmount !== 0) {
+            await WHLedger.create({
+                customer: customer._id,
+                date: new Date('2000-01-01'),
+                description: 'Opening Balance',
+                refType: 'Opening',
+                refId: customer._id,
+                debit: openingAmount > 0 ? openingAmount : 0,
+                credit: openingAmount < 0 ? Math.abs(openingAmount) : 0,
+                createdBy: req.user.id
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: 'WH Customer updated successfully',
@@ -175,6 +211,7 @@ exports.deleteWHCustomer = async (req, res) => {
             });
         }
 
+        await WHLedger.deleteMany({ customer: customer._id, refType: 'Opening' });
         await customer.deleteOne();
 
         res.status(200).json({
