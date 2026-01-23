@@ -54,6 +54,35 @@
             border-left: 4px solid #0d6efd;
             font-weight: 600;
         }
+
+        /* Name search suggestions styling */
+        #nameSuggestions .list-group-item {
+            border: none;
+            border-bottom: 1px solid #f1f3f5;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #nameSuggestions .list-group-item:hover,
+        #nameSuggestions .list-group-item.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+
+        #nameSuggestions .list-group-item:hover .text-muted,
+        #nameSuggestions .list-group-item.active .text-muted {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        #nameSuggestions::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #nameSuggestions::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
     </style>
 </head>
 
@@ -88,6 +117,7 @@
                                     <th>ItemName</th>
                                     <th>Cost</th>
                                     <th>Sale</th>
+                                    <th>Incentive</th>
                                     <th>Stock</th>
                                     <th>Company</th>
                                     <th>Category</th>
@@ -136,9 +166,14 @@
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label text-danger fw-bold">Search By Name</label>
-                                    <select class="form-select" id="searchName">
-                                        <option value="">Select Item</option>
-                                    </select>
+                                    <div class="position-relative">
+                                        <input type="text" class="form-control" id="searchName"
+                                            placeholder="Type item name..." oninput="filterItemsByName(this.value)"
+                                            onkeydown="handleNameSearchKeydown(event)" autocomplete="off">
+                                        <div id="nameSuggestions" class="list-group position-absolute w-100"
+                                            style="z-index: 1050; display:none; max-height: 300px; overflow-y: auto; top: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ced4da; border-radius: 4px;">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

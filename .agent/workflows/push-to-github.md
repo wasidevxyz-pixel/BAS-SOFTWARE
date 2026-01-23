@@ -4,9 +4,9 @@ description: Push code to the official BAS-SOFTWARE repository
 
 This workflow ensures that code is pushed to the correct repository: `https://github.com/wasidevxyz-pixel/BAS-SOFTWARE.git`.
 
-1. **Verify Remote**: Ensure the `origin` remote is set to `git@github.com:wasidevxyz-pixel/BAS-SOFTWARE.git`.
+1. **Verify Remote**: Ensure the `origin` remote is set to `https://github.com/wasidevxyz-pixel/BAS-SOFTWARE.git`.
    ```powershell
-   git remote set-url origin git@github.com:wasidevxyz-pixel/BAS-SOFTWARE.git
+   git remote set-url origin https://github.com/wasidevxyz-pixel/BAS-SOFTWARE.git
    ```
 
 2. **Stage Changes**:

@@ -10,7 +10,7 @@ exports.getWHItems = async (req, res) => {
         const reqQuery = { ...req.query };
 
         // Fields to exclude
-        const removeFields = ['select', 'sort', 'page', 'limit'];
+        const removeFields = ['select', 'sort', 'page', 'limit', 'search'];
         removeFields.forEach(param => delete reqQuery[param]);
 
         // Create query string
@@ -19,8 +19,20 @@ exports.getWHItems = async (req, res) => {
         // Create operators ($gt, $gte, etc)
         queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
+        let queryObj = JSON.parse(queryStr);
+
+        // Add search support
+        if (req.query.search) {
+            const searchRegex = { $regex: req.query.search, $options: 'i' };
+            queryObj.$or = [
+                { name: searchRegex },
+                { itemsCode: searchRegex },
+                { barcode: searchRegex }
+            ];
+        }
+
         // Finding resource
-        query = WHItem.find(JSON.parse(queryStr))
+        query = WHItem.find(queryObj)
             .populate('company', 'name')
             .populate('category', 'name')
             .populate('itemClass', 'name')
@@ -134,28 +146,45 @@ exports.getNextSeqId = async (req, res) => {
         const nextId = lastItem ? lastItem.seqId + 1 : 1;
 
         // Get Next Item Code (Auto-generate starting from 2000)
-        const result = await WHItem.aggregate([
-            {
-                $match: {
-                    itemsCode: { $regex: /^\d+$/ } // Match only numeric item codes
+        let nextCode = 2000;
+
+        try {
+            const result = await WHItem.aggregate([
+                {
+                    $match: {
+                        itemsCode: { $regex: /^\d{1,9}$/ } // Match numeric codes up to 9 digits (exclude EAN-13/UPC)
+                    }
+                },
+                {
+                    $project: {
+                        codeNum: { $toInt: "$itemsCode" }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        maxCode: { $max: "$codeNum" }
+                    }
                 }
-            },
-            {
-                $project: {
-                    codeNum: { $toInt: "$itemsCode" }
-                }
-            },
-            {
-                $group: {
-                    _id: null,
-                    maxCode: { $max: "$codeNum" }
+            ]);
+
+            if (result.length > 0 && result[0].maxCode >= 2000) {
+                nextCode = result[0].maxCode + 1;
+            }
+        } catch (aggError) {
+            console.error('Aggregation error in getNextSeqId:', aggError);
+            // If aggregation fails, try simple approach with length check
+            const items = await WHItem.find({ itemsCode: { $regex: /^\d{1,9}$/ } })
+                .collation({ locale: "en_US", numericOrdering: true }) // Ensure numeric sort
+                .sort({ itemsCode: -1 })
+                .limit(1);
+
+            if (items.length > 0) {
+                const maxCode = parseInt(items[0].itemsCode);
+                if (!isNaN(maxCode) && maxCode >= 2000) {
+                    nextCode = maxCode + 1;
                 }
             }
-        ]);
-
-        let nextCode = 2000;
-        if (result.length > 0 && result[0].maxCode >= 2000) {
-            nextCode = result[0].maxCode + 1;
         }
 
         res.status(200).json({
@@ -166,6 +195,7 @@ exports.getNextSeqId = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Error in getNextSeqId:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

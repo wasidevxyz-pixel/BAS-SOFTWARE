@@ -40,6 +40,7 @@ exports.createWHSale = async (req, res) => {
                     // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: sale.invoiceDate,
                         type: 'out',
                         qty: saleQty,
                         previousQty: previousQty,
@@ -140,6 +141,7 @@ exports.updateWHSale = async (req, res) => {
 
                         await WHStockLog.create({
                             item: whItem._id,
+                            date: sale.invoiceDate,
                             type: 'in',
                             qty: oldSaleQty,
                             previousQty: previousQty,
@@ -175,6 +177,7 @@ exports.updateWHSale = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: sale.invoiceDate,
                         type: 'out',
                         qty: saleQty,
                         previousQty: previousQty,
@@ -230,6 +233,7 @@ exports.updateWHSale = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: sale.invoiceDate,
                         type: 'in',
                         qty: oldSaleQty,
                         previousQty: previousQty,
@@ -273,6 +277,7 @@ exports.deleteWHSale = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: sale.invoiceDate,
                         type: 'in',
                         qty: saleQty,
                         previousQty: previousQty,

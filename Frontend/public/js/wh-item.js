@@ -200,18 +200,11 @@ async function loadItemsForSearch() {
         const data = await response.json();
         if (data.success) {
             allItems = data.data || [];
-            const select = document.getElementById('searchName');
-            if (select) {
-                select.innerHTML = '<option value="">Select Item</option>';
-                allItems.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item._id;
-                    opt.textContent = item.name;
-                    select.appendChild(opt);
-                });
-            }
+            console.log(`Loaded ${allItems.length} items for search`);
         }
-    } catch (error) { console.error('Error loading search items:', error); }
+    } catch (error) {
+        console.error('Error loading search items:', error);
+    }
 }
 
 function setupSearchListeners() {
@@ -238,17 +231,89 @@ function setupSearchListeners() {
             }
         });
     }
+}
 
-    // Name Search (Dropdown)
-    const nameSelect = document.getElementById('searchName');
-    if (nameSelect) {
-        nameSelect.addEventListener('change', (e) => {
-            const id = e.target.value;
-            if (id) {
-                selectItem(id);
-            }
-        });
+// Name search with suggestions
+let nameSearchIndex = -1;
+
+function filterItemsByName(query) {
+    const suggestionsBox = document.getElementById('nameSuggestions');
+
+    if (query.length < 1) {
+        suggestionsBox.style.display = 'none';
+        nameSearchIndex = -1;
+        return;
     }
+
+    const matches = allItems.filter(item =>
+        (item.name && item.name.toLowerCase().includes(query.toLowerCase())) ||
+        (item.barcode && item.barcode.toLowerCase().includes(query.toLowerCase())) ||
+        (item.itemsCode && String(item.itemsCode).toLowerCase().includes(query.toLowerCase()))
+    ).slice(0, 15);
+
+    if (matches.length > 0) {
+        suggestionsBox.innerHTML = '';
+        nameSearchIndex = -1;
+
+        matches.forEach((item, index) => {
+            const el = document.createElement('a');
+            el.className = 'list-group-item list-group-item-action p-2';
+            el.href = '#';
+            el.setAttribute('data-index', index);
+            el.innerHTML = `<b>${item.name}</b> <small class="text-muted">(${item.barcode || item.itemsCode || 'No Code'})</small>`;
+            el.onclick = (e) => {
+                e.preventDefault();
+                selectItem(item._id);
+                document.getElementById('searchName').value = '';
+                suggestionsBox.style.display = 'none';
+            };
+            suggestionsBox.appendChild(el);
+        });
+
+        suggestionsBox.matchedItems = matches;
+        suggestionsBox.style.display = 'block';
+    } else {
+        suggestionsBox.style.display = 'none';
+    }
+}
+
+function handleNameSearchKeydown(e) {
+    const suggestionsBox = document.getElementById('nameSuggestions');
+    const items = suggestionsBox.querySelectorAll('.list-group-item');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        nameSearchIndex = Math.min(nameSearchIndex + 1, items.length - 1);
+        updateNameSearchSelection(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        nameSearchIndex = Math.max(nameSearchIndex - 1, -1);
+        updateNameSearchSelection(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (nameSearchIndex >= 0 && suggestionsBox.matchedItems) {
+            const selectedItem = suggestionsBox.matchedItems[nameSearchIndex];
+            if (selectedItem) {
+                selectItem(selectedItem._id);
+                document.getElementById('searchName').value = '';
+                suggestionsBox.style.display = 'none';
+            }
+        }
+    } else if (e.key === 'Escape') {
+        suggestionsBox.style.display = 'none';
+        nameSearchIndex = -1;
+    }
+}
+
+function updateNameSearchSelection(items) {
+    items.forEach((item, index) => {
+        if (index === nameSearchIndex) {
+            item.classList.add('active');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('active');
+        }
+    });
 }
 // Add Stock Row
 function addStockRow() {
@@ -377,10 +442,24 @@ async function saveItem() {
         const result = await response.json();
         if (result.success) {
             showAlert(`Item ${id ? 'updated' : 'saved'} successfully`, 'success');
+
+            // Update local cache
+            const savedItem = result.data;
+            if (id) {
+                const idx = allItems.findIndex(i => i._id === id);
+                if (idx !== -1) {
+                    allItems[idx] = savedItem;
+                }
+            } else {
+                // If it's a new item, add to the beginning
+                allItems.unshift(savedItem);
+            }
+
             clearForm();
             // Refresh list if open
             if (document.getElementById('itemListModal').classList.contains('show')) {
-                showList();
+                // Since we updated allItems, showList/renderItemList will use the new data
+                renderItemList(allItems);
             }
         } else {
             showAlert(result.message || result.error || 'Error saving item', 'danger');
@@ -492,6 +571,7 @@ function renderItemList(items) {
         const bgPurple = 'background-color: #e2d9f3;';
         const bgPurpleLight = 'background-color: #f3e5f5;';
         const bgCyan = 'background-color: #caf0f8;';
+        const bgOrange = 'background-color: #ffe6cc;';
 
         return `
             <tr>
@@ -511,6 +591,7 @@ function renderItemList(items) {
                 <td style="${bgBlue} text-align: left; padding-left: 10px;">${item.name || ''}</td>
                 <td style="${bgGreen}">${item.costPrice || 0}</td>
                 <td style="${bgRed}">${item.salePrice || 0}</td>
+                <td style="${bgOrange}">${item.incentive || 0}</td>
                 <td style="${bgPink}">${totalStock}</td>
                 <td style="${bgYellow}">${getCompanyName(item.company)}</td>
                 <td style="${bgPurple}">${getCategoryName(item.category)}</td>
@@ -587,7 +668,7 @@ async function selectItem(id) {
             document.getElementById('grossPerBarCode').value = item.barcode || '';
             document.getElementById('searchBarcode').value = ''; // Clear search bar
             const nameSearch = document.getElementById('searchName');
-            if (nameSearch) nameSearch.value = item._id;
+            if (nameSearch) nameSearch.value = ''; // Clear name search field
 
             document.getElementById('itemName').value = item.name;
             document.getElementById('itemCode').value = item.itemsCode || '';

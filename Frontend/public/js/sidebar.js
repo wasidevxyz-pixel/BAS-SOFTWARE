@@ -87,6 +87,7 @@ class SidebarNavigation {
                     { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
                 ]
             },
+
             {
                 id: 'overview', icon: 'fa-tachometer-alt', label: 'Overview', permission: 'dashboard',
                 children: [
@@ -97,20 +98,22 @@ class SidebarNavigation {
                 id: 'reports', icon: 'fa-chart-bar', label: 'Reports', permission: 'reports',
                 children: [
                     {
-                        id: 'warehouse-reports', label: 'Warehouse Reports', icon: 'fa-warehouse', permission: 'warehouse_reports',
+                        id: 'wh-sales-reports', label: 'WH Sales Reports', icon: 'fa-warehouse', permission: 'warehouse_sales_reports',
                         submenu: [
                             { label: 'Sales Report', link: '/sales-report.html', permission: 'sales_report_link' },
                             { label: 'Sales Comparison', link: '/sales-comparison-report.html', permission: 'sales_comparison_link' },
                             { label: 'Date-Wise Sales', link: '/date-wise-sales-report.html', permission: 'date_wise_sales_link' },
-                            { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' },
-                            { label: 'WH Customer Ledger', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
-                            { label: 'WH Customer Balance', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' },
+                            { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' }
+                        ]
+                    },
+                    {
+                        id: 'wh-reports', icon: 'fa-chart-pie', label: 'WH Reports', permission: 'warehouse_reports',
+                        submenu: [
+                            { label: 'WH Customer Ledger Report', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
+                            { label: 'WH Customer Balance Report', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' },
                             { label: 'WH Stock Position', link: '/wh-stock-position-report.html', permission: 'wh_stock_position_rpt' },
                             { label: 'WH Item Ledger', link: '/wh-item-ledger-report.html', permission: 'wh_item_ledger_rpt' },
-                            { label: 'WH Cost of Stock', link: '/wh-cost-stock-report.html', permission: 'wh_cost_stock_rpt' },
-                            { label: 'WH Stock Activity', link: '/wh-stock-activity-report.html', permission: 'wh_stock_activity_rpt' },
-                            { label: 'WH Date-Wise Stock', link: '/wh-date-wise-stock-report.html', permission: 'wh_date_wise_stock_rpt' },
-                            { label: 'WH Stock In Hand', link: '/wh-stock-in-hand-report.html', permission: 'wh_stock_in_hand_rpt' }
+                            { label: 'WH Stock Activity', link: '/wh-stock-activity-report.html', permission: 'wh_stock_activity_rpt' }
                         ]
                     },
                     {
@@ -232,25 +235,19 @@ class SidebarNavigation {
             {
                 id: 'purchases', icon: 'fa-shopping-bag', label: 'Purchase', permission: 'purchase',
                 children: [
-
                     { label: 'New Purchase', link: '/purchases.html', permission: 'new_purchase' },
                     { label: 'Purchase Return', link: '/purchase-returns.html', permission: 'purchase_returns' },
                     { label: 'Supplier Payment', link: '/supplier-payments.html', permission: 'supplier_payment' },
                     { label: 'Supplier WH Tax', link: '/supplier-wh-tax.html', permission: 'supplier_wh_tax_link' },
                     { label: 'Exemption Invoices', link: '/exemption-invoices.html', permission: 'exemption_invoices_link' }
-
-
                 ]
             },
             {
                 id: 'stock', icon: 'fa-warehouse', label: 'Stock', permission: 'stock',
                 children: [
-
                     { label: 'Stock Adjustments', link: '/stock-adjustments.html', permission: 'stock_adjustments' }
                 ]
             },
-
-
             {
                 id: 'settings', icon: 'fa-cog', label: 'Settings', permission: 'settings',
                 children: [

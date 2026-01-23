@@ -9,6 +9,7 @@ let saleItems = []; // Array of items added to the table
 let editingId = null;
 let itemListModal, customerListModal;
 let searchIndex = -1;
+let customerSearchIndex = -1;
 
 async function initializePage() {
     document.getElementById('invoiceDate').valueAsDate = new Date();
@@ -62,10 +63,16 @@ function setupEventListeners() {
     });
 
     // Item Selection
-    document.getElementById('itemSelect').addEventListener('change', handleItemSelect);
-    document.getElementById('customerSelect').addEventListener('change', handleCustomerSelect);
+    // document.getElementById('itemSelect').addEventListener('change', handleItemSelect); 
+    // Commented out since we call it manually in selectItem
 
-    // Item Code (Barcode) Enter handling
+    // Close suggestions on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.position-relative')) {
+            document.getElementById('itemSuggestions').style.display = 'none';
+            document.getElementById('customerSuggestions').style.display = 'none';
+        }
+    });
     document.getElementById('itemCode').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -94,12 +101,6 @@ function setupEventListeners() {
         }
     });
 
-    // Close suggestions on outside click
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.position-relative')) {
-            document.getElementById('itemSuggestions').style.display = 'none';
-        }
-    });
 
     document.addEventListener('keydown', (e) => {
         if (e.altKey && e.key.toLowerCase() === 'x') {
@@ -154,16 +155,90 @@ async function loadCustomers() {
         const data = await res.json();
         if (data.success) {
             customersList = data.data;
-            const select = document.getElementById('customerSelect');
-            select.innerHTML = '<option value="">Select Customer</option>';
-            customersList.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c._id;
-                opt.textContent = c.customerName;
-                select.appendChild(opt);
-            });
         }
     } catch (err) { console.error(err); }
+}
+
+function filterCustomers(input) {
+    const term = input.value.toLowerCase().trim();
+    const suggestions = document.getElementById('customerSuggestions');
+
+    if (!term) {
+        suggestions.style.display = 'none';
+        return;
+    }
+
+    const filtered = customersList.filter(c =>
+        (c.customerName && c.customerName.toLowerCase().includes(term)) ||
+        (c.mobile && c.mobile.includes(term)) ||
+        (c.phone && c.phone.includes(term)) ||
+        (c.code && c.code.toLowerCase().includes(term))
+    ).slice(0, 15);
+
+    if (filtered.length > 0) {
+        suggestions.innerHTML = filtered.map((c, idx) => `
+            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-1 px-2 small" onclick="selectCustomerById('${c._id}')">
+                <div class="d-flex justify-content-between">
+                    <span>${c.customerName}</span>
+                    <span class="text-muted small">${c.mobile || c.phone || ''}</span>
+                </div>
+            </a>
+        `).join('');
+        suggestions.style.display = 'block';
+        customerSearchIndex = -1;
+        suggestions.matchedItems = filtered;
+    } else {
+        suggestions.style.display = 'none';
+    }
+}
+
+function handleCustomerSearchKeydown(e) {
+    const suggestionsBox = document.getElementById('customerSuggestions');
+    const items = suggestionsBox.querySelectorAll('.list-group-item');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        customerSearchIndex = (customerSearchIndex + 1) % items.length;
+        updateCustomerSelection(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        customerSearchIndex = (customerSearchIndex - 1 + items.length) % items.length;
+        updateCustomerSelection(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (customerSearchIndex > -1) {
+            const selected = suggestionsBox.matchedItems[customerSearchIndex];
+            selectCustomer(selected);
+        } else if (items.length > 0) {
+            selectCustomer(suggestionsBox.matchedItems[0]);
+        }
+        suggestionsBox.style.display = 'none';
+    } else if (e.key === 'Escape') {
+        suggestionsBox.style.display = 'none';
+    }
+}
+
+function updateCustomerSelection(items) {
+    items.forEach(it => it.classList.remove('active'));
+    if (customerSearchIndex > -1) {
+        items[customerSearchIndex].classList.add('active');
+        items[customerSearchIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function selectCustomerById(id) {
+    const cust = customersList.find(c => c._id === id);
+    if (cust) selectCustomer(cust);
+}
+
+function selectCustomer(cust) {
+    document.getElementById('customerSelect').value = cust._id;
+    document.getElementById('customerSearch').value = cust.customerName;
+    document.getElementById('customerPhone').value = cust.mobile || cust.phone || '';
+    document.getElementById('summaryPreBalance').value = (cust.openingBalance || 0).toFixed(2);
+    document.getElementById('customerSuggestions').style.display = 'none';
+    customerSearchIndex = -1;
+    updateGrandTotals();
 }
 
 async function loadCategories() {
@@ -293,43 +368,40 @@ function selectItem(item) {
 }
 
 function handleCustomerSelect() {
-    const custId = document.getElementById('customerSelect').value;
-    const cust = customersList.find(c => c._id === custId);
-    if (cust) {
-        document.getElementById('customerPhone').value = cust.mobile || cust.phone || '';
-        document.getElementById('summaryPreBalance').value = (cust.openingBalance || 0).toFixed(2);
-        updateGrandTotals();
-    } else {
-        document.getElementById('customerPhone').value = '';
-        document.getElementById('summaryPreBalance').value = '0';
-    }
+    // This is now handled by selectCustomer
 }
 
 async function handleItemSelect() {
     const itemId = document.getElementById('itemSelect').value;
     const item = itemsList.find(i => i._id === itemId);
     if (item) {
+        // Initial population from cached list
         document.getElementById('itemCode').value = item.barcode || item.itemsCode || '';
         document.getElementById('itemPrice').value = item.costPrice || 0;
+        document.getElementById('itemRetailPrice').value = item.retailPrice || 0;
+        document.getElementById('itemIncentive').value = item.incentive || 0;
+        document.getElementById('itemStock').value = (item.stock && item.stock.length > 0) ? item.stock[0].quantity : 0;
+        if (document.getElementById('footerCurrentStock')) document.getElementById('footerCurrentStock').textContent = document.getElementById('itemStock').value;
 
-        // Load latest stock from API
+        // Load LATEST data from API (in case of updates)
         try {
             const res = await fetch(`/api/v1/wh-items/${itemId}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const data = await res.json();
             if (data.success) {
-                const stock = (data.data.stock && data.data.stock.length > 0) ? data.data.stock[0].quantity : 0;
+                const it = data.data;
+                const stock = (it.stock && it.stock.length > 0) ? it.stock[0].quantity : 0;
                 document.getElementById('itemStock').value = stock;
                 if (document.getElementById('footerCurrentStock')) document.getElementById('footerCurrentStock').textContent = stock;
 
-                // Load prices and incentive
-                document.getElementById('itemPrice').value = data.data.costPrice || 0;
-                document.getElementById('itemRetailPrice').value = data.data.retailPrice || 0;
-                document.getElementById('itemIncentive').value = data.data.incentive || 0;
-
+                // Only overwrite if API returns a value (avoid wiping out cached data with 0 if API is inconsistent)
+                if (it.costPrice !== undefined) document.getElementById('itemPrice').value = it.costPrice;
+                if (it.retailPrice !== undefined) document.getElementById('itemRetailPrice').value = it.retailPrice;
+                if (it.incentive !== undefined) document.getElementById('itemIncentive').value = it.incentive;
+                if (it.barcode || it.itemsCode) document.getElementById('itemCode').value = it.barcode || it.itemsCode;
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('Error fetching latest item data:', err); }
 
         calculateRowInput();
     }
@@ -639,6 +711,8 @@ function resetForm() {
         document.getElementById(id).value = '0';
     });
     document.getElementById('summaryNetTotal').value = '0';
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('customerPhone').value = '';
 }
 
 async function loadSaleList() {
@@ -699,8 +773,12 @@ async function editSale(id) {
 
             document.getElementById('invoiceNo').value = s.invoiceNo;
             document.getElementById('invoiceDate').valueAsDate = new Date(s.invoiceDate);
-            document.getElementById('customerSelect').value = s.customer ? s.customer._id : '';
-            handleCustomerSelect();
+
+            // Handle Customer Selection
+            if (s.customer) {
+                selectCustomerById(s.customer._id);
+            }
+
             document.getElementById('remarks').value = s.remarks || '';
             document.getElementById('categorySelect').value = s.whCategory ? s.whCategory._id : '';
 
@@ -831,7 +909,6 @@ function renderLookupCustomerList(customers) {
 }
 
 function selectLookupCustomer(id) {
-    document.getElementById('customerSelect').value = id;
-    handleCustomerSelect();
+    selectCustomerById(id);
     customerListModal.hide();
 }

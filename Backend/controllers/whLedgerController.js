@@ -48,18 +48,31 @@ exports.getWHLedgerReport = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/wh-ledger/balances
 // @access  Private
 exports.getWHCustomerBalances = asyncHandler(async (req, res) => {
-    const customers = await WHCustomer.find().sort({ customerName: 1 });
+    const { category, balanceOnly } = req.query;
 
-    // We can either use openingBalance from WHCustomer model (if we trust it's fully synced)
-    // or calculate from WHLedger. For consistency with previous logic, let's use the model.
+    let query = {};
+    if (category) {
+        query.customerCategory = category;
+    }
 
-    const data = customers.map(c => ({
+    const customers = await WHCustomer.find(query)
+        .populate('customerCategory', 'name')
+        .sort({ customerName: 1 });
+
+    let data = customers.map(c => ({
         _id: c._id,
         customerName: c.customerName,
         code: c.code,
         phone: c.phone || '',
-        balance: c.openingBalance || 0
+        balance: c.openingBalance || 0,
+        categoryId: c.customerCategory ? c.customerCategory._id : null,
+        categoryName: c.customerCategory ? c.customerCategory.name : ''
     }));
+
+    // Filter to show only customers with balance if requested
+    if (balanceOnly === 'true') {
+        data = data.filter(c => c.balance !== 0);
+    }
 
     res.status(200).json({
         success: true,
@@ -102,7 +115,9 @@ exports.getWHStockPosition = asyncHandler(async (req, res) => {
         return {
             _id: item._id,
             seqId: item.seqId,
+            code: item.barcode || item.itemsCode, // Show barcode if available, otherwise itemsCode
             itemsCode: item.itemsCode,
+            barcode: item.barcode || '',
             name: item.name,
             company: item.company,
             category: item.category,
@@ -120,11 +135,203 @@ exports.getWHStockPosition = asyncHandler(async (req, res) => {
         data = data.filter(item => item.currentStock > 0);
     } else if (criteria === 'less') {
         data = data.filter(item => item.currentStock < 0);
+    } else if (criteria === 'incentive') {
+        data = data.filter(item => (item.incentive || 0) > 0);
     }
 
     res.status(200).json({
         success: true,
         count: data.length,
         data
+    });
+});
+
+// @desc    Get WH Item Ledger Report
+// @route   GET /api/v1/wh-ledger/item-ledger
+// @access  Private
+exports.getWHItemLedger = asyncHandler(async (req, res) => {
+    const { item, from, to } = req.query;
+
+    if (!item) {
+        return res.status(400).json({ success: false, error: 'Item ID is required' });
+    }
+
+    const itemDoc = await WHItem.findById(item);
+    if (!itemDoc) {
+        return res.status(404).json({ success: false, error: 'Item not found' });
+    }
+
+    let query = { item };
+
+    if (from && to) {
+        // Set 'to' to end of day to include all transactions on that date
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+
+        query.date = {
+            $gte: new Date(from),
+            $lte: toDate
+        };
+    }
+
+    // Get logs for the period
+    const WHStockLog = require('../models/WHStockLog');
+    const logs = await WHStockLog.find(query).sort({ date: 1, createdAt: 1 });
+
+    // Calculate Opening Stock for the period
+    let openingBalance = 0;
+    if (from) {
+        const lastLogBefore = await WHStockLog.findOne({
+            item,
+            date: { $lt: new Date(from) }
+        }).sort({ date: -1, createdAt: -1 });
+
+        if (lastLogBefore) {
+            openingBalance = lastLogBefore.newQty;
+        } else {
+            // Use the item's initial opening stock if no logs before 'from'
+            openingBalance = itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0;
+        }
+    } else {
+        // If no 'from' date, the opening balance is the item's initial opening
+        openingBalance = itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0;
+    }
+
+    // --- Fetch Details to Append Names ---
+    const WHPurchase = require('../models/WHPurchase');
+    const WHSale = require('../models/WHSale');
+    const WHPurchaseReturn = require('../models/WHPurchaseReturn');
+    const WHSaleReturn = require('../models/WHSaleReturn');
+
+    // Collect IDs
+    const purchaseIds = [];
+    const saleIds = [];
+    const purchaseReturnIds = [];
+    const saleReturnIds = [];
+
+    logs.forEach(l => {
+        if (l.refType === 'purchase') purchaseIds.push(l.refId);
+        else if (l.refType === 'sale') saleIds.push(l.refId);
+        else if (l.refType === 'purchase_return') purchaseReturnIds.push(l.refId);
+        else if (l.refType === 'sales_return') saleReturnIds.push(l.refId);
+    });
+
+    // Fetch Docs
+    const purchases = await WHPurchase.find({ _id: { $in: purchaseIds } }).populate('supplier', 'supplierName');
+    const sales = await WHSale.find({ _id: { $in: saleIds } }).populate('customer', 'customerName');
+    const purchaseReturns = await WHPurchaseReturn.find({ _id: { $in: purchaseReturnIds } }).populate('supplier', 'supplierName');
+    const saleReturns = await WHSaleReturn.find({ _id: { $in: saleReturnIds } }).populate('customer', 'customerName');
+
+    // Create Map
+    const nameMap = {}; // refId -> Name
+    purchases.forEach(p => { if (p.supplier) nameMap[p._id.toString()] = ' - ' + p.supplier.supplierName; });
+    sales.forEach(s => { if (s.customer) nameMap[s._id.toString()] = ' - ' + s.customer.customerName; });
+    purchaseReturns.forEach(p => { if (p.supplier) nameMap[p._id.toString()] = ' - ' + p.supplier.supplierName; });
+    saleReturns.forEach(s => { if (s.customer) nameMap[s._id.toString()] = ' - ' + s.customer.customerName; });
+
+    const entries = logs.map(l => {
+        let suffix = '';
+        if (l.refId && nameMap[l.refId.toString()]) {
+            suffix = nameMap[l.refId.toString()];
+        }
+        return {
+            date: l.date,
+            refId: l.refId,
+            refType: l.refType,
+            description: (l.remarks || l.refType) + suffix,
+            quantity: l.qty,
+            type: l.type, // 'in' or 'out'
+            previousQty: l.previousQty,
+            newQty: l.newQty
+        };
+    });
+
+    res.status(200).json({
+        success: true,
+        data: {
+            openingBalance,
+            entries
+        }
+    });
+});
+
+// @desc    Get WH Stock Activity Report
+// @route   GET /api/v1/wh-ledger/stock-activity
+// @access  Private
+exports.getWHStockActivity = asyncHandler(async (req, res) => {
+    const { from, to, criteria, search } = req.query;
+
+    let itemQuery = {};
+    if (search) {
+        itemQuery.$or = [
+            { itemsCode: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    const items = await WHItem.find(itemQuery).sort({ seqId: 1, name: 1 });
+    const WHStockLog = require('../models/WHStockLog');
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+
+    const reportData = [];
+
+    for (const item of items) {
+        // Calculate Opening (Balance before 'from' date)
+        let opening = 0;
+        const lastLogBefore = await WHStockLog.findOne({
+            item: item._id,
+            date: { $lt: fromDate }
+        }).sort({ date: -1, createdAt: -1 });
+
+        if (lastLogBefore) {
+            opening = lastLogBefore.newQty;
+        } else {
+            opening = item.stock && item.stock.length > 0 ? item.stock[0].opening : 0;
+        }
+
+        // Get activities in range
+        const logsInRange = await WHStockLog.find({
+            item: item._id,
+            date: { $gte: fromDate, $lte: toDate }
+        });
+
+        const purchases = logsInRange.filter(l => l.refType === 'purchase').reduce((acc, curr) => acc + curr.qty, 0);
+        const sales = logsInRange.filter(l => l.refType === 'sale').reduce((acc, curr) => acc + curr.qty, 0);
+        const salesReturns = logsInRange.filter(l => l.refType === 'sales_return').reduce((acc, curr) => acc + curr.qty, 0);
+        const purchaseReturns = logsInRange.filter(l => l.refType === 'purchase_return').reduce((acc, curr) => acc + curr.qty, 0);
+        const adjustments = logsInRange.filter(l => l.refType === 'audit').reduce((acc, curr) => {
+            return acc + (curr.type === 'in' ? curr.qty : -curr.qty);
+        }, 0);
+
+        const netReturns = salesReturns - purchaseReturns;
+        const closing = opening + purchases - sales + netReturns + adjustments;
+
+        // Apply filters (skip if searching specific item)
+        if (!search) {
+            if (criteria === 'active' && purchases === 0 && sales === 0 && netReturns === 0 && adjustments === 0 && opening === 0) continue;
+            if (criteria === 'zero_stock' && closing !== 0) continue;
+            if (criteria === 'non_zero' && closing === 0) continue;
+        }
+
+        reportData.push({
+            _id: item._id,
+            name: item.name,
+            code: item.itemsCode,
+            opening,
+            purchases,
+            sales,
+            returns: netReturns,
+            adjustments,
+            closing
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        count: reportData.length,
+        data: reportData
     });
 });

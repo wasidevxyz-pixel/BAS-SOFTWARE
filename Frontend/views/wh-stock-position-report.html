@@ -10,6 +10,10 @@
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%);
+        }
+
         .report-container {
             padding: 15px;
             height: calc(100vh - 60px);
@@ -18,50 +22,57 @@
         }
 
         .filter-panel {
-            background: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%);
+            background: var(--primary-gradient);
             padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             color: white;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         .filter-panel label {
             font-weight: 600;
             font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+            display: block;
             opacity: 0.9;
         }
 
         .filter-panel .form-control,
         .filter-panel .form-select {
-            border: none;
-            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            border-radius: 6px;
             font-size: 0.85rem;
+        }
+
+        .filter-panel .form-select option {
+            color: #333;
         }
 
         .data-panel {
             flex: 1;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #edf2f7;
         }
 
         .table-container {
             flex: 1;
             overflow: auto;
-            padding: 0;
         }
 
         .data-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         .data-table thead {
@@ -71,122 +82,143 @@
         }
 
         .data-table th {
-            background: #f3f4f6;
-            color: #374151;
-            padding: 10px 15px;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 12px 20px;
             font-weight: 700;
             text-transform: uppercase;
-            font-size: 10px;
-            border-bottom: 2px solid #e5e7eb;
+            font-size: 0.7rem;
+            border-bottom: 2px solid #e2e8f0;
         }
 
         .data-table td {
-            padding: 8px 15px;
-            border-bottom: 1px solid #f3f4f6;
+            padding: 10px 20px;
+            border-bottom: 1px solid #f1f5f9;
             font-size: 0.85rem;
-            color: #4b5563;
         }
 
-        .data-table tbody tr:hover {
-            background: #f9fafb;
-        }
-
-        @media print {
-            @page {
-                size: portrait;
-                margin: 1cm;
-            }
-
-            body {
-                background: white !important;
-            }
-
-            .page-header,
-            .filter-panel,
-            .fas,
-            #sidebar-container,
-            .btn,
-            .main-content .page-header {
-                display: none !important;
-            }
-
-            .report-container {
-                padding: 0 !important;
-                margin: 0 !important;
-                height: auto !important;
-            }
-
-            .data-panel {
-                border: none !important;
-                box-shadow: none !important;
-            }
-
-            .main-content {
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-            }
-
-            .print-header {
-                display: block !important;
-            }
-
-            .data-table {
-                border: 1.5px solid black !important;
-                width: 100% !important;
-                table-layout: fixed;
-            }
-
-            .data-table th {
-                background: #d1d5db !important;
-                color: black !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                border: 1px solid black !important;
-                font-size: 11px !important;
-                padding: 4px !important;
-                text-align: center !important;
-            }
-
-            .data-table td {
-                border: 1px solid black !important;
-                font-size: 11px !important;
-                padding: 4px !important;
-                color: black !important;
-            }
-
-            .category-header-row td {
-                background: white !important;
-                font-weight: bold !important;
-                text-align: center !important;
-                border: 1px solid black !important;
-                font-size: 13px !important;
-                padding: 6px !important;
-                text-transform: uppercase;
-                color: black !important;
-            }
+        .category-header-row td {
+            background: #f8fafc;
+            font-weight: 800;
+            color: #1e4c8c;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #e2e8f0;
         }
 
         .print-header {
             display: none;
             text-align: center;
-            margin-bottom: 10px;
-            border-bottom: 2px solid black;
-            padding-bottom: 10px;
+            margin-bottom: 30px;
+            border-bottom: 3px double #333;
+            padding-bottom: 15px;
         }
 
-        .print-header h4 {
-            margin: 0;
-            font-weight: bold;
-            font-family: 'Times New Roman', serif;
+        @media (max-width: 768px) {
+            .report-container {
+                padding: 10px;
+                height: auto;
+            }
+
+            .filter-panel .btn {
+                width: 100%;
+            }
         }
 
-        .print-header .sub-info {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            margin-top: 10px;
-            font-size: 12px;
+        @media print {
+
+            .page-header,
+            .filter-panel,
+            #sidebar-container {
+                display: none !important;
+            }
+
+            .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .report-container {
+                padding: 0;
+                height: auto;
+                display: block;
+            }
+
+            .print-header {
+                display: block;
+            }
+
+            .data-panel {
+                border: none;
+                box-shadow: none;
+                overflow: visible;
+            }
+
+            .table-container {
+                overflow: visible;
+            }
+
+            .data-table th {
+                background: #f1f5f9 !important;
+                color: black !important;
+                border-top: 1px solid #333;
+                border-bottom: 2px solid #333;
+            }
+
+            .data-table td {
+                border-bottom: 1px solid #eee;
+            }
+
+            .category-header-row td {
+                background: #eee !important;
+                border: 1px solid #333 !important;
+            }
+
+            .category-header-row td {
+                background: #eee !important;
+                border: 1px solid #333 !important;
+            }
+
+            .category-section-title {
+                background: #eee !important;
+                color: #000 !important;
+                border: 1px solid #333;
+                border-bottom: none;
+                padding: 10px;
+                margin-top: 20px;
+                font-weight: bold;
+            }
+        }
+
+        .category-section-title {
+            background: #f8fafc;
+            padding: 10px 15px;
+            font-weight: 800;
+            color: #1e4c8c;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border: 1px solid #edf2f7;
+            border-radius: 8px 8px 0 0;
+            /* margin-top removed */
+        }
+
+        .table-group {
+            margin-bottom: 30px;
+            margin-top: 30px;
+        }
+
+        .table-group:first-child {
+            margin-top: 0;
+        }
+
+        .table-group .data-table {
+            border-top: none;
+        }
+
+        .table-group .data-table thead th {
+            border-top: 1px solid #e2e8f0;
         }
     </style>
 </head>
@@ -201,75 +233,73 @@
             </div>
         </div>
 
-        <div class="print-header">
-            <h4>Haris Bakhtawari Warehouse</h4>
-            <div class="sub-info">
-                <span>Shop</span>
-                <span>Item Stock Position Report</span>
-            </div>
-        </div>
-
         <div class="report-container">
+            <!-- Print Header -->
+            <div class="print-header">
+                <h2 class="fw-bold mb-1">BILAL ACCOUNTING SOFTWARE</h2>
+                <h4 class="text-uppercase mb-2">Warehouse Stock Position Report</h4>
+                <div class="d-flex justify-content-between px-4 mt-3">
+                    <span id="printFilters">Filters: All Items</span>
+                    <span>Date: <span id="printDate"></span></span>
+                </div>
+            </div>
+
             <div class="filter-panel d-print-none">
-                <div class="row g-2">
-                    <div class="col-md-3">
+                <div class="row g-3">
+                    <div class="col-lg-3 col-md-6">
                         <label>Company</label>
                         <select id="filterCompany" class="form-select">
                             <option value="">All Companies</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-6">
                         <label>Category</label>
                         <select id="filterCategory" class="form-select">
                             <option value="">All Categories</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-6">
                         <label>Class</label>
                         <select id="filterClass" class="form-select">
                             <option value="">All Classes</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-6">
                         <label>Sub-Class</label>
                         <select id="filterSubClass" class="form-select">
                             <option value="">All Sub-Classes</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-6">
                         <label>Supplier</label>
                         <select id="filterSupplier" class="form-select">
                             <option value="">All Suppliers</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-4">
                         <label>Stock Criteria</label>
                         <select id="filterCriteria" class="form-select">
                             <option value="all">All Items</option>
                             <option value="zero">Equal to Zero</option>
                             <option value="greater">Greater than Zero</option>
                             <option value="less">Less than Zero</option>
+                            <option value="incentive">With Incentive</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-lg-4 col-md-5">
                         <label>Search Item</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-0"><i
-                                    class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="filterSearch" class="form-control" placeholder="Code or Name...">
-                        </div>
+                        <input type="text" id="filterSearch" class="form-control" placeholder="Code or Name...">
                     </div>
-                    <div class="col-md-2 d-flex flex-column pt-1">
+                    <div class="col-lg-2 col-md-3 d-flex flex-column justify-content-end">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="showIncentive">
-                            <label class="form-check-label text-white" for="showIncentive"
-                                style="font-size: 10px; opacity: 1;">SHOW INCENTIVE</label>
+                            <label class="form-check-label text-white small" for="showIncentive">SHOW INCENTIVE</label>
                         </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-light fw-bold flex-fill" onclick="generateReport()">
                                 <i class="fas fa-sync-alt me-1"></i>GENERATE
                             </button>
-                            <button class="btn btn-warning text-white fw-bold px-3" onclick="window.print()">
+                            <button class="btn btn-warning text-white fw-bold" onclick="window.print()">
                                 <i class="fas fa-print"></i>
                             </button>
                         </div>
@@ -278,36 +308,8 @@
             </div>
 
             <div class="data-panel">
-                <div class="table-container">
-                    <table class="data-table" id="stockTable">
-                        <thead>
-                            <tr class="d-print-none">
-                                <th style="width: 80px">Seq</th>
-                                <th style="width: 120px">Code</th>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th style="width: 100px" class="text-end">Current Stock</th>
-                                <th style="width: 100px" class="text-end">Cost Price</th>
-                                <th style="width: 100px" class="text-end incentive-col d-none">Incentive</th>
-                                <th style="width: 120px" class="text-end">Stock Value</th>
-                            </tr>
-                            <!-- Print Only Headers (To match image) -->
-                            <tr class="d-none d-print-table-row">
-                                <th style="width: 100px">Item_Code</th>
-                                <th style="text-align: left !important;">Article</th>
-                                <th style="width: 80px">Stock</th>
-                                <th style="width: 90px">Cost Price</th>
-                                <th style="width: 80px" class="incentive-col d-none">Incentive</th>
-                                <th style="width: 100px">Total Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportContent">
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">Click Generate to load stock
-                                    position</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="table-container" id="reportOutput">
+                    <div class="text-center py-5 text-muted">Click Generate to load stock position</div>
                 </div>
             </div>
         </div>
@@ -319,8 +321,27 @@
     <script>
         const token = localStorage.getItem('token');
 
+        let currentRepoData = [];
+
         document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('printDate').textContent = new Date().toLocaleString();
             await loadFilters();
+
+            // Auto-check Show Incentive when "With Incentive" criteria is selected
+            document.getElementById('filterCriteria').addEventListener('change', function () {
+                if (this.value === 'incentive') {
+                    document.getElementById('showIncentive').checked = true;
+                }
+                // Optional: Re-render if we want immediate feedback based on criteria change without fetch (but data might not match)
+                // For now, only fetch updates data.
+            });
+
+            // Re-render table when checkbox is toggled (client-side toggle)
+            document.getElementById('showIncentive').addEventListener('change', () => {
+                if (currentRepoData.length > 0) {
+                    renderData(currentRepoData);
+                }
+            });
         });
 
         async function loadFilters() {
@@ -338,14 +359,11 @@
                 if (classes.success) populateSelect('filterClass', classes.data);
                 if (subClasses.success) populateSelect('filterSubClass', subClasses.data);
                 if (suppliers.success) populateSelect('filterSupplier', suppliers.data, 'supplierName');
-            } catch (error) {
-                console.error('Error loading filters:', error);
-            }
+            } catch (error) { console.error('Error loading filters:', error); }
         }
 
         function populateSelect(id, data, nameField = 'name') {
             const select = document.getElementById(id);
-            if (!select) return;
             data.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item._id;
@@ -357,7 +375,13 @@
         async function generateReport() {
             const btn = document.querySelector('button[onclick="generateReport()"]');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> LOADING...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>...';
+
+            const criteria = document.getElementById('filterCriteria').value;
+            // Auto check "Show Incentive" if filtering by incentive
+            if (criteria === 'incentive') {
+                document.getElementById('showIncentive').checked = true;
+            }
 
             const filters = {
                 company: document.getElementById('filterCompany').value,
@@ -365,7 +389,7 @@
                 itemClass: document.getElementById('filterClass').value,
                 subClass: document.getElementById('filterSubClass').value,
                 supplier: document.getElementById('filterSupplier').value,
-                criteria: document.getElementById('filterCriteria').value,
+                criteria: criteria,
                 search: document.getElementById('filterSearch').value
             };
 
@@ -375,37 +399,28 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const result = await response.json();
-
                 if (result.success) {
+                    currentRepoData = result.data;
                     renderData(result.data);
-                } else {
-                    alert(result.error || 'Failed to fetch report');
                 }
-            } catch (error) {
-                console.error('Error fetching report:', error);
-            } finally {
+            } catch (error) { console.error('Error:', error); }
+            finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> GENERATE';
+                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>GENERATE';
             }
         }
 
         function renderData(data) {
-            const tbody = document.getElementById('reportContent');
-            const showIncentive = document.getElementById('showIncentive').checked;
+            const container = document.getElementById('reportOutput');
+            const criteria = document.getElementById('filterCriteria').value;
+            const showIncentive = document.getElementById('showIncentive').checked || criteria === 'incentive';
+            container.innerHTML = '';
 
-            // Toggle Incentive visibility
-            document.querySelectorAll('.incentive-col').forEach(el => {
-                if (showIncentive) el.classList.remove('d-none');
-                else el.classList.add('d-none');
-            });
-
-            if (data.length === 0) {
-                const colspan = showIncentive ? 8 : 7;
-                tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-5 text-muted">No items found matching criteria</td></tr>`;
+            if (!data.length) {
+                container.innerHTML = `<div class="text-center py-5">No items found</div>`;
                 return;
             }
 
-            // Group by Category
             const groupedData = data.reduce((acc, item) => {
                 const catName = item.category?.name || 'Uncategorized';
                 if (!acc[catName]) acc[catName] = [];
@@ -413,46 +428,77 @@
                 return acc;
             }, {});
 
-            let html = '';
             let totalVal = 0;
+            const sortedCategories = Object.keys(groupedData).sort();
 
-            Object.keys(groupedData).sort().forEach(catName => {
-                // Add Category Sub-Header
-                html += `
-                    <tr class="category-header-row">
-                        <td colspan="${showIncentive ? 8 : 7}" class="d-print-none text-start px-3">${catName}</td>
-                        <td colspan="${showIncentive ? 6 : 5}" class="d-none d-print-table-cell">${catName}</td>
-                    </tr>
+            sortedCategories.forEach(catName => {
+                const items = groupedData[catName];
+
+                // Create Group Wrapper
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'table-group';
+
+                // Category Header
+                const catHeader = document.createElement('div');
+                catHeader.className = 'category-section-title';
+                catHeader.textContent = catName;
+                groupDiv.appendChild(catHeader);
+
+                // Table
+                const table = document.createElement('table');
+                table.className = 'data-table';
+
+                // Table Header
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th style="width: 60px" class="text-center">Seq</th>
+                            <th style="width: 100px" class="text-center">Code</th>
+                            <th style="width: 140px" class="text-center">Barcode</th>
+                            <th>Item Name</th>
+                            <th style="width: 150px" class="text-end">Stock</th>
+                            <th style="width: 120px" class="text-end">Cost</th>
+                            ${showIncentive ? '<th style="width: 120px" class="text-end">Incentive</th>' : ''}
+                            <th style="width: 150px" class="text-end">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
                 `;
 
-                groupedData[catName].forEach((item, idx) => {
-                    const stockVal = (item.currentStock || 0) * (item.costPrice || 0);
+                const tbody = table.querySelector('tbody');
+
+                items.forEach((item, idx) => {
+                    const price = item.costPrice || 0;
+                    const stock = item.currentStock || 0;
+                    const stockVal = stock * price;
                     totalVal += stockVal;
-                    html += `
-                        <tr>
-                            <td class="text-center d-print-none">${idx + 1}</td>
-                            <td class="text-center fw-bold text-primary">${item.itemsCode || '-'}</td>
-                            <td>${item.name}</td>
-                            <td class="d-print-none">${catName}</td>
-                            <td class="text-end fw-bold ${item.currentStock <= 0 ? 'text-danger' : 'text-success'}">${(item.currentStock || 0).toLocaleString()}</td>
-                            <td class="text-end">${(item.costPrice || 0).toLocaleString()}</td>
-                            <td class="text-end incentive-col ${showIncentive ? '' : 'd-none'}">${(item.incentive || 0).toLocaleString()}</td>
-                            <td class="text-end fw-bold">${stockVal.toLocaleString()}</td>
-                        </tr>
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-center text-muted small">${idx + 1}</td>
+                        <td class="text-center fw-bold">${item.itemsCode || '-'}</td>
+                        <td class="text-center text-muted small">${item.barcode || '-'}</td>
+                        <td>${item.name}</td>
+                        <td class="text-end fw-bold ${stock <= 0 ? 'text-danger' : 'text-success'}">${stock.toLocaleString()}</td>
+                        <td class="text-end">${price.toLocaleString()}</td>
+                        ${showIncentive ? `<td class="text-end">${(item.incentive || 0).toLocaleString()}</td>` : ''}
+                        <td class="text-end fw-bold">${stockVal.toLocaleString()}</td>
                     `;
+                    tbody.appendChild(row);
                 });
+
+                groupDiv.appendChild(table);
+                container.appendChild(groupDiv);
             });
 
-            tbody.innerHTML = html;
-
-            // Add Footer row
-            tbody.innerHTML += `
-                <tr class="bg-light fw-bold">
-                    <td colspan="${showIncentive ? 7 : 6}" class="text-end d-print-none">GRAND TOTAL STOCK VALUE:</td>
-                    <td colspan="${showIncentive ? 5 : 4}" class="text-end d-none d-print-table-cell">GRAND TOTAL COST:</td>
-                    <td class="text-end text-primary">${totalVal.toLocaleString()}</td>
-                </tr>
+            // Grand Total
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'p-3 bg-light d-flex justify-content-end align-items-center mt-3 border rounded';
+            totalDiv.innerHTML = `
+                <span class="fw-bold me-3">GRAND TOTAL VALUE:</span>
+                <span class="fs-5 fw-bold text-primary">${totalVal.toLocaleString()}</span>
             `;
+            container.appendChild(totalDiv);
         }
     </script>
 </body>

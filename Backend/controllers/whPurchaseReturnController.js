@@ -42,6 +42,7 @@ exports.createWHPurchaseReturn = async (req, res) => {
                     // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: purchaseReturn.returnDate,
                         type: 'out',
                         qty: returnQty,
                         previousQty: previousQty,
@@ -182,6 +183,7 @@ exports.updateWHPurchaseReturn = async (req, res) => {
 
                         await WHStockLog.create({
                             item: whItem._id,
+                            date: updated.returnDate,
                             type: 'in',
                             qty: oldReturnQty,
                             previousQty: previousQty,
@@ -217,6 +219,7 @@ exports.updateWHPurchaseReturn = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: updated.returnDate,
                         type: 'out',
                         qty: returnQty,
                         previousQty: previousQty,
@@ -248,6 +251,7 @@ exports.updateWHPurchaseReturn = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: updated.returnDate,
                         type: 'in',
                         qty: oldReturnQty,
                         previousQty: previousQty,
@@ -314,6 +318,7 @@ exports.deleteWHPurchaseReturn = async (req, res) => {
                     // Create reversal log
                     await WHStockLog.create({
                         item: whItem._id,
+                        date: purchaseReturn.returnDate,
                         type: 'in',
                         qty: returnQty,
                         previousQty: previousQty,

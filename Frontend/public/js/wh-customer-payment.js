@@ -9,8 +9,9 @@ const token = localStorage.getItem('token');
 async function initializePage() {
     // Set default dates
     const today = new Date().toISOString().split('T')[0];
+    const lastDec31 = new Date(new Date().getFullYear() - 1, 11, 31).toISOString().split('T')[0];
     document.getElementById('date').value = today;
-    document.getElementById('filterFrom').value = today;
+    document.getElementById('filterFrom').value = lastDec31;
     document.getElementById('filterTo').value = today;
 
     // Load initial data

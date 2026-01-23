@@ -565,47 +565,99 @@ function exportToExcel() {
     const startDate = document.getElementById('startDateFilter').value;
     const endDate = document.getElementById('endDateFilter').value;
 
-    // Get table data
     const table = document.querySelector('.income-table');
     if (!table) {
         showError('No data to export');
         return;
     }
 
-    // Create CSV content
-    let csv = `Income Statement - ${branch}\n`;
-    csv += `${startDate} to ${endDate}\n\n`;
+    // Prepare table for export (handle inputs)
+    // We update the value attribute of original inputs so cloning captures current values
+    const originalInputs = table.querySelectorAll('input');
+    originalInputs.forEach(input => input.setAttribute('value', input.value));
 
-    // Add main table
-    csv += 'CATEGORY,SALES,COST,BANK DED.,GROSS PROFIT,DISCOUNT,GP RATE\n';
+    const tableClone = table.cloneNode(true);
 
-    const tbody = document.getElementById('incomeTableBody');
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        const rowData = Array.from(cells).map(cell => cell.textContent.trim().replace(/,/g, '')).join(',');
-        csv += rowData + '\n';
+    // Replace inputs in clone with text
+    const cloneInputs = tableClone.querySelectorAll('input');
+    cloneInputs.forEach(input => {
+        const span = document.createElement('span');
+        span.textContent = input.getAttribute('value') || '0';
+        input.replaceWith(span);
     });
 
-    // Add summary
-    csv += '\nSUMMARY\n';
-    csv += `TOTAL SALE,${document.getElementById('summaryTotalSale').textContent}\n`;
-    csv += `TOTAL SALE RETURNS,${document.getElementById('summaryTotalReturns').textContent}\n`;
-    csv += `NET SALES,${document.getElementById('summaryNetSales').textContent}\n`;
-    csv += `COST,${document.getElementById('summaryCost').textContent}\n`;
-    csv += `G.PROFIT,${document.getElementById('summaryGrossProfit').textContent}\n`;
-    csv += `EXPENSES,${document.getElementById('summaryExpenses').textContent}\n`;
-    csv += `SHORT CASH,${document.getElementById('summaryShortCash').textContent}\n`;
-    csv += `NET PROFIT,${document.getElementById('summaryNetProfit').textContent}\n`;
+    const tableHtml = tableClone.outerHTML;
 
-    // Download CSV
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // Build Summary HTML
+    const netSales = document.getElementById('summaryNetSales').textContent;
+    const cost = document.getElementById('summaryCost').textContent;
+    const grossProfit = document.getElementById('summaryGrossProfit').textContent;
+    const expenses = document.getElementById('summaryExpenses').value || '0';
+    const shortCash = document.getElementById('summaryShortCash').textContent;
+    const netProfit = document.getElementById('summaryNetProfit').textContent;
+
+    const summaryHtml = `
+        <br>
+        <table style="width: 50%; margin-top: 20px; border-collapse: collapse;">
+            <thead>
+                <tr><th colspan="2" style="background-color: #333; color: white; text-align:left; padding:5px;">SUMMARY</th></tr>
+            </thead>
+            <tbody>
+                <tr><td style="border:1px solid #ccc; padding:5px;">NET SALES</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${netSales}</td></tr>
+                <tr><td style="border:1px solid #ccc; padding:5px;">COST</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${cost}</td></tr>
+                <tr><td style="border:1px solid #ccc; padding:5px;">GROSS PROFIT</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${grossProfit}</td></tr>
+                <tr><td style="border:1px solid #ccc; padding:5px;">EXPENSES</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${expenses}</td></tr>
+                <tr><td style="border:1px solid #ccc; padding:5px;">SHORT CASH</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${shortCash}</td></tr>
+                <tr style="font-weight:bold; background-color:#f8f9fa;"><td style="border:1px solid #ccc; padding:5px;">NET PROFIT</td><td style="border:1px solid #ccc; padding:5px; text-align:right;">${netProfit}</td></tr>
+            </tbody>
+        </table>
+    `;
+
+    // Construct full HTML for Excel
+    const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <!--[if gte mso 9]>
+            <xml>
+                <x:ExcelWorkbook>
+                    <x:ExcelWorksheets>
+                        <x:ExcelWorksheet>
+                            <x:Name>Income Statement</x:Name>
+                            <x:WorksheetOptions>
+                                <x:DisplayGridlines/>
+                            </x:WorksheetOptions>
+                        </x:ExcelWorksheet>
+                    </x:ExcelWorksheets>
+                </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+                body { font-family: Arial, sans-serif; }
+                table { border-collapse: collapse; width: 100%; }
+                th { background-color: #0d6efd; color: white; border: 1px solid #000; padding: 5px; text-align: center; }
+                td { border: 1px solid #ccc; padding: 5px; vertical-align: middle; }
+                .text-end { text-align: right; }
+                .text-center { text-align: center; }
+                .number { text-align: right; mso-number-format:"\\#\\,\\#\\#0"; }
+                .total-row td { font-weight: bold; background-color: #e9ecef; border-top: 2px solid #333; }
+                .grand-total-row td { font-weight: bold; background-color: #212529; color: white; font-size: 1.1em; }
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align:center;">D WATSON PHARMACY & SUPER STORE</h2>
+            <h3 style="text-align:center;">INCOME STATEMENT (${branch})</h3>
+            <p style="text-align:center;">${startDate} to ${endDate}</p>
+            <br>
+            ${tableHtml}
+            ${summaryHtml}
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Income_Statement_${branch}_${startDate}_${endDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = `Income_Statement_${branch}_${startDate}_${endDate}.xls`;
     link.click();
-    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 100);
 }
