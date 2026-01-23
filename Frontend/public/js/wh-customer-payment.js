@@ -415,6 +415,13 @@ function selectCustomerFromSearch(c) {
     const select = document.getElementById('customer');
     select.value = c._id;
     handleCustomerChange({ target: select });
+
+    // Move focus to amount field
+    const amountInput = document.getElementById('amount');
+    if (amountInput) {
+        amountInput.focus();
+        amountInput.select(); // Optional: select existing value for easier entry
+    }
 }
 
 function highlightMatch(text, search) {
