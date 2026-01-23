@@ -82,11 +82,18 @@
                                 <i class="fas fa-sync me-1"></i> Refresh Balances
                             </button>
                         </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" id="searchCustomer" class="form-control"
+                                    placeholder="Search Customer..." oninput="filterTable()">
+                            </div>
+                        </div>
                         <div class="col-md-6 text-end">
                             <button class="btn btn-info btn-sm" onclick="printTable()">
                                 <i class="fas fa-print me-1"></i> Print
                             </button>
-                            <button class="btn btn-success btn-sm d-none" onclick="exportToExcel()">
+                            <button class="btn btn-success btn-sm" onclick="exportToExcel()">
                                 <i class="fas fa-file-excel me-1"></i> Export Excel
                             </button>
                             <button class="btn btn-warning btn-sm text-white d-none"

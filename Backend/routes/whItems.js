@@ -6,13 +6,15 @@ const {
     createWHItem,
     updateWHItem,
     deleteWHItem,
-    getNextSeqId
+    getNextSeqId,
+    importStock
 } = require('../controllers/whItemController');
 const { protect } = require('../middleware/auth');
 
 router.use(protect);
 
 router.get('/next-seq', getNextSeqId);
+router.post('/import-stock', importStock);
 
 router.route('/')
     .get(getWHItems)

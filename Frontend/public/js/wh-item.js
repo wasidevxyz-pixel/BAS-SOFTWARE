@@ -1069,3 +1069,72 @@ function setUserName() {
         userNameElem.textContent = user.name || 'User';
     }
 }
+// Handle Stock Import
+async function handleStockImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                showAlert('Excel file is empty', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to import opening stock for ${jsonData.length} items? This will update their current stock and opening stock.`)) {
+                event.target.value = '';
+                return;
+            }
+
+            // Show loading message
+            showAlert(`Importing stock for ${jsonData.length} items... please wait`, 'info');
+
+            const response = await fetch('/api/v1/wh-items/import-stock', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ stockData: jsonData })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                // Reload items for search and refresh list if visible
+                await loadItemsForSearch();
+                if (document.getElementById('itemListModal').classList.contains('show')) {
+                    renderItemList(allItems);
+                }
+            } else {
+                showAlert(result.message || 'Import failed', 'danger');
+            }
+            event.target.value = '';
+
+        } catch (error) {
+            console.error('Stock import processing error:', error);
+            showAlert('Error processing Excel file', 'danger');
+            event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Global showAlert fallback if not already present
+if (typeof showAlert !== 'function') {
+    window.showAlert = function (message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 4000);
+    };
+}

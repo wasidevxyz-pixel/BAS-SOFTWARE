@@ -1,4 +1,6 @@
 const WHItem = require('../models/WHItem');
+const WHStockLog = require('../models/WHStockLog');
+const Store = require('../models/Store');
 
 // @desc    Get all WH Items
 // @route   GET /api/v1/wh-items
@@ -196,6 +198,93 @@ exports.getNextSeqId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error in getNextSeqId:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Import Stock from Excel (Matching by Name)
+// @route   POST /api/v1/wh-items/import-stock
+exports.importStock = async (req, res) => {
+    try {
+        const { stockData } = req.body;
+        if (!stockData || !Array.isArray(stockData)) {
+            return res.status(400).json({ success: false, message: 'Invalid stock data' });
+        }
+
+        // Get default store (first active store)
+        let store = await Store.findOne({ isActive: true });
+        if (!store) {
+            return res.status(400).json({ success: false, message: 'No active store found to import stock' });
+        }
+
+        let importCount = 0;
+        let skipCount = 0;
+        let errors = [];
+
+        for (const row of stockData) {
+            try {
+                const itemName = row.ItemName || row.name;
+                const barcode = row.Barcode || row.barcode;
+                const stockQty = parseFloat(row['Stock in Hand'] || row.stock || 0);
+
+                if (!itemName) {
+                    skipCount++;
+                    continue;
+                }
+
+                // Search by name only as requested
+                const item = await WHItem.findOne({ name: { $regex: new RegExp(`^${itemName}$`, 'i') } });
+
+                if (!item) {
+                    skipCount++;
+                    continue;
+                }
+
+                const prevQty = (item.stock && item.stock.length > 0) ? item.stock[0].quantity : 0;
+
+                // Update or Init Stock
+                if (item.stock && item.stock.length > 0) {
+                    item.stock[0].opening = stockQty;
+                    item.stock[0].quantity = stockQty;
+                } else {
+                    item.stock = [{
+                        store: store._id,
+                        quantity: stockQty,
+                        opening: stockQty
+                    }];
+                }
+
+                item.markModified('stock');
+                await item.save();
+
+                // Create Stock Log
+                await WHStockLog.create({
+                    item: item._id,
+                    date: new Date(),
+                    type: 'in',
+                    qty: stockQty,
+                    previousQty: prevQty,
+                    newQty: stockQty,
+                    refType: 'purchase', // Using purchase as a generic refType for opening stock if 'Opening' not available
+                    refId: item._id, // Self-reference for opening
+                    remarks: 'Opening Stock Import from Excel',
+                    createdBy: req.user.id
+                });
+
+                importCount++;
+            } catch (err) {
+                console.error(`Error importing item ${row.ItemName}:`, err);
+                errors.push(`${row.ItemName}: ${err.message}`);
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Import completed: ${importCount} updated, ${skipCount} skipped/not found, ${errors.length} errors`,
+            details: { importCount, skipCount, errorCount: errors.length, errors }
+        });
+    } catch (error) {
+        console.error('Import Stock Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

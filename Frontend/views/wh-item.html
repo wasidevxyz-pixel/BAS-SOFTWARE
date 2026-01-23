@@ -10,6 +10,7 @@
     <link href="/css/sidebar.css" rel="stylesheet">
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .form-label {
             font-weight: 600;
@@ -339,6 +340,10 @@
                                 <button type="button" class="btn btn-primary flex-grow-1" onclick="showList()">
                                     <i class="fas fa-list me-1"></i> List
                                 </button>
+                                <button type="button" class="btn btn-warning flex-grow-1 text-white" onclick="document.getElementById('stockImportInput').click()">
+                                    <i class="fas fa-file-import me-1"></i> Import Stock
+                                </button>
+                                <input type="file" id="stockImportInput" style="display: none;" accept=".xlsx, .xls" onchange="handleStockImport(event)">
                             </div>
 
                             <!-- Active Checkbox -->

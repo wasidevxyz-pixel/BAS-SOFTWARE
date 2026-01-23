@@ -158,16 +158,16 @@ async function loadCustomers() {
 }
 
 // Render Table
-function renderTable() {
+function renderTable(data = customers) {
     const tbody = document.getElementById('customersTableBody');
     if (!tbody) return;
 
-    if (customers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No customers found</td></tr>';
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center">No customers found</td></tr>';
         return;
     }
 
-    tbody.innerHTML = customers.map((customer) => `
+    tbody.innerHTML = data.map((customer) => `
         <tr>
             <td class="text-center">${customer.code || '-'}</td>
             <td class="text-start">${customer.customerName}</td>
@@ -190,6 +190,25 @@ function renderTable() {
             </td>
         </tr>
     `).join('');
+}
+
+// Global Filter Table
+function filterTable() {
+    const query = document.getElementById('searchCustomer').value.toLowerCase().trim();
+    if (!query) {
+        renderTable(customers);
+        return;
+    }
+
+    const filtered = customers.filter(c =>
+        (c.customerName && c.customerName.toLowerCase().includes(query)) ||
+        (c.code && c.code.toString().toLowerCase().includes(query)) ||
+        (c.mobile && c.mobile.toString().toLowerCase().includes(query)) ||
+        (c.phone && c.phone.toString().toLowerCase().includes(query)) ||
+        (c.customerNTN && c.customerNTN.toString().toLowerCase().includes(query))
+    );
+
+    renderTable(filtered);
 }
 
 // Show Add Modal
@@ -428,7 +447,7 @@ function showAlert(message, type) {
     const div = document.createElement('div');
     div.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
     div.style.zIndex = '9999';
-    div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    div.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 3000);
 }

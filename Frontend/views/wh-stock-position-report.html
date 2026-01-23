@@ -9,6 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/css/desktop-style.css" rel="stylesheet">
     <link href="/css/sidebar.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%);
@@ -128,9 +129,16 @@
 
         @media print {
 
+            @page {
+                size: A4 portrait;
+                margin: 1cm;
+            }
+
             .page-header,
             .filter-panel,
-            #sidebar-container {
+            #sidebar-container,
+            button,
+            .d-print-none {
                 display: none !important;
             }
 
@@ -146,7 +154,25 @@
             }
 
             .print-header {
-                display: block;
+                display: block !important;
+                text-align: center;
+                border-bottom: 2px solid #1e4c8c;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+            }
+
+            .print-header h2 {
+                color: #1e4c8c;
+                font-size: 24pt;
+                font-weight: 800;
+                margin-bottom: 5px;
+            }
+
+            .print-header h4 {
+                color: #444;
+                font-size: 14pt;
+                text-transform: uppercase;
+                letter-spacing: 2px;
             }
 
             .data-panel {
@@ -160,34 +186,58 @@
             }
 
             .data-table th {
-                background: #f1f5f9 !important;
-                color: black !important;
-                border-top: 1px solid #333;
-                border-bottom: 2px solid #333;
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color: #000 !important;
+                border: 1px solid #000 !important;
+                font-size: 9pt !important;
+                padding: 8px 5px !important;
             }
 
             .data-table td {
-                border-bottom: 1px solid #eee;
+                border: 1px solid #000 !important;
+                font-size: 9pt !important;
+                padding: 6px 8px !important;
             }
 
-            .category-header-row td {
-                background: #eee !important;
-                border: 1px solid #333 !important;
-            }
-
-            .category-header-row td {
-                background: #eee !important;
-                border: 1px solid #333 !important;
+            /* Expand Item Name Column */
+            .data-table th:nth-child(4),
+            .data-table td:nth-child(4) {
+                width: 40% !important;
+                text-align: left !important;
             }
 
             .category-section-title {
-                background: #eee !important;
-                color: #000 !important;
-                border: 1px solid #333;
-                border-bottom: none;
-                padding: 10px;
-                margin-top: 20px;
-                font-weight: bold;
+                background: #1e4c8c !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                color: #fff !important;
+                border: 1px solid #000 !important;
+                font-size: 11pt !important;
+                padding: 8px 15px !important;
+                margin-top: 15px !important;
+                border-radius: 0;
+            }
+
+            .table-group {
+                margin-bottom: 0px;
+                margin-top: 5px;
+            }
+
+            .bg-light {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                border: 1px solid #000 !important;
+            }
+
+            .text-primary {
+                color: #1e4c8c !important;
+            }
+
+            .text-success {
+                color: #15803d !important;
             }
         }
 
@@ -301,6 +351,9 @@
                             </button>
                             <button class="btn btn-warning text-white fw-bold" onclick="window.print()">
                                 <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-success fw-bold" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i>
                             </button>
                         </div>
                     </div>
@@ -419,6 +472,13 @@
                 });
                 const result = await response.json();
                 if (result.success) {
+                    // Sort data by Category name then Item name A-Z
+                    result.data.sort((a, b) => {
+                        const catA = (a.category?.name || 'Uncategorized').toLowerCase();
+                        const catB = (b.category?.name || 'Uncategorized').toLowerCase();
+                        if (catA !== catB) return catA.localeCompare(catB);
+                        return a.name.localeCompare(b.name);
+                    });
                     currentRepoData = result.data;
                     renderData(result.data);
                 }
@@ -448,10 +508,13 @@
             }, {});
 
             let totalVal = 0;
+            let totalQty = 0; // Added totalQty calculation
             const sortedCategories = Object.keys(groupedData).sort();
 
             sortedCategories.forEach(catName => {
                 const items = groupedData[catName];
+                // Sort items A-Z by name within each category
+                items.sort((a, b) => a.name.localeCompare(b.name));
 
                 // Create Group Wrapper
                 const groupDiv = document.createElement('div');
@@ -489,8 +552,9 @@
                 items.forEach((item, idx) => {
                     const price = item.costPrice || 0;
                     const stock = item.currentStock || 0;
-                    const stockVal = stock * price;
+                    const stockVal = Math.round(stock * price); // Rounded
                     totalVal += stockVal;
+                    totalQty += stock; // Add to totalQty
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -512,12 +576,63 @@
 
             // Grand Total
             const totalDiv = document.createElement('div');
-            totalDiv.className = 'p-3 bg-light d-flex justify-content-end align-items-center mt-3 border rounded';
+            totalDiv.className = 'p-3 bg-light d-flex justify-content-end align-items-center mt-3 border rounded gap-5'; // Added gap-5
             totalDiv.innerHTML = `
-                <span class="fw-bold me-3">GRAND TOTAL VALUE:</span>
-                <span class="fs-5 fw-bold text-primary">${totalVal.toLocaleString()}</span>
+                <div class="d-flex align-items-center">
+                    <span class="fw-bold me-3">GRAND TOTAL QTY:</span>
+                    <span class="fs-5 fw-bold text-success">${totalQty.toLocaleString()}</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="fw-bold me-3">GRAND TOTAL VALUE:</span>
+                    <span class="fs-5 fw-bold text-primary">${Math.round(totalVal).toLocaleString()}</span>
+                </div>
             `;
             container.appendChild(totalDiv);
+        }
+
+        function exportToExcel() {
+            if (!currentRepoData.length) {
+                alert('No data to export. Please generate the report first.');
+                return;
+            }
+
+            // Create a copy and sort globally A-Z by name
+            const sortedData = [...currentRepoData].sort((a, b) =>
+                (a.name || '').localeCompare(b.name || '')
+            );
+
+            const exportData = sortedData.map((item, index) => ({
+                'Sr#': index + 1,
+                'Code': item.itemsCode || '',
+                'Barcode': item.barcode || '',
+                'Item Name': item.name,
+                'Category': item.category?.name || '',
+                'Stock': item.currentStock,
+                'Cost': item.costPrice,
+                'Value': Math.round(item.currentStock * item.costPrice),
+                'Incentive': item.incentive || 0
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Stock Position");
+
+            // Auto-size columns
+            const colWidths = [
+                { wch: 5 },  // Seq
+                { wch: 15 }, // Code
+                { wch: 20 }, // Barcode
+                { wch: 40 }, // Item Name
+                { wch: 20 }, // Company
+                { wch: 20 }, // Category
+                { wch: 10 }, // Stock
+                { wch: 10 }, // Cost
+                { wch: 15 }, // Value
+                { wch: 10 }  // Incentive
+            ];
+            ws['!cols'] = colWidths;
+
+            XLSX.writeFile(wb, `WH_Stock_Position_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
     </script>
 </body>
