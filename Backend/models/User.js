@@ -63,6 +63,16 @@ const userSchema = new mongoose.Schema({
   profilePicture: {
     type: String,
     default: ''
+  },
+  allowedWHCustomerCategories: {
+    type: [mongoose.Schema.ObjectId],
+    ref: 'WHCustomerCategory',
+    default: []
+  },
+  allowedWHItemCategories: {
+    type: [mongoose.Schema.ObjectId],
+    ref: 'WHItemCategory',
+    default: []
   }
 });
 

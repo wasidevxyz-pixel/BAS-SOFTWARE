@@ -84,10 +84,16 @@ async function loadCategories() {
             categories = data.data;
             const select = document.getElementById('category');
             if (select) {
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                const allowed = (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) ? user.allowedWHItemCategories : null;
+
                 select.innerHTML = '<option value="">Select Category</option>';
                 categories.forEach(c => {
                     if (c.isActive) {
-                        select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                        if (!allowed || allowed.includes(c._id)) {
+                            select.innerHTML += `<option value="${c._id}">${c.name}</option>`;
+                        }
                     }
                 });
             }
@@ -200,7 +206,19 @@ async function loadItemsForSearch() {
         const data = await response.json();
         if (data.success) {
             allItems = data.data || [];
-            console.log(`Loaded ${allItems.length} items for search`);
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                allItems = allItems.filter(item => {
+                    const catId = typeof item.category === 'object' ? item.category?._id : item.category;
+                    return allowed.includes(catId);
+                });
+            }
+
+            console.log(`Loaded ${allItems.length} items for search after filtering`);
         }
     } catch (error) {
         console.error('Error loading search items:', error);
@@ -526,7 +544,19 @@ async function showList() {
             });
             const data = await response.json();
             if (data.success) {
-                allItems = data.data || [];
+                let items = data.data || [];
+
+                // Filter by allowed categories
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                    const allowed = user.allowedWHItemCategories;
+                    items = items.filter(item => {
+                        const catId = typeof item.category === 'object' ? item.category?._id : item.category;
+                        return allowed.includes(catId);
+                    });
+                }
+                allItems = items;
             }
         }
 

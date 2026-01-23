@@ -340,10 +340,12 @@
                                 <button type="button" class="btn btn-primary flex-grow-1" onclick="showList()">
                                     <i class="fas fa-list me-1"></i> List
                                 </button>
-                                <button type="button" class="btn btn-warning flex-grow-1 text-white" onclick="document.getElementById('stockImportInput').click()">
+                                <button type="button" class="btn btn-warning flex-grow-1 text-white d-none"
+                                    onclick="document.getElementById('stockImportInput').click()">
                                     <i class="fas fa-file-import me-1"></i> Import Stock
                                 </button>
-                                <input type="file" id="stockImportInput" style="display: none;" accept=".xlsx, .xls" onchange="handleStockImport(event)">
+                                <input type="file" id="stockImportInput" style="display: none;" accept=".xlsx, .xls"
+                                    onchange="handleStockImport(event)">
                             </div>
 
                             <!-- Active Checkbox -->

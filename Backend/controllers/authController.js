@@ -125,6 +125,13 @@ exports.login = async (req, res) => {
       }
     }
 
+    // Merge individual user permissions (overrides or additions)
+    if (fullUser.permissions && Array.isArray(fullUser.permissions)) {
+      fullUser.permissions.forEach(p => {
+        finalizedRights[p] = true;
+      });
+    }
+
     console.log('Finalized Rights Payload:', JSON.stringify(finalizedRights, null, 2));
 
     if (!process.env.JWT_SECRET) {
@@ -153,7 +160,9 @@ exports.login = async (req, res) => {
             branch: fullUser.branch,
             department: fullUser.department,
             group: fullUser.groupId,
-            rights: finalizedRights
+            rights: finalizedRights,
+            allowedWHCustomerCategories: fullUser.allowedWHCustomerCategories,
+            allowedWHItemCategories: fullUser.allowedWHItemCategories
           }
         });
       }
@@ -183,8 +192,39 @@ exports.logout = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password').populate('groupId');
-    res.json(user);
+    const fullUser = await User.findById(req.user.id).select('-password').populate('groupId');
+
+    // Safe conversion of rights
+    let finalizedRights = {};
+    if (fullUser.groupId && fullUser.groupId.rights) {
+      if (typeof fullUser.groupId.rights.forEach === 'function') {
+        fullUser.groupId.rights.forEach((value, key) => {
+          finalizedRights[key] = value;
+        });
+      } else {
+        finalizedRights = fullUser.groupId.rights;
+      }
+    }
+
+    // Merge individual user permissions (overrides or additions)
+    if (fullUser.permissions && Array.isArray(fullUser.permissions)) {
+      fullUser.permissions.forEach(p => {
+        finalizedRights[p] = true;
+      });
+    }
+
+    res.json({
+      _id: fullUser._id,
+      name: fullUser.name,
+      email: fullUser.email,
+      role: fullUser.role,
+      branch: fullUser.branch,
+      department: fullUser.department,
+      group: fullUser.groupId,
+      rights: finalizedRights,
+      allowedWHCustomerCategories: fullUser.allowedWHCustomerCategories,
+      allowedWHItemCategories: fullUser.allowedWHItemCategories
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

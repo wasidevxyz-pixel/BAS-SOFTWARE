@@ -159,12 +159,18 @@ async function loadWHCategories() {
         const result = await response.json();
         if (result.success) {
             const select = document.getElementById('whCategoryFilter');
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const allowed = (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) ? user.allowedWHItemCategories : null;
+
             select.innerHTML = '<option value="">Select Category</option>';
             result.data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item._id;
-                option.textContent = item.name;
-                select.appendChild(option);
+                if (!allowed || allowed.includes(item._id)) {
+                    const option = document.createElement('option');
+                    option.value = item._id;
+                    option.textContent = item.name;
+                    select.appendChild(option);
+                }
             });
         }
     } catch (error) { console.error(error); }
@@ -179,7 +185,19 @@ async function loadItems() {
         const result = await response.json();
 
         if (result.success) {
-            itemsList = result.data.filter(item => item.isActive !== false);
+            let data = result.data.filter(item => item.isActive !== false);
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                data = data.filter(item => {
+                    const catId = typeof item.category === 'object' ? item.category?._id : item.category;
+                    return allowed.includes(catId);
+                });
+            }
+            itemsList = data;
         }
     } catch (error) {
         console.error('Error loading items:', error);
@@ -688,10 +706,20 @@ async function loadReturnList() {
         const result = await response.json();
 
         if (result.success) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            let returns = result.data;
 
-            // Extract rights similar to sidebar.js logic
-            let rights = user.rights || {};
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                returns = returns.filter(r => {
+                    const catId = typeof r.whCategory === 'object' ? r.whCategory?._id : r.whCategory;
+                    return !catId || allowed.includes(catId);
+                });
+            }
+
+            const rights = user.rights || {};
             if (Object.keys(rights).length === 0) {
                 if (user.group && user.group.rights) {
                     rights = user.group.rights;
@@ -708,7 +736,7 @@ async function loadReturnList() {
             const canEditPosted = isAdmin || rights['wh_purchase_return_edit_posted'];
 
             const tbody = document.getElementById('purchaseListBody');
-            tbody.innerHTML = result.data.map(p => `
+            tbody.innerHTML = returns.map(p => `
                 <tr>
                     <td>${p.returnNo}</td>
                     <td>${p.postingNumber ? String(p.postingNumber).padStart(2, '0') : '-'}</td>

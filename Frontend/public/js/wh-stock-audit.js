@@ -39,7 +39,18 @@ async function loadItems() {
 
         if (data.success) {
             // Filter active items
-            itemsList = data.data.filter(item => item.isActive !== false);
+            let items = data.data.filter(item => item.isActive !== false);
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                items = items.filter(it => {
+                    const catId = typeof it.category === 'object' ? it.category?._id : it.category;
+                    return allowed.includes(catId);
+                });
+            }
+            itemsList = items;
             if (input) input.placeholder = 'Scan...';
         } else {
             console.error('Failed to load items:', data.message);
@@ -94,13 +105,19 @@ async function loadCategories() {
         const data = await response.json();
         if (data.success) {
             const select = document.getElementById('whCategoryFilter');
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const allowed = (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) ? user.allowedWHItemCategories : null;
+
             // Keep "All Categories"
             select.innerHTML = '<option value="">All Categories</option>';
             data.data.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat._id;
-                option.textContent = cat.name;
-                select.appendChild(option);
+                if (!allowed || allowed.includes(cat._id)) {
+                    const option = document.createElement('option');
+                    option.value = cat._id;
+                    option.textContent = cat.name;
+                    select.appendChild(option);
+                }
             });
         }
     } catch (error) {
@@ -673,7 +690,21 @@ window.loadAuditList = async function () {
         tbody.innerHTML = '';
 
         if (data.success) {
-            data.data.forEach(audit => {
+            let audits = data.data;
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                audits = audits.filter(audit => {
+                    // Filter based on whCategory of the audit if it exists
+                    const catId = typeof audit.whCategory === 'object' ? audit.whCategory?._id : audit.whCategory;
+                    return !catId || allowed.includes(catId);
+                });
+            }
+
+            audits.forEach(audit => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${audit.auditNo}</td>

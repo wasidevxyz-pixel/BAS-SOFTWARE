@@ -154,7 +154,17 @@ async function loadCustomers() {
         });
         const data = await res.json();
         if (data.success) {
-            customersList = data.data;
+            let customers = data.data;
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) {
+                const allowed = user.allowedWHCustomerCategories;
+                customers = customers.filter(c => {
+                    const catId = typeof c.customerCategory === 'object' ? c.customerCategory?._id : c.customerCategory;
+                    return allowed.includes(catId);
+                });
+            }
+            customersList = customers;
         }
     } catch (err) { console.error(err); }
 }
@@ -248,14 +258,20 @@ async function loadCategories() {
         });
         const data = await res.json();
         if (data.success) {
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const allowed = (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) ? user.allowedWHItemCategories : null;
+
             categoriesList = data.data;
             const select = document.getElementById('categorySelect');
             select.innerHTML = '<option value="">Select Category</option>';
             categoriesList.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c._id;
-                opt.textContent = c.name;
-                select.appendChild(opt);
+                if (!allowed || allowed.includes(c._id)) {
+                    const opt = document.createElement('option');
+                    opt.value = c._id;
+                    opt.textContent = c.name;
+                    select.appendChild(opt);
+                }
             });
         }
     } catch (err) { console.error(err); }
@@ -268,7 +284,17 @@ async function loadItems() {
         });
         const data = await res.json();
         if (data.success) {
-            itemsList = data.data;
+            let items = data.data;
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                const allowed = user.allowedWHItemCategories;
+                items = items.filter(it => {
+                    const catId = typeof it.category === 'object' ? it.category?._id : it.category;
+                    return allowed.includes(catId);
+                });
+            }
+            itemsList = items;
         }
     } catch (err) { console.error(err); }
 }
@@ -722,9 +748,21 @@ async function loadSaleList() {
         });
         const data = await res.json();
         if (data.success) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            // Role based access logic similar to sidebar.js
-            let rights = user.rights || {};
+            let sales = data.data;
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) {
+                const allowed = user.allowedWHCustomerCategories;
+                sales = sales.filter(s => {
+                    if (!s.customer) return false;
+                    const catId = typeof s.customer.customerCategory === 'object' ? s.customer.customerCategory?._id : s.customer.customerCategory;
+                    return allowed.includes(catId);
+                });
+            }
+
+            const rights = user.rights || {};
             if (Object.keys(rights).length === 0) {
                 if (user.group && user.group.rights) rights = user.group.rights;
                 else if (user.groupId && user.groupId.rights) rights = user.groupId.rights;
@@ -736,7 +774,7 @@ async function loadSaleList() {
             const canEditPosted = isAdmin || rights['wh_sale_edit_posted'];
 
             const tbody = document.getElementById('saleListBody');
-            tbody.innerHTML = data.data.map(s => {
+            tbody.innerHTML = sales.map(s => {
                 const showEdit = canEdit || (s.status === 'Posted' && canEditPosted);
                 return `
                 <tr>

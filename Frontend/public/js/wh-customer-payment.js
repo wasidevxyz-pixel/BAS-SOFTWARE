@@ -69,9 +69,22 @@ async function loadCustomers() {
 
         select.innerHTML = '<option value="">Select Customer</option>';
         if (data.success) {
-            allCustomers = data.data; // Store for search
+            let customers = data.data;
 
-            data.data.forEach(cust => {
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) {
+                const allowed = user.allowedWHCustomerCategories;
+                customers = customers.filter(c => {
+                    const catId = typeof c.customerCategory === 'object' ? c.customerCategory?._id : c.customerCategory;
+                    return allowed.includes(catId);
+                });
+            }
+
+            allCustomers = customers; // Store for search
+
+            customers.forEach(cust => {
                 const option = document.createElement('option');
                 option.value = cust._id;
                 option.textContent = `${cust.customerName} (${cust.code})`;
@@ -202,6 +215,19 @@ async function loadPayments() {
 
         if (data.success) {
             let filteredData = data.data;
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) {
+                const allowed = user.allowedWHCustomerCategories;
+                filteredData = filteredData.filter(p => {
+                    if (!p.customer) return false;
+                    const catId = typeof p.customer.customerCategory === 'object' ? p.customer.customerCategory?._id : p.customer.customerCategory;
+                    return allowed.includes(catId);
+                });
+            }
+
             if (search) {
                 const s = search.toLowerCase();
                 filteredData = filteredData.filter(p =>

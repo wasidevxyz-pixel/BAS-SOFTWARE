@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show loading state if needed
     await fetchGroups();
     await fetchStores(); // Load stores as branches
+    await fetchWHCategories();
     await fetchUsers();
 
     // Setup sidebar toggle as per new header
@@ -24,14 +25,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Close dropdown on outside click
+    // Close dropdowns on outside click
     window.addEventListener('click', (e) => {
-        if (!e.target.closest('#branchDropdown')) {
-            const list = document.getElementById('branchList');
-            if (list) list.classList.remove('show');
+        if (!e.target.closest('.multi-select-dropdown')) {
+            document.querySelectorAll('.multi-select-content').forEach(list => {
+                list.classList.remove('show');
+            });
         }
     });
 });
+
+function toggleGenericDropdown(id) {
+    document.getElementById(id).classList.toggle('show');
+}
 
 function toggleBranchDropdown(e) {
     e.stopPropagation();
@@ -94,6 +100,43 @@ function populateGroupDropdown() {
     const select = document.getElementById('userGroup');
     select.innerHTML = '<option value="">Select Group</option>' +
         allGroups.map(group => `<option value="${group._id}">${group.name}</option>`).join('');
+}
+
+async function fetchWHCategories() {
+    try {
+        const [custRes, itemRes] = await Promise.all([
+            fetch('/api/v1/wh-customer-categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
+            fetch('/api/v1/wh-item-categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+        ]);
+        const custData = await custRes.json();
+        const itemData = await itemRes.json();
+        if (custData.success) populateGenericDropdown('whCustomerCatList', custData.data, 'cust-cat-cb', 'updateWHCustomerCatsText');
+        if (itemData.success) populateGenericDropdown('whItemCatList', itemData.data, 'item-cat-cb', 'updateWHItemCatsText');
+    } catch (e) { console.error('Error fetching WH categories:', e); }
+}
+
+function populateGenericDropdown(listId, data, cbClass, updateFnName) {
+    const list = document.getElementById(listId);
+    if (list) {
+        list.innerHTML = data.map(item => `
+            <div class="multi-select-item" onclick="event.stopPropagation()">
+                <input class="${cbClass}" type="checkbox" value="${item._id}" id="${cbClass}_${item._id}" onchange="${updateFnName}()">
+                <label for="${cbClass}_${item._id}">${item.name}</label>
+            </div>
+        `).join('') || '<div class="p-2 text-muted">None found</div>';
+    }
+}
+
+function updateWHCustomerCatsText() {
+    const checked = Array.from(document.querySelectorAll('.cust-cat-cb:checked'))
+        .map(cb => cb.parentElement.querySelector('label').innerText);
+    document.getElementById('selectedWHCustomerCatsText').innerText = checked.length > 0 ? (checked.length > 2 ? `${checked.length} Selected` : checked.join(', ')) : 'All Allowed';
+}
+
+function updateWHItemCatsText() {
+    const checked = Array.from(document.querySelectorAll('.item-cat-cb:checked'))
+        .map(cb => cb.parentElement.querySelector('label').innerText);
+    document.getElementById('selectedWHItemCatsText').innerText = checked.length > 0 ? (checked.length > 2 ? `${checked.length} Selected` : checked.join(', ')) : 'All Allowed';
 }
 
 async function fetchUsers() {
@@ -166,6 +209,17 @@ function selectUser(id) {
     updateSelectedBranchesText();
 
     document.getElementById('userDepartment').value = user.department || '';
+    document.getElementById('userType').value = user.userType || '';
+    document.getElementById('userSaleDeleteLimit').value = user.saleDeleteLimit || '';
+
+    // Set allowed categories
+    const allowedCustCats = user.allowedWHCustomerCategories || [];
+    document.querySelectorAll('.cust-cat-cb').forEach(cb => cb.checked = allowedCustCats.includes(cb.value));
+    updateWHCustomerCatsText();
+
+    const allowedItemCats = user.allowedWHItemCategories || [];
+    document.querySelectorAll('.item-cat-cb').forEach(cb => cb.checked = allowedItemCats.includes(cb.value));
+    updateWHItemCatsText();
 
     // Clear and set checkboxes
     clearCheckboxes();
@@ -189,8 +243,10 @@ function clearCheckboxes() {
 function resetForm() {
     document.getElementById('userId').value = '';
     document.getElementById('userForm').reset();
-    document.querySelectorAll('.branch-cb').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.branch-cb, .cust-cat-cb, .item-cat-cb').forEach(cb => cb.checked = false);
     updateSelectedBranchesText();
+    updateWHCustomerCatsText();
+    updateWHItemCatsText();
     clearCheckboxes();
 }
 
@@ -214,6 +270,13 @@ async function saveUser() {
     const zakat = document.getElementById('userZakat')?.value || '';
     const userType = document.getElementById('userType')?.value || '';
     const saleDeleteLimit = document.getElementById('userSaleDeleteLimit')?.value || '';
+
+    // Collect allowed categories
+    const allowedWHCustomerCategories = [];
+    document.querySelectorAll('.cust-cat-cb:checked').forEach(cb => allowedWHCustomerCategories.push(cb.value));
+
+    const allowedWHItemCategories = [];
+    document.querySelectorAll('.item-cat-cb:checked').forEach(cb => allowedWHItemCategories.push(cb.value));
 
     if (!name || !email || !groupId) {
         alert('Please fill at least Name, Email (Login Id), and Group');
@@ -251,7 +314,9 @@ async function saveUser() {
         department,
         zakat,
         userType,
-        saleDeleteLimit
+        saleDeleteLimit,
+        allowedWHCustomerCategories,
+        allowedWHItemCategories
     };
 
     if (password) data.password = password;

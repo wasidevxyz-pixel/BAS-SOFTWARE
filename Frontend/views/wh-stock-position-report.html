@@ -426,8 +426,15 @@
                     fetch('/api/v1/wh-suppliers', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
                 ]);
 
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                const allowed = (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) ? user.allowedWHItemCategories : null;
+
                 if (companies.success) populateSelect('filterCompany', companies.data);
-                if (categories.success) populateSelect('filterCategory', categories.data);
+                if (categories.success) {
+                    const filteredCats = allowed ? categories.data.filter(c => allowed.includes(c._id)) : categories.data;
+                    populateSelect('filterCategory', filteredCats);
+                }
                 if (classes.success) populateSelect('filterClass', classes.data);
                 if (subClasses.success) populateSelect('filterSubClass', subClasses.data);
                 if (suppliers.success) populateSelect('filterSupplier', suppliers.data, 'supplierName');
@@ -472,15 +479,28 @@
                 });
                 const result = await response.json();
                 if (result.success) {
+                    let data = result.data;
+
+                    // Filter by allowed categories
+                    const userStr = localStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : null;
+                    if (user && user.allowedWHItemCategories && user.allowedWHItemCategories.length > 0) {
+                        const allowed = user.allowedWHItemCategories;
+                        data = data.filter(item => {
+                            const catId = typeof item.category === 'object' ? item.category?._id : item.category;
+                            return allowed.includes(catId);
+                        });
+                    }
+
                     // Sort data by Category name then Item name A-Z
-                    result.data.sort((a, b) => {
+                    data.sort((a, b) => {
                         const catA = (a.category?.name || 'Uncategorized').toLowerCase();
                         const catB = (b.category?.name || 'Uncategorized').toLowerCase();
                         if (catA !== catB) return catA.localeCompare(catB);
                         return a.name.localeCompare(b.name);
                     });
-                    currentRepoData = result.data;
-                    renderData(result.data);
+                    currentRepoData = data;
+                    renderData(data);
                 }
             } catch (error) { console.error('Error:', error); }
             finally {

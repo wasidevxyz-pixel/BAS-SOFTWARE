@@ -69,10 +69,16 @@ async function loadCategories() {
             const select = document.getElementById('customerCategory');
             if (select) {
                 const currentValue = select.value;
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                const allowedWHCustomerCategories = (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) ? user.allowedWHCustomerCategories : null;
+
                 select.innerHTML = '<option value="">Select Category</option>';
                 categories.forEach(cat => {
                     if (cat.isActive) {
-                        select.innerHTML += `<option value="${cat._id}">${cat.name}</option>`;
+                        if (!allowedWHCustomerCategories || allowedWHCustomerCategories.includes(cat._id)) {
+                            select.innerHTML += `<option value="${cat._id}">${cat.name}</option>`;
+                        }
                     }
                 });
                 if (currentValue) select.value = currentValue;
@@ -149,6 +155,18 @@ async function loadCustomers() {
         const data = await response.json();
         if (data.success) {
             customers = data.data;
+
+            // Filter by allowed categories
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user && user.allowedWHCustomerCategories && user.allowedWHCustomerCategories.length > 0) {
+                const allowed = user.allowedWHCustomerCategories;
+                customers = customers.filter(c => {
+                    const catId = typeof c.customerCategory === 'object' ? c.customerCategory?._id : c.customerCategory;
+                    return allowed.includes(catId);
+                });
+            }
+
             renderTable();
         }
     } catch (error) {

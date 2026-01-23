@@ -369,14 +369,6 @@
                         <div class="rights-section-inner">
                             <div class="row mb-3">
                                 <div class="col-6">
-                                    <label class="form-label">Select User Type</label>
-                                    <select class="form-select form-select-sm" id="userType">
-                                        <option value="">Select User Type</option>
-                                        <option value="counter">Select Counter User</option>
-                                        <option value="office">Office User</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
                                     <label class="form-label">Allow Sale Delete</label>
                                     <select class="form-select form-select-sm" id="userSaleDeleteLimit">
                                         <option value="">Select Limit</option>
@@ -384,6 +376,44 @@
                                         <option value="own">Delete Own Only</option>
                                         <option value="none">No Delete</option>
                                     </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">User Type</label>
+                                    <select class="form-select form-select-sm" id="userType">
+                                        <option value="">Select Type</option>
+                                        <option value="office">Office</option>
+                                        <option value="counter">Counter</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">WH Customer Categories</label>
+                                    <div class="multi-select-dropdown" id="whCustomerCatDropdown">
+                                        <div class="multi-select-btn"
+                                            onclick="toggleGenericDropdown('whCustomerCatList')">
+                                            <span id="selectedWHCustomerCatsText">All Allowed</span>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div class="multi-select-content" id="whCustomerCatList">
+                                            <div class="p-2 text-muted" style="font-size: 0.75rem;">Loading
+                                                categories...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">WH Item Categories</label>
+                                    <div class="multi-select-dropdown" id="whItemCatDropdown">
+                                        <div class="multi-select-btn" onclick="toggleGenericDropdown('whItemCatList')">
+                                            <span id="selectedWHItemCatsText">All Allowed</span>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div class="multi-select-content" id="whItemCatList">
+                                            <div class="p-2 text-muted" style="font-size: 0.75rem;">Loading
+                                                categories...</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -448,6 +478,10 @@
                                         class="checkbox-label">26: Show Cost Price</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_27"><label
                                         class="checkbox-label">27: Allow Day Opening Closing</label></div>
+                                <div class="check-group"><input type="checkbox" id="wh_customer"><label
+                                        class="checkbox-label">28: Allow WH Customer Access</label></div>
+                                <div class="check-group"><input type="checkbox" id="wh_item"><label
+                                        class="checkbox-label">29: Allow WH Item Access</label></div>
                             </div>
                         </div>
 
