@@ -19,7 +19,7 @@ exports.addLedgerEntry = async (data) => {
         if (!customer) throw new Error('Customer not found');
 
         // Calculate running balance: Current Balance + Debit - Credit
-        const newBalance = (customer.openingBalance || 0) + (data.debit || 0) - (data.credit || 0);
+        const newBalance = (customer.currentBalance || 0) + (data.debit || 0) - (data.credit || 0);
 
         const ledgerEntry = await WHLedger.create({
             ...data,
@@ -27,7 +27,7 @@ exports.addLedgerEntry = async (data) => {
         });
 
         // Update Customer Record
-        customer.openingBalance = newBalance;
+        customer.currentBalance = newBalance;
         await customer.save();
 
         return ledgerEntry;
@@ -53,7 +53,7 @@ exports.deleteLedgerEntry = async (refId, fallback = null) => {
             const customer = await WHCustomer.findById(entry.customer);
             if (customer) {
                 // Reverse balance: New Balance = Current - AddedDebit + AddedCredit
-                customer.openingBalance = (customer.openingBalance || 0) - (entry.debit || 0) + (entry.credit || 0);
+                customer.currentBalance = (customer.currentBalance || 0) - (entry.debit || 0) + (entry.credit || 0);
                 await customer.save();
                 console.log(`Ledger entry found for ${refId}. Reversed customer balance.`);
             }
@@ -62,7 +62,7 @@ exports.deleteLedgerEntry = async (refId, fallback = null) => {
             // If No ledger entry found (old data), do manual reversal
             const customer = await WHCustomer.findById(fallback.customer);
             if (customer) {
-                customer.openingBalance = (customer.openingBalance || 0) - (fallback.debit || 0) + (fallback.credit || 0);
+                customer.currentBalance = (customer.currentBalance || 0) - (fallback.debit || 0) + (fallback.credit || 0);
                 await customer.save();
                 console.log(`No ledger entry for ${refId}. Performed manual fallback reversal.`);
             }

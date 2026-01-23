@@ -67,7 +67,7 @@ exports.getWHCustomerBalances = asyncHandler(async (req, res) => {
         customerName: c.customerName,
         code: c.code,
         phone: c.phone || '',
-        balance: c.openingBalance || 0,
+        balance: c.currentBalance || 0,
         categoryId: c.customerCategory ? c.customerCategory._id : null,
         categoryName: c.customerCategory ? c.customerCategory.name : ''
     }));

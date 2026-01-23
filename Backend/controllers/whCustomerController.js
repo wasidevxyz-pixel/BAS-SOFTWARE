@@ -106,6 +106,8 @@ exports.createWHCustomer = async (req, res) => {
         // Add user to req.body
         req.body.createdBy = req.user.id;
 
+        // Initialize current balance with opening balance
+        req.body.currentBalance = req.body.openingBalance || 0;
         const customer = await WHCustomer.create(req.body);
 
         // Create Opening Ledger Entry if balance is set
@@ -120,6 +122,11 @@ exports.createWHCustomer = async (req, res) => {
                 credit: req.body.openingBalance < 0 ? Math.abs(req.body.openingBalance) : 0,
                 createdBy: req.user.id
             });
+
+            // Re-sync after opening entry
+            const ledgerEntries = await WHLedger.find({ customer: customer._id });
+            customer.currentBalance = ledgerEntries.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.credit || 0), 0);
+            await customer.save();
         }
 
         res.status(201).json({
@@ -182,6 +189,12 @@ exports.updateWHCustomer = async (req, res) => {
             });
         }
 
+        // Re-sync current balance after any update
+        const ledgerEntries = await WHLedger.find({ customer: customer._id });
+        const total = ledgerEntries.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.credit || 0), 0);
+        customer.currentBalance = total;
+        await customer.save();
+
         res.status(200).json({
             success: true,
             message: 'WH Customer updated successfully',
@@ -241,12 +254,15 @@ exports.syncWHCustomerBalance = asyncHandler(async (req, res) => {
     const ledgerEntries = await WHLedger.find({ customer: req.params.id });
 
     // Sum them up
-    // Note: We don't include an initial opening balance here because 
-    // we assume the ledger system captures all changes. 
-    // If there was a manual start balance, it should be in the ledger as 'Opening'
     const total = ledgerEntries.reduce((acc, curr) => acc + (curr.debit || 0) - (curr.credit || 0), 0);
 
-    customer.openingBalance = total;
+    // Check if there's an 'Opening' refType to set the openingBalance field
+    const openingEntry = ledgerEntries.find(e => e.refType === 'Opening');
+    if (openingEntry) {
+        customer.openingBalance = (openingEntry.debit || 0) - (openingEntry.credit || 0);
+    }
+
+    customer.currentBalance = total;
     await customer.save();
 
     res.status(200).json({
