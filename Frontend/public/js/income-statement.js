@@ -155,6 +155,12 @@ function renderIncomeStatement(data) {
 
     document.getElementById('dateRange').innerHTML = `<h5 class="fw-bold mb-1">${branchName}</h5>${startDate} to ${endDate}`;
 
+    // Calculate days for Average Sale
+    const startObj = new Date(period.startDate);
+    const endObj = new Date(period.endDate);
+    const diffTime = Math.abs(endObj - startObj);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
     // Render grouped departments
     const tbody = document.getElementById('incomeTableBody');
     tbody.innerHTML = '';
@@ -165,38 +171,41 @@ function renderIncomeStatement(data) {
             const headerRow = document.createElement('tr');
             headerRow.style.fontWeight = 'bold';
             headerRow.innerHTML = `
-                <td colspan="8" style="padding: 10px; background-color: #145a32; color: white;">
+                <td colspan="10" style="padding: 10px; background-color: #145a32; color: white;">
                     <i class="fas fa-folder-open me-2"></i>${group.parentName}
                 </td>
             `;
             tbody.appendChild(headerRow);
 
             // Add sub-departments
-            if (group.subDepartments && group.subDepartments.length > 0) {
-                group.subDepartments.forEach((dept, index) => {
-                    const tr = document.createElement('tr');
+            group.subDepartments.forEach((dept, index) => {
+                const tr = document.createElement('tr');
 
-                    let discountCell = '';
-                    if (index === 0) {
-                        const rowspan = group.subDepartments.length;
-                        // Use group total percentage for the merged cell
-                        const groupPercent = calculateDiscountPercent(group.totals.discount, group.totals.sales);
-                        discountCell = `<td class="text-center align-middle" rowspan="${rowspan}" style="vertical-align: middle;">${groupPercent}</td>`;
-                    }
+                let discountCell = '';
+                let deductionCell = '';
+                if (index === 0) {
+                    const rowspan = group.subDepartments.length;
+                    // Discount Cell
+                    const groupPercent = calculateDiscountPercent(group.totals.discount, group.totals.sales);
+                    discountCell = `<td class="text-center align-middle" rowspan="${rowspan}" style="vertical-align: middle;">${groupPercent}</td>`;
+                    // Deduction Cell (Merged) - Using parent department deduction from setup
+                    deductionCell = `<td class="text-center align-middle fw-bold text-danger" rowspan="${rowspan}" style="vertical-align: middle;">${group.parentDed || 0}%</td>`;
+                }
 
-                    tr.innerHTML = `
-                        <td style="padding-left: 30px;">${dept.department}</td>
-                        <td class="number">${formatNumber(dept.sales)}</td>
-                        <td class="number">${formatNumber(dept.cost)}</td>
-                        <td></td>
-                        <td></td> <!-- Empty Expense for Sub-Dept -->
-                        <td class="number">${formatNumber(dept.grossProfit)}</td>
-                        ${discountCell}
-                        <td class="number">${calculateGpRate(dept.grossProfit, dept.sales)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
+                tr.innerHTML = `
+                    <td style="padding-left: 30px;">${dept.department}</td>
+                    <td class="number">${formatNumber(dept.sales)}</td>
+                    <td class="number print-only">${formatNumber(dept.sales / diffDays)}</td>
+                    <td class="number print-hide">${formatNumber(dept.cost)}</td>
+                    <td></td>
+                    <td class="print-hide"></td> <!-- Empty Expense for Sub-Dept -->
+                    <td class="number">${formatNumber(dept.grossProfit)}</td>
+                    ${discountCell}
+                    <td class="number">${calculateGpRate(dept.grossProfit, dept.sales)}</td>
+                    ${deductionCell}
+                `;
+                tbody.appendChild(tr);
+            });
 
             // Add subtotal row (same style as total)
             const subtotalRow = document.createElement('tr');
@@ -209,9 +218,10 @@ function renderIncomeStatement(data) {
             subtotalRow.innerHTML = `
                 <td style="padding-left: 30px;">SUB-TOTAL:</td>
                 <td class="number">${formatNumber(group.totals.sales)}</td>
-                <td class="number">${formatNumber(group.totals.cost)}</td>
+                <td class="number print-only">${formatNumber(group.totals.sales / diffDays)}</td>
+                <td class="number print-hide">${formatNumber(group.totals.cost)}</td>
                 <td class="number">${formatNumber(group.totals.bankDeduction)}</td>
-                <td style="padding: 2px;">
+                <td style="padding: 2px;" class="print-hide">
                     <input type="number" class="form-control form-control-sm text-end" 
                            placeholder="0" value="" 
                            oninput="updateSubTotal(this, ${baseGp}, ${sales}, '${groupId}')"
@@ -220,6 +230,7 @@ function renderIncomeStatement(data) {
                 <td class="number" id="gp-${groupId}">${formatNumber(baseGp)}</td>
                 <td class="text-center">${formatNumber(group.totals.discount)}</td>
                 <td class="number" id="rate-${groupId}">${calculateGpRate(baseGp, sales)}</td>
+                <td></td> <!-- Dept Ded % Placeholder -->
             `;
             tbody.appendChild(subtotalRow);
         });
@@ -230,16 +241,18 @@ function renderIncomeStatement(data) {
         totalRow.innerHTML = `
             <td>TOTAL</td>
             <td class="number">${formatNumber(totals.sales)}</td>
-            <td class="number">${formatNumber(totals.cost)}</td>
+            <td class="number print-only">${formatNumber(totals.sales / diffDays)}</td>
+            <td class="number print-hide">${formatNumber(totals.cost)}</td>
             <td class="number">${formatNumber(totals.bankDeduction)}</td>
-            <td class="text-end"></td> <!-- Total Expense Placeholder -->
+            <td class="text-end print-hide"></td> <!-- Total Expense Placeholder -->
             <td class="number">${formatNumber(totals.grossProfit)}</td>
             <td class="text-center">${formatNumber(totals.discount)}</td>
             <td class="number">${calculateGpRate(totals.grossProfit, totals.sales)}</td>
+            <td></td> <!-- Dept Ded % Placeholder -->
         `;
         tbody.appendChild(totalRow);
     } else {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No data available</td></tr>';
     }
 
     // Update summary section

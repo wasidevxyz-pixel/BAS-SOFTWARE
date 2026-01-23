@@ -166,42 +166,64 @@
                 background-color: white !important;
             }
 
-            /* Reset report container for print */
-            .report-container {
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-                border: none;
-                background-color: white !important;
-            }
-
-            /* Adjust table for better fit */
-            .income-table {
-                font-size: 10px;
-                /* Smaller font to ensure fit */
-                width: 100% !important;
-            }
-
-            .income-table th,
-            .income-table td {
-                padding: 4px !important;
-            }
-
-            /* Remove input styling */
-            input.form-control {
-                border: none !important;
-                background: transparent !important;
-                padding: 0 !important;
-                height: auto !important;
-                text-align: right !important;
-                width: auto !important;
-                display: block;
-            }
-
             /* Ensure colors match screen */
             .summary-table {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 5mm;
+            }
+
+            .report-container {
+                padding: 10px !important;
+            }
+
+            .report-title h4 {
+                font-size: 16px !important;
+            }
+
+            .report-title h5 {
+                font-size: 14px !important;
+                margin-bottom: 5px !important;
+            }
+
+            .report-subtitle {
+                margin-bottom: 10px !important;
+            }
+
+            .income-table td,
+            .income-table th {
+                padding: 4px 6px !important;
+                line-height: 1.2 !important;
+            }
+
+            .income-table th {
+                vertical-align: middle !important;
+            }
+
+            .summary-table {
+                margin-top: 10px !important;
+            }
+
+            .summary-table td {
+                padding: 4px 8px !important;
+            }
+
+            .print-hide {
+                display: none !important;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            .print-only {
+                display: table-cell !important;
             }
         }
     </style>
@@ -290,13 +312,15 @@
                         <thead>
                             <tr>
                                 <th style="width: 25%; text-align: left; padding-left: 15px;">CATEGORY</th>
-                                <th style="width: 12%; text-align: right;">SALES</th>
-                                <th style="width: 12%; text-align: right;">COST</th>
-                                <th style="width: 9%; text-align: right;">BANK DED.</th>
-                                <th style="width: 9%; text-align: right;">EXPENSE</th>
+                                <th style="width: 10%; text-align: right;">SALES</th>
+                                <th style="width: 10%; text-align: center;" class="print-only">AVG SALE<br>PER DAY</th>
+                                <th style="width: 10%; text-align: right;" class="print-hide">COST</th>
+                                <th style="width: 8%; text-align: right;">BANK DED.</th>
+                                <th style="width: 8%; text-align: right;" class="print-hide">EXPENSE</th>
                                 <th style="width: 11%; text-align: right;">GROSS PROFIT</th>
-                                <th style="width: 10%; text-align: center;">DISCOUNT</th>
-                                <th style="width: 12%; text-align: right;">GP RATE</th>
+                                <th style="width: 9%; text-align: center;">DISCOUNT</th>
+                                <th style="width: 10%; text-align: right;">GP RATE</th>
+                                <th style="width: 9%; text-align: center;">DEPT<br>DED</th>
                             </tr>
                         </thead>
                         <tbody id="incomeTableBody">

@@ -187,6 +187,7 @@ exports.getIncomeStatement = async (req, res) => {
                     departmentGroups.set(parentId, {
                         parentName: parentName,
                         parentId: parentId,
+                        parentDed: actualParent.deduction || 0,
                         subDepartments: new Map(), // Use Map to aggregate sub-departments
                         totals: {
                             sales: 0,
@@ -249,9 +250,11 @@ exports.getIncomeStatement = async (req, res) => {
 
                         // Initialize or update sub-department
                         if (!group.subDepartments.has(subId)) {
+                            const subDeptObj = deptIdToObj.get(subId);
                             group.subDepartments.set(subId, {
                                 department: subDeptName,
                                 departmentId: subId,
+                                deptDed: subDeptObj ? (subDeptObj.deduction || 0) : 0,
                                 sales: 0,
                                 cost: 0,
                                 bankDeduction: 0,
@@ -287,6 +290,7 @@ exports.getIncomeStatement = async (req, res) => {
                         group.subDepartments.set(deptId, {
                             department: dept.name,
                             departmentId: deptId,
+                            deptDed: dept.deduction || 0,
                             sales: 0,
                             cost: 0,
                             bankDeduction: 0,
@@ -347,6 +351,7 @@ exports.getIncomeStatement = async (req, res) => {
                     group.subDepartments.set(dId, {
                         department: dept.name,
                         departmentId: dId,
+                        deptDed: dept.deduction || 0,
                         sales: 0,
                         cost: 0,
                         bankDeduction: 0,
