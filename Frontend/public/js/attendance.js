@@ -1,248 +1,23 @@
 let attendanceRecords = [];
-let employees = [];
+let branches = [];
+let departments = [];
+let designations = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDates();
-    loadEmployees();
-    loadBranches();
-    loadAttendanceList();
-
-    // Calculate worked hours when check in/out changes
-    document.getElementById('checkIn')?.addEventListener('change', calculateWorkedHours);
-    document.getElementById('checkOut')?.addEventListener('change', calculateWorkedHours);
+    await Promise.all([
+        loadBranches(),
+        loadDepartments(),
+        loadDesignations(),
+    ]);
+    await loadAttendanceList();
 });
 
 function setDefaultDates() {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
     document.getElementById('fromDate').value = today;
     document.getElementById('toDate').value = today;
-    document.getElementById('attendanceDate').value = today;
-}
-
-async function loadEmployees() {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/employees', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            employees = data.data.filter(emp => emp.isActive);
-            const empSelect = document.getElementById('employee');
-            empSelect.innerHTML = '<option value="">Select Employee</option>';
-            employees.forEach(emp => {
-                const option = document.createElement('option');
-                option.value = emp._id;
-                option.textContent = `${emp.code} - ${emp.name}`;
-                empSelect.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading employees:', error);
-    }
-}
-
-async function loadAttendanceList() {
-    try {
-        const token = localStorage.getItem('token');
-        const fromDate = document.getElementById('fromDate').value;
-        const toDate = document.getElementById('toDate').value;
-        const branch = document.getElementById('filterBranch').value;
-
-        let url = `/api/v1/attendance?from=${fromDate}&to=${toDate}`;
-        if (branch) url += `&branch=${branch}`;
-
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            attendanceRecords = data.data;
-            renderAttendanceList();
-        }
-    } catch (error) {
-        console.error('Error loading attendance:', error);
-        alert('Error loading attendance records');
-    }
-}
-
-function renderAttendanceList() {
-    const tbody = document.getElementById('attendanceListBody');
-    tbody.innerHTML = '';
-
-    if (attendanceRecords.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No attendance records found</td></tr>';
-        return;
-    }
-
-    attendanceRecords.forEach(att => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${new Date(att.date).toLocaleDateString()}</td>
-            <td>${att.employee?.name || '-'}</td>
-            <td>${att.branch || '-'}</td>
-            <td>${att.checkIn || '-'}</td>
-            <td>${att.checkOut || '-'}</td>
-            <td>${att.workedHrs || '-'}</td>
-            <td><span class="badge bg-${getStatusColor(att.displayStatus)}">${att.displayStatus}</span></td>
-            <td>${att.remarks || '-'}</td>
-            <td>
-                <button class="btn btn-sm btn-primary" onclick="editAttendance('${att._id}')">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteAttendance('${att._id}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function getStatusColor(status) {
-    switch (status) {
-        case 'Present': return 'success';
-        case 'Absent': return 'danger';
-        case 'Leave': return 'warning';
-        case 'Half Day': return 'info';
-        default: return 'secondary';
-    }
-}
-
-function calculateWorkedHours() {
-    const checkIn = document.getElementById('checkIn').value;
-    const checkOut = document.getElementById('checkOut').value;
-
-    if (checkIn && checkOut) {
-        const inTime = new Date(`2000-01-01 ${checkIn}`);
-        const outTime = new Date(`2000-01-01 ${checkOut}`);
-        const diff = (outTime - inTime) / 1000 / 60 / 60; // hours
-
-        if (diff > 0) {
-            const hours = Math.floor(diff);
-            const minutes = Math.round((diff - hours) * 60);
-            document.getElementById('workedHrs').value = `${hours}h ${minutes}m`;
-        }
-    }
-}
-
-async function saveAttendance() {
-    const attendanceId = document.getElementById('attendanceId').value;
-    const attendanceData = {
-        employee: document.getElementById('employee').value,
-        date: document.getElementById('attendanceDate').value,
-        branch: document.getElementById('attendanceBranch').value,
-        checkIn: document.getElementById('checkIn').value,
-        checkOut: document.getElementById('checkOut').value,
-        workedHrs: document.getElementById('workedHrs').value,
-        breakHrs: document.getElementById('breakHrs').value,
-        displayStatus: document.getElementById('displayStatus').value,
-        remarks: document.getElementById('remarks').value,
-        isPresent: document.getElementById('displayStatus').value === 'Present'
-    };
-
-    if (!attendanceData.employee || !attendanceData.date) {
-        alert('Please select employee and date');
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/attendance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(attendanceData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            alert('Attendance saved successfully');
-            clearAttendanceForm();
-            loadAttendanceList();
-            // Switch to list tab
-            const listTab = new bootstrap.Tab(document.querySelector('[href="#attendanceList"]'));
-            listTab.show();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Error saving attendance:', error);
-        alert('Error saving attendance');
-    }
-}
-
-async function editAttendance(id) {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/v1/attendance/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            const att = data.data;
-            document.getElementById('attendanceId').value = att._id;
-            document.getElementById('employee').value = att.employee?._id || '';
-            document.getElementById('attendanceDate').value = att.date ? att.date.split('T')[0] : '';
-            document.getElementById('attendanceBranch').value = att.branch || '';
-            document.getElementById('checkIn').value = att.checkIn || '';
-            document.getElementById('checkOut').value = att.checkOut || '';
-            document.getElementById('workedHrs').value = att.workedHrs || '';
-            document.getElementById('breakHrs').value = att.breakHrs || '0';
-            document.getElementById('displayStatus').value = att.displayStatus || 'Present';
-            document.getElementById('remarks').value = att.remarks || '';
-
-            // Switch to add tab
-            const addTab = new bootstrap.Tab(document.querySelector('[href="#attendanceAdd"]'));
-            addTab.show();
-        }
-    } catch (error) {
-        console.error('Error loading attendance:', error);
-        alert('Error loading attendance');
-    }
-}
-
-async function deleteAttendance(id) {
-    if (!confirm('Are you sure you want to delete this attendance record?')) return;
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/v1/attendance/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            alert('Attendance deleted successfully');
-            loadAttendanceList();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Error deleting attendance:', error);
-        alert('Error deleting attendance');
-    }
-}
-
-function clearAttendanceForm() {
-    document.getElementById('attendanceId').value = '';
-    document.getElementById('employee').value = '';
-    setDefaultDates();
-    document.getElementById('attendanceBranch').value = '';
-    document.getElementById('checkIn').value = '';
-    document.getElementById('checkOut').value = '';
-    document.getElementById('workedHrs').value = '';
-    document.getElementById('breakHrs').value = '0';
-    document.getElementById('displayStatus').value = 'Present';
-    document.getElementById('remarks').value = '';
 }
 
 async function loadBranches() {
@@ -253,41 +28,421 @@ async function loadBranches() {
         });
         const data = await response.json();
         if (data.success) {
-            const filterSelect = document.getElementById('filterBranch');
-            const formSelect = document.getElementById('attendanceBranch');
-
-            // Populate filter select
-            if (filterSelect) {
-                const currentFilter = filterSelect.value;
-                filterSelect.innerHTML = '<option value="">All</option>';
-                data.data.forEach(store => {
-                    const option = document.createElement('option');
-                    option.value = store.name;
-                    option.textContent = store.name;
-                    filterSelect.appendChild(option);
-                });
-                if (currentFilter) filterSelect.value = currentFilter;
-            }
-
-            // Populate form select
-            if (formSelect) {
-                const currentForm = formSelect.value;
-                formSelect.innerHTML = '<option value="">Select Branch</option>';
-                data.data.forEach(store => {
-                    const option = document.createElement('option');
-                    option.value = store.name;
-                    option.textContent = store.name;
-                    formSelect.appendChild(option);
-                });
-                // Preserve selection if valid, or default if single branch
-                if (currentForm && Array.from(formSelect.options).some(o => o.value === currentForm)) {
-                    formSelect.value = currentForm;
-                } else if (data.data.length === 1) {
-                    formSelect.value = data.data[0].name;
-                }
-            }
+            const select = document.getElementById('filterBranch');
+            select.innerHTML = '<option value="">All Branches</option>';
+            data.data.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.textContent = s.name;
+                select.appendChild(opt);
+            });
         }
-    } catch (e) {
-        console.error('Error loading branches:', e);
+    } catch (err) { console.error(err); }
+}
+
+async function loadDepartments() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/employee-departments', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const select = document.getElementById('filterDept');
+            select.innerHTML = '<option value="">Select Department</option>';
+            data.data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d._id;
+                opt.textContent = d.name;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function loadDesignations() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/designations', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const select = document.getElementById('filterDesig');
+            select.innerHTML = '<option value="">Select Designation</option>';
+            data.data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d._id;
+                opt.textContent = d.name;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) { console.error(err); }
+}
+
+async function loadAttendanceList() {
+    const tbody = document.getElementById('attendanceRecordsBody');
+    tbody.innerHTML = '<tr><td colspan="19" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
+    try {
+        const token = localStorage.getItem('token');
+        const fromDate = document.getElementById('fromDate').value;
+        const toDate = document.getElementById('toDate').value;
+        const branch = document.getElementById('filterBranch').value;
+        const dept = document.getElementById('filterDept').value;
+        const desig = document.getElementById('filterDesig').value;
+        const status = document.getElementById('filterStatus').value;
+
+        // Update Screen Grid Header
+        if (document.getElementById('dispDateRange')) {
+            document.getElementById('dispDateRange').textContent = `${fromDate} to ${toDate}`;
+        }
+        if (document.getElementById('dispDept')) {
+            const deptText = document.getElementById('filterDept').options[document.getElementById('filterDept').selectedIndex].text;
+            document.getElementById('dispDept').textContent = dept ? deptText : 'All Departments';
+        }
+
+        // 1. Fetch Employees
+        const empRes = await fetch(`/api/v1/employees?branch=${branch}&department=${dept}&designation=${desig}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const empData = await empRes.json();
+
+        // 2. Fetch Attendance
+        let attUrl = `/api/v1/attendance?from=${fromDate}&to=${toDate}&branch=${branch}`;
+        const attRes = await fetch(attUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const attData = await attRes.json();
+
+        if (empData.success && attData.success) {
+            const allEmployees = empData.data.filter(e => e.isActive);
+            const recordedAttendance = attData.data;
+
+            // Merge: For each employee, see if they have a record for this date
+            // If it's a single date, we match easily. If range, it's more complex, but usually registers are single-date.
+            attendanceRecords = allEmployees.map(emp => {
+                const record = recordedAttendance.find(a =>
+                    a.employee && (a.employee._id === emp._id || a.employee === emp._id)
+                );
+
+                if (record) return record;
+
+                // Return a "virtual" record if none exists
+                return {
+                    _id: `new_${emp._id}`,
+                    employee: emp,
+                    date: fromDate,
+                    branch: emp.branch,
+                    displayStatus: 'Present',
+                    checkIn: '',
+                    checkOut: '',
+                    workedHrs: '',
+                    isNew: true
+                };
+            });
+
+            // Status filter (client-side for merged data)
+            if (status) {
+                attendanceRecords = attendanceRecords.filter(r => r.displayStatus === status);
+            }
+
+            renderAttendanceTable();
+        }
+    } catch (error) {
+        console.error('Error loading attendance:', error);
+        tbody.innerHTML = '<tr><td colspan="19" class="text-center text-danger">Error loading data</td></tr>';
     }
 }
+
+function renderAttendanceTable() {
+    const tbody = document.getElementById('attendanceRecordsBody');
+    tbody.innerHTML = '';
+
+    attendanceRecords.forEach((att, index) => {
+        const tr = document.createElement('tr');
+
+        // Initial color based on strict rules
+        tr.className = '';
+        if (att.checkIn && att.checkOut && att.displayStatus === 'Present') {
+            tr.className = 'row-present';
+        } else if (!att.checkIn && !att.checkOut && att.displayStatus === 'Absent') {
+            tr.className = 'row-absent';
+        }
+
+        tr.dataset.id = att._id;
+
+        const date = new Date(att.date);
+        const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        tr.innerHTML = `
+            <td class="text-center col-sr">${index + 1}</td>
+            <td class="text-center col-date" style="font-weight: 600;">${dateStr}</td>
+            <td class="text-center col-code">
+                <a href="/employee-attendance-detail.html?id=${att.employee?._id || ''}&date=${att.date}" class="code-link-box">
+                    ${att.employee?.code || '-'}
+                </a>
+                <span class="print-value">${att.employee?.code || '-'}</span>
+            </td>
+            <td class="text-center col-action">
+                <button class="btn btn-primary btn-xs" onclick="quickSaveAttendance('${att._id}', this)">Save</button>
+            </td>
+            <td class="ps-2 fw-bold text-uppercase col-name">${att.employee?.name || '-'}</td>
+            <td class="text-center col-dept">${att.employee?.department?.name || '-'}</td>
+            <td class="text-center col-desig">${att.employee?.designation?.name || '-'}</td>
+            <td class="text-center col-duty" style="font-weight: 600;">${att.employee?.totalHrs || '0h'}</td>
+            <td class="px-1 col-checkin">
+                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${att.checkIn || ''}" oninput="updateWorkedHrs(this)">
+                <span class="print-value">${att.checkIn || ''}</span>
+            </td>
+            <td class="px-1 col-checkout">
+                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${att.checkOut || ''}" oninput="updateWorkedHrs(this)">
+                <span class="print-value">${att.checkOut || ''}</span>
+            </td>
+            <td class="text-center fw-bold col-worked">${att.workedHrs || ''}</td>
+            <td class="px-1 col-breakout">
+                <input type="time" class="form-control form-control-xs text-center" value="${att.breakOut || ''}" oninput="updateWorkedHrs(this)">
+                <span class="print-value">${att.breakOut || ''}</span>
+            </td>
+            <td class="px-1 col-breakin">
+                <input type="time" class="form-control form-control-xs text-center" value="${att.breakIn || ''}" oninput="updateWorkedHrs(this)">
+                <span class="print-value">${att.breakIn || ''}</span>
+            </td>
+            <td class="text-center col-breakhrs">${att.breakHrs || ''}</td>
+            <td class="px-0 col-diff">
+                <div class="diff-btns" data-mode="${att.diffMode || '+'}">
+                    <button class="btn btn-diff btn-success ${(!att.diffMode || att.diffMode === '+') ? '' : 'opacity-50'}" onclick="setDiffMode(this, '+')">+</button>
+                    <button class="btn btn-diff btn-danger ${att.diffMode === '-' ? '' : 'opacity-50'}" onclick="setDiffMode(this, '-')">-</button>
+                </div>
+            </td>
+            <td class="px-1 col-diffin"><input type="time" class="input-diff-box" value="${att.timeDiffIn || ''}" oninput="updateWorkedHrs(this)"></td>
+            <td class="px-1 col-diffout"><input type="time" class="input-diff-box" value="${att.timeDiffOut || ''}" oninput="updateWorkedHrs(this)"></td>
+            <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
+            <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
+            <td class="px-1 text-center col-status">
+                <select class="form-select form-select-xs fw-bold">
+                    <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>P</option>
+                    <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>A</option>
+                    <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>L</option>
+                    <option value="Half Day" ${att.displayStatus === 'Half Day' ? 'selected' : ''}>H</option>
+                </select>
+                <span class="print-value">${att.displayStatus ? att.displayStatus.charAt(0) : ''}</span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function updateRowColor(element) {
+    const tr = element.closest('tr');
+    const status = tr.cells[19].querySelector('select').value;
+    const checkIn = tr.cells[8].querySelector('input').value;
+    const checkOut = tr.cells[9].querySelector('input').value;
+
+    tr.className = '';
+    if (checkIn && checkOut && status === 'Present') {
+        tr.className = 'row-present';
+    } else if (!checkIn && !checkOut && status === 'Absent') {
+        tr.className = 'row-absent';
+    }
+}
+
+function setDiffMode(btn, mode) {
+    const parent = btn.closest('.diff-btns');
+    parent.dataset.mode = mode;
+    parent.querySelectorAll('.btn-diff').forEach(b => b.classList.add('opacity-50'));
+    btn.classList.remove('opacity-50');
+    updateWorkedHrs(btn);
+}
+
+function handleGlobalSearch(value) {
+    const filter = value.toUpperCase();
+    const rows = document.getElementById('attendanceRecordsBody').getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const text = rows[i].textContent || rows[i].innerText;
+        if (text.toUpperCase().indexOf(filter) > -1) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
+function updateWorkedHrs(input) {
+    const tr = input.closest('tr');
+    const checkIn = tr.querySelector('.col-checkin input').value;
+    const checkOut = tr.querySelector('.col-checkout input').value;
+    const breakOut = tr.querySelector('.col-breakout input').value;
+    const breakIn = tr.querySelector('.col-breakin input').value;
+    const diffIn = tr.querySelector('.col-diffin input').value;
+    const diffOut = tr.querySelector('.col-diffout input').value;
+    const mode = tr.querySelector('.diff-btns').dataset.mode || '+';
+
+    // Update Print Values for Inputs
+    tr.querySelectorAll('input').forEach(inp => {
+        const span = inp.nextElementSibling;
+        if (span && span.classList.contains('print-value')) span.textContent = inp.value;
+    });
+    // Update Print Values for Selects
+    tr.querySelectorAll('select').forEach(sel => {
+        const span = sel.nextElementSibling;
+        if (span && span.classList.contains('print-value')) span.textContent = sel.value ? sel.value.charAt(0) : '';
+    });
+
+    // 1. Calculate Break Hrs
+    let bMin = 0;
+    if (breakOut && breakIn) {
+        const outParts = breakOut.split(':').map(Number);
+        const inParts = breakIn.split(':').map(Number);
+        bMin = (inParts[0] * 60 + inParts[1]) - (outParts[0] * 60 + outParts[1]);
+        if (bMin < 0) bMin += 1440; // overnight
+
+        const bHrsStr = `${Math.floor(bMin / 60)}:${(bMin % 60).toString().padStart(2, '0')}`;
+        tr.querySelector('.col-breakhrs').textContent = bHrsStr;
+    } else {
+        tr.querySelector('.col-breakhrs').textContent = '';
+    }
+
+    // 2. Calculate Total Diffs (Duration between Diff In and Diff Out)
+    let totalDiffMin = 0;
+    if (diffIn && diffOut) {
+        const inParts = diffIn.split(':').map(Number);
+        const outParts = diffOut.split(':').map(Number);
+        totalDiffMin = (outParts[0] * 60 + outParts[1]) - (inParts[0] * 60 + inParts[1]);
+        if (totalDiffMin < 0) totalDiffMin += 1440;
+
+        const totalDiffStr = `${Math.floor(totalDiffMin / 60)}:${(totalDiffMin % 60).toString().padStart(2, '0')}`;
+        tr.querySelector('.col-totaldiff').textContent = totalDiffStr;
+    } else {
+        tr.querySelector('.col-totaldiff').textContent = '';
+    }
+
+    // 3. Worked Hrs
+    if (checkIn && checkOut) {
+        const cin = checkIn.split(':').map(Number);
+        const cout = checkOut.split(':').map(Number);
+        let wMin = (cout[0] * 60 + cout[1]) - (cin[0] * 60 + cin[1]);
+        if (wMin < 0) wMin += 1440;
+
+        // Net Worked
+        let netMin = wMin - bMin;
+        if (netMin < 0) netMin = 0;
+        tr.querySelector('.col-worked').textContent = `${Math.floor(netMin / 60)}:${(netMin % 60).toString().padStart(2, '0')}`;
+
+        // Apply Diff Mode to Net Worked
+        let finalMin = netMin;
+        if (mode === '+') finalMin += totalDiffMin;
+        else finalMin -= totalDiffMin;
+        if (finalMin < 0) finalMin = 0;
+
+        const h = Math.floor(finalMin / 60);
+        const m = finalMin % 60;
+        const finalStr = `${h}:${m.toString().padStart(2, '0')}`;
+
+        tr.querySelector('.col-totalhrs').textContent = finalStr;
+
+        // Auto-set status if both times filled
+        const statusSelect = tr.querySelector('.col-status select');
+        if (statusSelect.value === 'Absent' || statusSelect.value === '') {
+            statusSelect.value = 'Present';
+            // Also update print value for status
+            const span = statusSelect.nextElementSibling;
+            if (span && span.classList.contains('print-value')) span.textContent = 'P';
+            updateRowColor(statusSelect);
+        }
+    } else {
+        // Helper to clear displays if incomplete
+        if (!checkIn && !checkOut) {
+            tr.querySelector('.col-worked').textContent = '';
+            tr.querySelector('.col-totalhrs').textContent = '';
+        }
+    }
+}
+
+async function quickSaveAttendance(id, btn) {
+    const tr = btn.closest('tr');
+    const isNew = id.startsWith('new_');
+    const realEmpId = isNew ? id.replace('new_', '') : null;
+
+    // Find matching record from local array to get accurate date
+    const localRecord = attendanceRecords.find(r => r._id === id);
+
+    const updatedData = {
+        employee: realEmpId || (localRecord.employee?._id || localRecord.employee),
+        date: localRecord.date,
+        branch: localRecord.branch || (document.getElementById('filterBranch').value || '(PWD-1)'),
+        branch: localRecord.branch || (document.getElementById('filterBranch').value || '(PWD-1)'),
+        checkIn: tr.querySelector('.col-checkin input').value,
+        checkOut: tr.querySelector('.col-checkout input').value,
+        workedHrs: tr.querySelector('.col-worked').textContent,
+        breakOut: tr.querySelector('.col-breakout input').value,
+        breakIn: tr.querySelector('.col-breakin input').value,
+        breakHrs: tr.querySelector('.col-breakhrs').textContent,
+        diffMode: tr.querySelector('.diff-btns').dataset.mode,
+        timeDiffIn: tr.querySelector('.col-diffin input').value,
+        timeDiffOut: tr.querySelector('.col-diffout input').value,
+        totalDiffHrs: tr.querySelector('.col-totaldiff').textContent,
+        displayStatus: tr.querySelector('.col-status select').value,
+        isPresent: tr.querySelector('.col-status select').value === 'Present'
+    };
+
+    try {
+        const token = localStorage.getItem('token');
+        const method = isNew ? 'POST' : 'PUT';
+        const url = isNew ? '/api/v1/attendance' : `/api/v1/attendance/${id}`;
+
+        const res = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedData)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = 'Saved!';
+            btn.classList.replace('btn-primary', 'btn-success');
+
+            // If it was new, we should reload to get the real ID from DB
+            if (isNew) await loadAttendanceList();
+            else updateRowColor(tr); // Immediate color update for existing rows
+
+            setTimeout(() => {
+                btn.textContent = 'Save';
+                btn.classList.replace('btn-success', 'btn-primary');
+            }, 2000);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to update attendance');
+    }
+}
+function handlePrint() {
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    const branch = document.getElementById('filterBranch').options[document.getElementById('filterBranch').selectedIndex]?.text || '';
+
+    // Update the new Simple Header elements
+    if (document.getElementById('pDateRange')) {
+        document.getElementById('pDateRange').textContent = `${fromDate} to ${toDate}`;
+    }
+
+    if (document.getElementById('pBranchHeader')) {
+        document.getElementById('pBranchHeader').textContent = `Branch: ${branch}`;
+    }
+
+    window.print();
+}
+
+// Shortcut keys
+document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        loadAttendanceList();
+    }
+});

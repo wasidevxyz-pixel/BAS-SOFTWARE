@@ -23,6 +23,8 @@ const attendanceSchema = new mongoose.Schema({
     checkIn: String,
     checkOut: String,
     workedHrs: String,
+    breakOut: String,
+    breakIn: String,
     breakHrs: String,
     // Time Differences
     timeDiffIn: String,

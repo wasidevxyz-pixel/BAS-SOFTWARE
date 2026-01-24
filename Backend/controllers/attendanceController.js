@@ -4,7 +4,7 @@ const Attendance = require('../models/Attendance');
 // @route   GET /api/v1/attendance
 exports.getAttendance = async (req, res) => {
     try {
-        const { from, to, branch, department, designation } = req.query;
+        const { from, to, branch, department, designation, employee } = req.query;
 
         let query = {};
 
@@ -12,15 +12,30 @@ exports.getAttendance = async (req, res) => {
             query.date = { $gte: new Date(from), $lte: new Date(to) };
         }
         if (branch) query.branch = branch;
+        if (employee) query.employee = employee;
 
         const attendance = await Attendance.find(query)
             .populate({
                 path: 'employee',
-                populate: { path: 'department' }
+                populate: [
+                    { path: 'department' },
+                    { path: 'designation' }
+                ]
             })
             .sort({ date: -1 });
 
-        res.status(200).json({ success: true, data: attendance });
+        // Filter by dept/desig after population if needed
+        let filteredData = attendance;
+        if (department || designation) {
+            filteredData = attendance.filter(att => {
+                let match = true;
+                if (department && att.employee?.department?._id.toString() !== department) match = false;
+                if (designation && att.employee?.designation?._id.toString() !== designation) match = false;
+                return match;
+            });
+        }
+
+        res.status(200).json({ success: true, data: filteredData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -89,6 +104,25 @@ exports.bulkCreateAttendance = async (req, res) => {
         }
 
         res.status(201).json({ success: true, data: results });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update attendance
+// @route   PUT /api/v1/attendance/:id
+exports.updateAttendance = async (req, res) => {
+    try {
+        const attendance = await Attendance.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
+
+        if (!attendance) {
+            return res.status(404).json({ success: false, message: 'Attendance not found' });
+        }
+
+        res.status(200).json({ success: true, data: attendance });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

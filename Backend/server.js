@@ -90,6 +90,9 @@ const whSaleRoutes = require('./routes/whSaleRoutes');
 const whSaleReturnRoutes = require('./routes/whSaleReturnRoutes');
 const whCustomerPaymentRoutes = require('./routes/whCustomerPaymentRoutes');
 const whLedgerRoutes = require('./routes/whLedgerRoutes');
+const designationRoutes = require('./routes/designations');
+const employeeDepartmentRoutes = require('./routes/employeeDepartments');
+
 
 
 
@@ -406,6 +409,9 @@ app.use('/api/v1/wh-sales', whSaleRoutes);
 app.use('/api/v1/wh-sale-returns', whSaleReturnRoutes);
 app.use('/api/v1/wh-customer-payments', whCustomerPaymentRoutes);
 app.use('/api/v1/wh-ledger', whLedgerRoutes);
+app.use('/api/v1/designations', designationRoutes);
+app.use('/api/v1/employee-departments', employeeDepartmentRoutes);
+
 
 
 
@@ -611,6 +617,11 @@ app.get('/income-statement.html', (req, res) => {
 app.get('/employee-registration.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-registration.html'));
 });
+
+app.get('/employee-list.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-list.html'));
+});
+
 
 app.get('/payroll.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'payroll.html'));

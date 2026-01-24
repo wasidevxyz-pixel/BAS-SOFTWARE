@@ -5,10 +5,13 @@ const {
     getEmployee,
     createEmployee,
     updateEmployee,
-    deleteEmployee
+    deleteEmployee,
+    getNextCode
 } = require('../controllers/employeeController');
 
 const { protect, authorize } = require('../middleware/auth');
+
+router.get('/next-code', protect, getNextCode);
 
 router.route('/')
     .get(protect, getEmployees)

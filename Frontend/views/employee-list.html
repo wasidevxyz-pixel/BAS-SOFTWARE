@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/desktop-style.css" rel="stylesheet">
+    <link href="/css/sidebar.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .table-container {
+            background: white;
+            border-radius: 0;
+            overflow-x: auto;
+            margin: 0 !important;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+
+        .table {
+            margin-bottom: 0;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            table-layout: fixed;
+            width: fit-content;
+            min-width: 100%;
+        }
+
+        .table thead th {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+            padding: 6px 4px;
+            border: 1px solid #0069d9;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .table tbody td {
+            padding: 2px 4px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .form-control-xs {
+            height: 22px;
+            padding: 1px 4px;
+            font-size: 0.72rem;
+            border-radius: 2px;
+            border: 1px solid #ced4da;
+        }
+
+        .btn-xs {
+            padding: 0px 5px;
+            font-size: 0.65rem;
+            border-radius: 2px;
+            line-height: 1.5;
+        }
+
+        /* Column Widths */
+        .col-sr {
+            width: 40px;
+        }
+
+        .col-code {
+            width: 60px;
+        }
+
+        .col-action {
+            width: 100px;
+        }
+
+        .col-branch {
+            width: 100px;
+        }
+
+        .col-name {
+            width: 150px;
+        }
+
+        .col-cnic {
+            width: 120px;
+        }
+
+        .col-marital {
+            width: 80px;
+        }
+
+        .col-desig {
+            width: 120px;
+        }
+
+        .col-dept {
+            width: 120px;
+        }
+
+        .col-acNo {
+            width: 120px;
+        }
+
+        .col-bank {
+            width: 80px;
+        }
+
+        .col-duty {
+            width: 60px;
+        }
+
+        .col-date {
+            width: 120px;
+        }
+
+        .col-salary {
+            width: 80px;
+        }
+
+        .col-comm {
+            width: 80px;
+        }
+
+        .col-allow {
+            width: 80px;
+        }
+
+        .col-st {
+            width: 80px;
+        }
+
+        .col-bool {
+            width: 50px;
+        }
+
+        .code-link {
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .code-link:hover {
+            color: #0056b3;
+        }
+
+        .header-controls {
+            background-color: #f8f9fa;
+            padding: 4px;
+            border-radius: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #dee2e6;
+            margin: 0 !important;
+            border-bottom: none;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .filter-row>* {
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <i class="fas fa-list me-2"></i> Employee List
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid p-0">
+        <div class="header-controls">
+            <!-- Filter & Action Row -->
+            <div class="d-flex gap-1 align-items-center flex-wrap">
+                <button class="btn btn-danger btn-sm text-nowrap px-2" style="font-size: 0.75rem;"
+                    onclick="location.href='employee-registration.html'">
+                    Add Employee
+                </button>
+                <select id="filterBranch" class="form-select form-select-sm" style="width: 130px; font-size: 0.75rem;">
+                    <option value="">Select Branch</option>
+                </select>
+                <input type="text" id="filterCode" class="form-control form-control-sm" placeholder="Enter Emp Code"
+                    style="width: 110px; font-size: 0.75rem;">
+                <input type="text" id="filterName" class="form-control form-control-sm" placeholder="Enter Emp Name"
+                    style="width: 140px; font-size: 0.75rem;">
+                <select id="filterDept" class="form-select form-select-sm" style="width: 140px; font-size: 0.75rem;">
+                    <option value="">Select Department</option>
+                </select>
+                <select id="filterDesig" class="form-select form-select-sm" style="width: 140px; font-size: 0.75rem;">
+                    <option value="">Select Designation</option>
+                </select>
+                <select id="filterType" class="form-select form-select-sm" style="width: 100px; font-size: 0.75rem;">
+                    <option value="">All Emp</option>
+                    <option value="commission">Commission Emp</option>
+                    <option value="bank">Bank Emp</option>
+                    <option value="cash">Cash Emp</option>
+                </select>
+                <select id="filterReligion" class="form-select form-select-sm"
+                    style="width: 110px; font-size: 0.75rem;">
+                    <option value="">All Religion</option>
+                    <option value="Islam">Islam</option>
+                    <option value="Christian">Christian</option>
+                    <option value="Hindu">Hindu</option>
+                </select>
+                <select id="filterStatus" class="form-select form-select-sm" style="width: 110px; font-size: 0.75rem;">
+                    <option value="">All Status</option>
+                    <option value="Married">Married</option>
+                    <option value="Single">Single</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                </select>
+
+                <!-- Action Buttons in same row -->
+                <button class="btn btn-success btn-sm px-2" style="font-size: 0.75rem;" onclick="loadEmployees()"><i
+                        class="fas fa-search"></i> Search</button>
+                <button class="btn btn-secondary btn-sm px-2" style="font-size: 0.75rem;"><i class="fas fa-print"></i>
+                    Print</button>
+                <button class="btn btn-primary btn-sm px-2" style="font-size: 0.75rem;">Employee Ranking</button>
+            </div>
+        </div>
+
+        <!-- Global Search Input Row -->
+        <div
+            style="background: white; border: 1px solid #dee2e6; border-top: none; padding: 2px 8px; margin: 0 !important;">
+            <input type="text" id="globalSearch" class="form-control form-control-sm border-0 shadow-none"
+                placeholder="Search..." style="font-size: 0.85rem; font-weight: 500; text-transform: uppercase;"
+                onkeyup="handleGlobalSearch(this.value)">
+        </div>
+
+        <div class="table-container">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th class="col-sr">SrNo</th>
+                        <th class="col-code">Code</th>
+                        <th class="col-action">Action</th>
+                        <th class="col-branch">Branch</th>
+                        <th class="col-name">Name</th>
+                        <th class="col-cnic">CNIC</th>
+                        <th class="col-marital">Marital</th>
+                        <th class="col-desig">Designation</th>
+                        <th class="col-dept">Department</th>
+                        <th class="col-acNo">Acc No</th>
+                        <th class="col-bank">Bank</th>
+                        <th class="col-duty">Hours</th>
+                        <th class="col-date">Incr Date</th>
+                        <th class="col-salary">Salary</th>
+                        <th class="col-comm">Comm</th>
+                        <th class="col-allow">Allow</th>
+                        <th class="col-st">ST.L</th>
+                        <th class="col-bool">Act</th>
+                        <th class="col-bool">PF</th>
+                        <th class="col-bool">EB</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/employee-list.js?v=2"></script>
+</body>
+
+</html>

@@ -4,6 +4,7 @@ const {
     getAttendance,
     getSingleAttendance,
     createAttendance,
+    updateAttendance,
     bulkCreateAttendance,
     deleteAttendance
 } = require('../controllers/attendanceController');
@@ -19,6 +20,7 @@ router.route('/bulk')
 
 router.route('/:id')
     .get(protect, getSingleAttendance)
+    .put(protect, authorize('admin', 'manager'), updateAttendance)
     .delete(protect, authorize('admin'), deleteAttendance);
 
 module.exports = router;
