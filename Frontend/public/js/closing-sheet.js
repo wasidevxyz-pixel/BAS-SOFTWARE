@@ -2913,7 +2913,7 @@ async function generateSMSPreview() {
     } else if (type === 'Zakat') {
         // Fetch Zakat data for the date
         try {
-            const zakatResp = await fetch(`/api/v1/zakats/date-range?startDate=${date}&endDate=${date}&branch=${branch}`, {
+            const zakatResp = await fetch(`/api/v1/zakats/date-range?startDate=${date}&endDate=${date}&branch=F-6`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const zakatJson = await zakatResp.json();
