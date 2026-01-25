@@ -274,6 +274,7 @@ function parseTime(timeStr) {
 }
 
 function formatTime(totalMinutes) {
+    if (!totalMinutes || totalMinutes === 0) return '';
     if (totalMinutes < 0) totalMinutes = 0;
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;

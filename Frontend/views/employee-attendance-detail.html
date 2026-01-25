@@ -10,6 +10,14 @@
     <link href="/css/sidebar.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        @media screen {
+
+            .print-grid,
+            .print-value {
+                display: none !important;
+            }
+        }
+
         .header-controls {
             background-color: #f8f9fa;
             padding: 4px;
@@ -275,17 +283,19 @@
         /* Professional Print Styles - Matching Ref Image 2 */
         @media print {
             @page {
-                size: landscape;
-                margin: 3mm;
+                size: portrait;
+                margin: 0.25mm;
+                /* Extremely minimal margin as requested */
             }
 
             .page-header,
             .header-controls,
             .btn,
-            .btn-delete,
             .col-del,
             .col-remarks,
-            .col-diff-btns {
+            .col-diff-btns,
+            .col-diffin,
+            .col-diffout {
                 display: none !important;
             }
 
@@ -303,14 +313,24 @@
             .row-present td,
             .row-absent td,
             .row-leave td {
+                background-color: transparent !important;
+                color: #000 !important;
+                font-weight: normal !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+
+            /* Force inputs/selects to be plain text black */
+            .print-value {
+                color: #000 !important;
+                font-weight: normal !important;
             }
 
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 8pt !important;
+                font-size: 7.5pt !important;
+                /* Increased font size for readability */
                 font-family: 'Segoe UI', Arial, sans-serif !important;
                 table-layout: fixed;
             }
@@ -318,10 +338,14 @@
             th,
             td {
                 border: 1px solid #000 !important;
-                padding: 1px 2px !important;
-                text-align: center !important;
+                padding: 4px 0px !important;
+                /* increased padding */
                 overflow: hidden;
                 white-space: nowrap;
+                line-height: 1.2 !important;
+                /* normal line height */
+                height: 29px;
+                /* Reduced specific height to fit exactly on 1 page */
             }
 
             thead th {
@@ -335,9 +359,10 @@
 
             .print-grid {
                 display: grid !important;
-                grid-template-columns: 80px 150px 120px 1fr 150px 150px;
+                grid-template-columns: 10% 12% 12% 43% 12% 11%;
                 border: 2px solid #000;
-                margin-bottom: 5px;
+                margin-bottom: 2px;
+                /* Reduce gap */
                 background: #fff;
             }
 
@@ -362,9 +387,9 @@
             }
 
             .print-box span:not(.print-label) {
-                padding: 2px;
+                padding: 4px;
                 font-weight: bold;
-                font-size: 9pt;
+                font-size: 10pt;
                 height: 100%;
                 display: flex;
                 align-items: center;
@@ -380,14 +405,15 @@
 
             .company-section h1 {
                 margin: 0;
-                font-size: 16pt;
+                font-size: 20pt;
                 font-family: 'Times New Roman', serif;
-                line-height: 1;
+                font-weight: bold;
+                line-height: 1.2;
             }
 
             .company-section h2 {
-                margin: 1px 0;
-                font-size: 11pt;
+                margin: 2px 0;
+                font-size: 14pt;
                 text-decoration: underline;
                 font-weight: bold;
             }
@@ -398,34 +424,47 @@
                 font-weight: bold;
             }
 
+            body,
+            html,
+            .table-container,
+            .container-fluid {
+                background-color: white !important;
+            }
+
+            /* Force Footer White - High Specificity */
+            table tfoot,
+            table tfoot tr,
+            table tfoot td,
+            .table tfoot td,
+            .tfoot-bold,
+            .tfoot-bold tr,
             .tfoot-bold td {
                 font-weight: bold !important;
-                background: #eee !important;
+                background: white !important;
+                /* Shorthand to override all backgrounds */
+                background-color: white !important;
+                color: #000 !important;
+                border-top: 2px solid #000 !important;
+                text-align: center !important;
+                box-shadow: none !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
-            /* Hidden rows or inputs */
-            input {
-                border: none !important;
-                background: transparent !important;
-                text-align: center !important;
-                font-size: inherit !important;
-                font-weight: bold !important;
-                width: 100%;
+            /* HIDE Actual Inputs/Selects in Print - Only show .print-value */
+            input,
+            select,
+            .form-control,
+            .form-select,
+            .input-diff-box {
+                display: none !important;
             }
 
-            select {
-                border: none !important;
-                background: transparent !important;
-                appearance: none;
-                -webkit-appearance: none;
-                font-size: inherit !important;
+            /* Show Text Values */
+            .print-value {
+                display: inline-block !important;
+                color: #000 !important;
                 font-weight: bold !important;
-                width: 100%;
-                text-align: center;
-                text-indent: 1px;
-                text-overflow: '';
             }
         }
 
@@ -547,8 +586,8 @@
                         <th style="width: 80px;">Break In</th>
                         <th style="width: 70px;">Total Brk Hrs</th>
                         <th class="col-diff-btns" style="width: 45px;">Diff</th>
-                        <th style="width: 80px;">Time Diff In</th>
-                        <th style="width: 80px;">Time Diff Out</th>
+                        <th class="col-diffin" style="width: 80px;">Time Diff In</th>
+                        <th class="col-diffout" style="width: 80px;">Time Diff Out</th>
                         <th style="width: 70px;">Total Diff</th>
                         <th style="width: 70px;">Total Hours</th>
                         <th class="col-status" style="width: 70px;">Status</th>
@@ -560,28 +599,17 @@
                 </tbody>
                 <tfoot class="tfoot-bold">
                     <tr>
-                        <td colspan="6" class="text-end">Total</td>
-                        <td id="tWorkedHrs">00:00</td>
+                        <td class="col-del"></td>
+                        <td colspan="5" class="text-center" style="font-weight:bold;">Total</td>
+                        <td id="tWorkedHrs" class="text-center">00:00</td>
                         <td colspan="2"></td>
-                        <td id="tBreakHrs">00:00</td>
-                        <td></td>
+                        <td id="tBreakHrs" class="text-center">00:00</td>
+                        <td class="col-diff-btns"></td>
+                        <td class="col-diffin"></td>
+                        <td class="col-diffout"></td>
+                        <td id="tDiffHrs" class="text-center">00:00</td>
+                        <td id="tFinalHrs" class="text-center">00:00</td>
                         <td colspan="2"></td>
-                        <td id="tDiffHrs">00:00</td>
-                        <td id="tFinalHrs">00:00</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </tfoot>
-                <tfoot>
-                    <tr id="totalRow">
-                        <td colspan="5" class="text-end">Total</td>
-                        <td class="text-center" id="totalWorked">-</td>
-                        <td colspan="2"></td>
-                        <td class="text-center" id="totalBreak">-</td>
-                        <td></td>
-                        <td colspan="2"></td>
-                        <td class="text-center" id="totalDiff">-</td>
-                        <td class="text-center" id="totalFinal">-</td>
-                        <td colspan="3"></td>
                     </tr>
                 </tfoot>
             </table>
