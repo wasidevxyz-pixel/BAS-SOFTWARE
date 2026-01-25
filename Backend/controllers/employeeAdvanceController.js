@@ -4,7 +4,18 @@ const EmployeeAdvance = require('../models/EmployeeAdvance');
 // @route   GET /api/v1/employee-advances
 exports.getEmployeeAdvances = async (req, res) => {
     try {
-        const advances = await EmployeeAdvance.find().populate('employee').sort({ date: -1 });
+        let query = {};
+        if (req.query.employee) {
+            query.employee = req.query.employee;
+        }
+        if (req.query.branch) {
+            query.branch = req.query.branch;
+        }
+
+        const advances = await EmployeeAdvance.find(query)
+            .populate('employee')
+            .populate('department')
+            .sort({ date: -1, createdAt: -1 });
         res.status(200).json({ success: true, data: advances });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

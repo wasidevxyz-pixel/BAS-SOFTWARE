@@ -10,35 +10,165 @@
     <link href="/css/sidebar.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-blue: #0d6efd;
+            --dark-blue: #0056b3;
+            --custom-blue: #007bff;
+            /* Adjust towards image blue */
+        }
+
         .grid-container {
             display: grid;
-            grid-template-columns: 450px 1fr;
-            gap: 20px;
-            height: calc(100vh - 100px);
+            grid-template-columns: 480px 1fr;
+            /* Slightly wider form panel */
+            gap: 15px;
+            height: calc(100vh - 80px);
         }
 
         .form-panel {
-            background: #f8f9fa;
-            padding: 15px;
+            background: #fff;
+            padding: 20px;
             border-radius: 4px;
-            border: 1px solid #ddd;
+            border: 1px solid #dee2e6;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
 
         .list-panel {
             background: #fff;
-            border: 1px solid #ddd;
+            border: 1px solid #dee2e6;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        .form-row-compact {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            /* Increased spacing */
+        }
+
+        .form-label-compact {
+            flex: 0 0 140px;
+            /* Fixed label width */
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+            color: #333;
+        }
+
+        .form-input-compact {
+            flex: 1;
+        }
+
+        /* Custom Colors from Image */
+        .bg-custom-blue {
+            background-color: #007bff !important;
+            color: white !important;
+            border: 1px solid #0056b3;
+        }
+
+        .bg-custom-header {
+            background-color: #1a5c9a !important;
+            /* Matched Dark Blue */
+        }
+
+        /* Compact Table & List Styling */
+        .table-custom-header th {
+            background-color: #007bff;
+            /* Header Blue */
+            color: white;
+            font-weight: normal;
+            border: 1px solid #fff;
+            /* White borders */
+            padding: 4px 8px;
+            font-size: 0.85rem;
+        }
+
+        .table-striped>tbody>tr:nth-of-type(odd)>* {
+            background-color: #dbeafe;
+            /* Light blue stripe */
+            color: #000;
+        }
+
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            background-color: #bfdbfe;
+            /* Slightly darker blue stripe */
+            color: #000;
+        }
+
+        .table-bordered> :not(caption)>*>* {
+            border-width: 0 1px 1px 0;
+            border-color: #fff;
+            /* White borders */
+        }
+
+        .table-sm td {
+            padding: 4px 8px;
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
+
+        /* Action Buttons */
+        .btn-action-sm {
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border-radius: 2px;
+            margin-right: 2px;
+            color: white;
+            border: none;
+        }
+
+        .btn-action-edit {
+            background-color: #28a745;
+        }
+
+        .btn-action-delete {
+            background-color: #dc3545;
+        }
+
+        .btn-action-view {
+            background-color: #17a2b8;
+        }
+
+        /* Button Group at bottom */
+        .btn-toolbar-custom {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            /* Push to bottom */
+            justify-content: space-between;
+        }
+
+        /* Custom Search Styling (same as WH Purchase) */
+        .list-group-item-action:hover,
+        .list-group-item-action.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+
+        .list-group-item-action:hover .text-muted,
+        .list-group-item-action.active .text-muted {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        #employeeSearchResults {
+            z-index: 1050;
+            max-height: 250px;
+            overflow-y: auto;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 
 <body>
-    <div class="page-header px-3">
+    <div class="page-header px-3 bg-custom-header" style="background-color: #0d47a1 !important;">
         <div style="flex: 1; display: flex; align-items: center;">
-            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
-            <i class="fas fa-money-bill-wave me-2"></i> Employee Advance
+            <i class="fas fa-bars me-3 text-white" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <span class="text-white fw-bold fs-5">Employee Advance</span>
         </div>
         <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
             <div class="dropdown">
@@ -55,109 +185,180 @@
         </div>
     </div>
 
-    <div class="container-fluid p-3">
+    <div class="container-fluid p-2"> <!-- Reduced padding -->
         <div class="grid-container">
             <!-- Left Form -->
-            <div class="form-panel">
+            <div class="form-panel shadow-sm">
                 <input type="hidden" id="advanceId">
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Date</label>
-                    <input type="date" id="date" class="form-control form-control-sm" required>
-                </div>
+                <!-- Search/Department equivalent? Keeping it simple or mimicking image? -->
+                <!-- Image has 'Select Department' then 'Pay' then Date -->
 
                 <div class="mb-2">
-                    <label class="form-label fw-bold">Employee *</label>
-                    <select id="employee" class="form-select form-select-sm" required onchange="loadEmployeeBalance()">
-                        <option value="">Select Employee</option>
+                    <select id="department" class="form-select form-select-sm">
+                        <option value="">Select Department</option>
                     </select>
                 </div>
 
                 <div class="mb-2">
-                    <label class="form-label fw-bold">Branch</label>
-                    <select id="branch" class="form-select form-select-sm">
-                        <option value="">Select Branch</option>
+                    <select id="transactionType" class="form-select form-select-sm">
+                        <option value="Pay">Pay</option>
+                        <option value="Received">Received</option>
                     </select>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Code</label>
-                    <input type="text" id="code" class="form-control form-control-sm" readonly>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Date</label>
+                    <div class="form-input-compact">
+                        <input type="date" id="date" class="form-control form-control-sm" required>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Pre Month Balance</label>
-                    <input type="number" id="preMonthBal" class="form-control form-control-sm bg-info text-white"
-                        value="0" readonly>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Branch</label>
+                    <div class="form-input-compact">
+                        <select id="branch" class="form-select form-select-sm" onchange="filterEmployees()">
+                            <option value="">Select Branch</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Current Month Balance</label>
-                    <input type="number" id="currentMonthBal" class="form-control form-control-sm" value="0"
-                        onchange="calculateTotals()">
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Code</label>
+                    <div class="form-input-compact">
+                        <input type="text" id="code" name="emp_code_field" class="form-control form-control-sm"
+                            autocomplete="nope">
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Total</label>
-                    <input type="number" id="total" class="form-control form-control-sm bg-success text-white" value="0"
-                        readonly>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Employee *</label>
+                    <div class="form-input-compact position-relative">
+                        <input type="text" id="employeeInput" name="employee_search_field"
+                            class="form-control form-control-sm" placeholder="Type Name or Code to Search..." required
+                            autocomplete="off">
+                        <div id="employeeSearchResults" class="list-group position-absolute" style="display:none;">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Salary</label>
-                    <input type="number" id="salary" class="form-control form-control-sm bg-warning" value="0" readonly>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Pre Month Bal</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="preMonthBal" class="form-control form-control-sm bg-custom-blue"
+                            value="0" readonly>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Paid</label>
-                    <input type="number" id="paid" class="form-control form-control-sm" value="0"
-                        onchange="calculateTotals()">
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Current Month Bal</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="currentMonthBal" class="form-control form-control-sm bg-custom-blue"
+                            value="0" readonly>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Balance</label>
-                    <input type="number" id="balance" class="form-control form-control-sm bg-danger text-white"
-                        value="0" readonly>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Total</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="total" class="form-control form-control-sm bg-custom-blue" value="0"
+                            readonly>
+                    </div>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Doc Mode</label>
-                    <select id="docMode" class="form-select form-select-sm">
-                        <option value="Cash">Cash</option>
-                        <option value="Bank">Bank</option>
-                    </select>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Salary</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="salary" class="form-control form-control-sm bg-custom-blue" value="0"
+                            readonly>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Remarks</label>
-                    <textarea id="remarks" class="form-control form-control-sm" rows="2"></textarea>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Paid</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="paid" class="form-control form-control-sm" value="0"
+                            oninput="calculateTotals()">
+                    </div>
                 </div>
 
-                <button class="btn btn-success w-100 mb-2" onclick="saveAdvance()"><i class="fas fa-save"></i>
-                    Save</button>
-                <button class="btn btn-secondary w-100" onclick="clearForm()"><i class="fas fa-times"></i>
-                    Clear</button>
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Balance</label>
+                    <div class="form-input-compact">
+                        <input type="number" id="balance" class="form-control form-control-sm bg-custom-blue" value="0"
+                            readonly>
+                    </div>
+                </div>
+
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Pay Mode</label>
+                    <div class="form-input-compact">
+                        <select id="docMode" class="form-select form-select-sm">
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row-compact">
+                    <label class="form-label-compact">Remarks</label>
+                    <div class="form-input-compact">
+                        <input type="text" id="remarks" class="form-control form-control-sm">
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <!-- Buttons -->
+                <div class="mt-auto pt-3 border-top">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-success btn-sm px-4" onclick="saveAdvance()">Save</button>
+                        <button class="btn btn-danger btn-sm px-4" onclick="clearForm()">Clear</button>
+                        <div class="ms-auto">
+                            <button class="btn btn-primary btn-sm" onclick="openInstallmentModal()">Add Monthly
+                                Installment</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Right List -->
-            <div class="list-panel">
-                <div class="p-2 border-bottom d-flex justify-content-between">
-                    <h5 class="m-0">Advance List</h5>
-                    <input type="text" id="searchInput" class="form-control form-control-sm w-auto"
-                        placeholder="Search...">
+            <div class="list-panel shadow-sm">
+                <!-- Advanced Search Filter Bar -->
+                <div class="p-2 border-bottom bg-light">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto"><span class="fw-bold fs-6">From</span></div>
+                        <div class="col-auto">
+                            <input type="date" id="searchFromDate" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-auto"><span class="fw-bold fs-6">To</span></div>
+                        <div class="col-auto">
+                            <input type="date" id="searchToDate" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary btn-sm" onclick="loadAdvances()">Search</button>
+                        </div>
+                        <!-- Keeping text search as well for quick filter? -->
+                        <div class="col">
+                            <input type="text" id="searchInput" class="form-control form-control-sm"
+                                placeholder="Search...">
+                        </div>
+                    </div>
                 </div>
+
                 <div class="table-responsive flex-grow-1">
-                    <table class="table table-striped table-hover mb-0">
-                        <thead class="table-primary sticky-top">
+                    <table class="table table-striped table-hover table-sm mb-0 table-bordered">
+                        <thead class="table-custom-header sticky-top">
                             <tr>
-                                <th>Date</th>
+                                <th>Dated</th>
+                                <th>Inv Time</th>
                                 <th>Employee</th>
-                                <th>Branch</th>
-                                <th>Total</th>
-                                <th>Paid</th>
-                                <th>Balance</th>
-                                <th>Mode</th>
-                                <th>Action</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Payment Mode</th>
+                                <th>Bank Name</th>
+                                <th>User Name</th>
+                                <th>Remarks</th>
+                                <th>Action</th> <!-- Added Action for Edit/Delete -->
                             </tr>
                         </thead>
                         <tbody id="advanceBody"></tbody>
@@ -165,6 +366,99 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Installment Modal -->
+    <div class="modal fade" id="installmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Employee Monthly Adv Installment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="text-center mb-3">
+                        <h4 id="modalEmpName" class="fw-bold">EMPLOYEE NAME</h4>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" id="modalEmpCode" class="form-control" readonly>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Pre Month Balance Section -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-header bg-primary text-white fw-bold">
+                                    Pre Month Balance
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="mb-2 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Pre Bal</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalPreBal1"
+                                                class="form-control bg-primary text-white" readonly value="0">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Installment</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalInstallment1" class="form-control" value="0"
+                                                oninput="calculateModalTotals()">
+                                        </div>
+                                    </div>
+                                    <div class="mb-0 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Balance</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalBalance1"
+                                                class="form-control bg-primary text-white" readonly value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Current Month Balance Section -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-header bg-primary text-white fw-bold">
+                                    Current Month Balance
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="mb-2 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Pre Bal</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalPreBal2"
+                                                class="form-control bg-primary text-white" value="0"
+                                                oninput="calculateModalTotals()">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Installment</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalInstallment2" class="form-control" value="0"
+                                                oninput="calculateModalTotals()">
+                                        </div>
+                                    </div>
+                                    <div class="mb-0 row align-items-center">
+                                        <label class="col-sm-4 col-form-label fw-bold">Balance</label>
+                                        <div class="col-sm-8">
+                                            <input type="number" id="modalBalance2"
+                                                class="form-control bg-primary text-white" readonly value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button class="btn btn-success" onclick="saveInstallment()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

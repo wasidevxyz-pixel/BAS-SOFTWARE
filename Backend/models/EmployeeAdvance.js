@@ -14,6 +14,15 @@ const employeeAdvanceSchema = new mongoose.Schema({
         type: String,
         default: 'Select Branch'
     },
+    department: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Department'
+    },
+    transactionType: {
+        type: String,
+        enum: ['Pay', 'Received'],
+        default: 'Pay'
+    },
     code: String,
     preMonthBal: {
         type: Number,
@@ -44,7 +53,17 @@ const employeeAdvanceSchema = new mongoose.Schema({
         enum: ['Cash', 'Bank'],
         default: 'Cash'
     },
-    remarks: String
+    remarks: String,
+    preMonthInstallment: {
+        preBal: { type: Number, default: 0 },
+        installment: { type: Number, default: 0 },
+        balance: { type: Number, default: 0 }
+    },
+    currentMonthInstallment: {
+        preBal: { type: Number, default: 0 },
+        installment: { type: Number, default: 0 },
+        balance: { type: Number, default: 0 }
+    }
 }, {
     timestamps: true
 });
