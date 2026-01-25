@@ -126,7 +126,9 @@ async function loadCategories() {
 }
 async function findAndAddItem(query) {
     try {
-        const response = await fetch(`/api/v1/wh-items?search=${encodeURIComponent(query)}&limit=1`);
+        const response = await fetch(`/api/v1/wh-items?search=${encodeURIComponent(query)}&limit=1`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
         const data = await response.json();
 
         if (data.success && data.data.length > 0) {
@@ -522,7 +524,9 @@ window.addNewItemRow = async function () { // "Add All Checks" / "Add All Items"
     }
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
         const data = await response.json();
 
         if (data.success) {
@@ -683,7 +687,9 @@ window.saveAudit = async function (statusArg) {
 // Load Audit List
 window.loadAuditList = async function () {
     try {
-        const response = await fetch('/api/v1/wh-stock-audits?sort=-date');
+        const response = await fetch('/api/v1/wh-stock-audits?sort=-date', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
         const data = await response.json();
 
         const tbody = document.getElementById('auditListBody');
@@ -734,7 +740,9 @@ window.loadAuditList = async function () {
 
 window.loadAuditDetails = async function (id) {
     try {
-        const response = await fetch(`/api/v1/wh-stock-audits/${id}`);
+        const response = await fetch(`/api/v1/wh-stock-audits/${id}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
         const data = await response.json();
 
         if (data.success) {
