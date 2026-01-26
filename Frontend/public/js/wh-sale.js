@@ -14,6 +14,12 @@ let customerSearchIndex = -1;
 async function initializePage() {
     document.getElementById('invoiceDate').valueAsDate = new Date();
 
+    // Set default dates for list
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('listFromDate').valueAsDate = firstDay;
+    document.getElementById('listToDate').valueAsDate = today;
+
     await Promise.all([
         loadCustomers(),
         loadCategories(),
@@ -144,6 +150,14 @@ function setupEventListeners() {
             (c.code && c.code.toLowerCase().includes(term))
         );
         renderLookupCustomerList(filtered);
+    });
+
+    // List Search Enter key handling
+    document.getElementById('listSearch').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            loadSaleList();
+        }
     });
 }
 
@@ -743,12 +757,28 @@ function resetForm() {
 
 async function loadSaleList() {
     try {
-        const res = await fetch('/api/v1/wh-sales', {
+        const fromDate = document.getElementById('listFromDate').value;
+        const toDate = document.getElementById('listToDate').value;
+        const search = document.getElementById('listSearch').value.toLowerCase();
+
+        let url = `/api/v1/wh-sales?startDate=${fromDate}&endDate=${toDate}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();
         if (data.success) {
             let sales = data.data;
+
+            // Extra frontend filter for customer name if search is provided
+            if (search) {
+                sales = sales.filter(s =>
+                    (s.invoiceNo && s.invoiceNo.toLowerCase().includes(search)) ||
+                    (s.customer && s.customer.customerName && s.customer.customerName.toLowerCase().includes(search)) ||
+                    (s.remarks && s.remarks.toLowerCase().includes(search))
+                );
+            }
 
             // Filter by allowed categories
             const userStr = localStorage.getItem('user');
@@ -787,9 +817,9 @@ async function loadSaleList() {
                     <td><span class="badge ${s.status === 'Posted' ? 'bg-success' : 'bg-warning'}">${s.status}</span></td>
                     <td>${s.createdBy ? s.createdBy.name : 'N/A'}</td>
                     <td>
-                        <button class="btn btn-sm btn-secondary" onclick="printInvoice('${s._id}')"><i class="fas fa-print"></i></button>
-                        ${showEdit ? `<button class="btn btn-sm btn-primary ms-1" onclick="editSale('${s._id}')"><i class="fas fa-edit"></i></button>` : ''}
-                        ${canDelete ? `<button class="btn btn-sm btn-danger ms-1" onclick="deleteSale('${s._id}')"><i class="fas fa-trash"></i></button>` : ''}
+                        <button class="btn btn-sm btn-info text-white" title="Print" onclick="printInvoice('${s._id}')"><i class="fas fa-print"></i></button>
+                        ${showEdit ? `<button class="btn btn-sm btn-primary ms-1" title="Edit" onclick="editSale('${s._id}')"><i class="fas fa-edit"></i></button>` : ''}
+                        ${canDelete ? `<button class="btn btn-sm btn-danger ms-1" title="Delete" onclick="deleteSale('${s._id}')"><i class="fas fa-trash"></i></button>` : ''}
                     </td>
                 </tr>
             `}).join('');

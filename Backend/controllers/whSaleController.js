@@ -77,10 +77,28 @@ exports.createWHSale = async (req, res) => {
 // @route   GET /api/v1/wh-sales
 exports.getWHSales = async (req, res) => {
     try {
-        const sales = await WHSale.find()
-            .populate('customer', 'customerName')
+        let query = {};
+
+        // Date Filtering
+        if (req.query.startDate || req.query.endDate) {
+            query.invoiceDate = {};
+            if (req.query.startDate) query.invoiceDate.$gte = new Date(req.query.startDate);
+            if (req.query.endDate) query.invoiceDate.$lte = new Date(req.query.endDate);
+        }
+
+        // Search Filtering (Invoice No or Remarks)
+        if (req.query.search) {
+            query.$or = [
+                { invoiceNo: { $regex: req.query.search, $options: 'i' } },
+                { remarks: { $regex: req.query.search, $options: 'i' } }
+            ];
+        }
+
+        const sales = await WHSale.find(query)
+            .populate('customer', 'customerName customerCategory')
             .populate('createdBy', 'name')
-            .sort({ createdAt: -1 });
+            .sort({ invoiceDate: -1, createdAt: -1 });
+
         res.status(200).json({ success: true, count: sales.length, data: sales });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
