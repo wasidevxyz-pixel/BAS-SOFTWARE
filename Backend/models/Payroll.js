@@ -67,6 +67,10 @@ const PayrollSchema = new mongoose.Schema({
     // Short Week Deduction
     shortWeek: { type: Number, default: 0 },
 
+    payAdvSalary: { type: Boolean, default: false },
+    otst30WorkingDays: { type: Boolean, default: false },
+    payFullSalaryThroughBank: { type: Boolean, default: false },
+
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

@@ -713,6 +713,10 @@ app.get('/voucher-print.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'voucher-print.html'));
 });
 
+app.get('/print-payroll.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'print-payroll.html'));
+});
+
 // Serve the main HTML file for all other routes (catch-all)
 app.use((req, res, next) => {
   // Skip API routes and static files

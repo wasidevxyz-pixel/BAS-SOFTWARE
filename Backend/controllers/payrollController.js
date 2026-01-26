@@ -11,8 +11,11 @@ exports.getPayrolls = async (req, res) => {
 
         let query = {};
         if (monthYear) query.monthYear = monthYear;
-        if (branch) query.branch = branch;
+        if (branch && branch !== 'null' && branch !== 'undefined' && branch !== '') {
+            query.branch = branch;
+        }
         if (employee) query.employee = employee;
+
 
         const payrolls = await Payroll.find(query)
             .populate('employee', 'name code department designation')
@@ -51,8 +54,11 @@ exports.calculatePayroll = async (req, res) => {
     try {
         const { employeeId, monthYear, branch } = req.body;
 
-        // Get employee details
-        const employee = await Employee.findById(employeeId);
+        // Get employee details with populated department and designation
+        const employee = await Employee.findById(employeeId)
+            .populate('department', 'name')
+            .populate('designation', 'name');
+
         if (!employee) {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
@@ -60,7 +66,8 @@ exports.calculatePayroll = async (req, res) => {
         // Get attendance for the month
         const [year, month] = monthYear.split('-');
         const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999); // Set to end of month
+        const daysInMonth = endDate.getDate();
 
         const attendances = await Attendance.find({
             employee: employeeId,
@@ -71,45 +78,136 @@ exports.calculatePayroll = async (req, res) => {
         const workedDays = attendances.filter(a => a.isPresent).length;
         const totalWorkedHours = attendances.reduce((sum, a) => {
             if (a.workedHrs) {
-                const hours = parseFloat(a.workedHrs.replace('h', '').replace('m', '/60'));
+                // Parse "8h 30m" format if exists, or just number
+                const hrsStr = String(a.workedHrs);
+                let hours = 0;
+                if (hrsStr.includes('h') || hrsStr.includes('m')) {
+                    const hMatch = hrsStr.match(/(\d+)h/);
+                    const mMatch = hrsStr.match(/(\d+)m/);
+                    if (hMatch) hours += parseInt(hMatch[1]);
+                    if (mMatch) hours += parseInt(mMatch[1]) / 60;
+                } else {
+                    hours = parseFloat(hrsStr) || 0;
+                }
                 return sum + hours;
             }
             return sum;
         }, 0);
 
-        // Get employee advance
-        const advance = await EmployeeAdvance.findOne({
+        // Get advances
+        // Current month advances (Documents created in this month or for this month)
+        const monthlyAdvances = await EmployeeAdvance.find({
             employee: employeeId,
             date: { $gte: startDate, $lte: endDate }
-        }).sort('-date');
+        });
 
-        // Calculate totals
-        const daysInMonth = endDate.getDate();
-        const perDaySalary = employee.basicSalary / daysInMonth;
-        const perHourSalary = perDaySalary / 8; // Assuming 8 hours per day
+        // Sum all 'Pay' transactions in this month
+        let currentPayAmount = 0;
+        monthlyAdvances.forEach(adv => {
+            if (adv.transactionType === 'Pay') {
+                currentPayAmount += (adv.amount || adv.paid || 0);
+            }
+        });
+
+        // Get installments from the MOST RECENTLY MODIFIED record of this month
+        // Sorting by updatedAt ensures that if you change 10k to 8k, the 8k is picked up!
+        const latestAdvInMonth = [...monthlyAdvances].sort((a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        )[0];
+
+        const currentRecInstallment = latestAdvInMonth?.currentMonthInstallment?.installment || 0;
+        const prevRecInstallment = latestAdvInMonth?.preMonthInstallment?.installment || 0;
+
+        // Previous balance (Opening for this month)
+        // Find the most recent advance before this month to get its balance
+        const lastPrevAdvance = await EmployeeAdvance.findOne({
+            employee: employeeId,
+            date: { $lt: startDate }
+        }).sort({ date: -1, createdAt: -1 });
+
+        const prevAdvBalance = lastPrevAdvance ? lastPrevAdvance.balance : (employee.opening || 0);
+
+        // Calculate sundays in month
+        let sundays = 0;
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            if (d.getDay() === 0) sundays++;
+        }
+        const totalWdsPerMonth = daysInMonth - sundays;
+
+        // Calculate totals based on Total Working Days (Excluding Sundays)
+        const dutyHours = parseFloat(employee.totalHrs) || 8;
+        const totalHrsPerMonth = totalWdsPerMonth * dutyHours;
+
+        let perDaySalary = 0;
+        let perHourSalary = 0;
+
+        const is30DayMonth = employee.thirtyWorkingDays || employee.otst30WorkingDays || false;
+
+        if (is30DayMonth) {
+            // User requested formula: Basic Salary / 30 / Duty Hrs
+            perHourSalary = (employee.basicSalary / 30) / (dutyHours || 8);
+            perDaySalary = employee.basicSalary / 30;
+        } else {
+            perDaySalary = employee.basicSalary / (totalWdsPerMonth || daysInMonth);
+            perHourSalary = perDaySalary / (dutyHours || 8);
+        }
+
+        // Calculate OT and ShortTime based on Hours
+        const diffHours = totalWorkedHours - totalHrsPerMonth;
+        const overTimeHrs = diffHours > 0 ? diffHours : 0;
+        const shortTimeHrs = diffHours < 0 ? Math.abs(diffHours) : 0;
+
+        // NEW Short Week Logic: Short Weeks = Short Hours / Weekly Hours
+        const weeklyHours = (dutyHours || 8) * 6;
+        const shortWeeks = shortTimeHrs / (weeklyHours || 48);
+
+        // TSW Amount = Short Weeks * (Pay for 7 days)
+        // This includes the 6 working days plus the paid Sunday
+        const shortWeekAmount = shortWeeks * (perDaySalary * 7);
 
         const calculatedData = {
             employee: employeeId,
             monthYear,
             branch,
             code: employee.code,
-            department: employee.department,
-            designation: employee.designation,
+            department: employee.department?.name || 'N/A',
+            designation: employee.designation?.name || 'N/A',
+            bank: employee.selectBank || 'N/A',
             totalDays: daysInMonth,
+            totalWdsPerMonth: totalWdsPerMonth,
+            totalHrsPerMonth: totalHrsPerMonth,
             workedDays: workedDays,
             workedHrs: totalWorkedHours,
             totalPerDay: perDaySalary,
             totalPerHr: perHourSalary,
             perMonth: employee.basicSalary,
+            offDay: employee.offDay || 'N/A',
+            totalHrsPerDay: dutyHours,
+            otst30WorkingDays: is30DayMonth,
+            payFullSalaryThroughBank: employee.payFullSalaryThroughBank || false,
 
             // Earnings
-            teaAllowance: employee.tcAllowance || 0,
+            teaAllowance: employee.teaAllowance || 0,
             otherAllow: employee.otherAllowance || 0,
-            stLateAllow: employee.areaAllowance || 0,
+            stLateAllow: employee.stLoss || 0,
+            natin: employee.fixAllowance || 0, // This is the Fix Allowance
+            rent: employee.foodAllowanceRs || 0, // This is Roti
+            monthlyComm: 0, // Add logic if needed
+
+            // OT / ShortTime
+            overTimeHrs: overTimeHrs,
+            overTime: (overTimeHrs * perHourSalary),
+            shortTimeHrs: shortTimeHrs,
+            shortWeekDays: Math.round(shortWeeks), // Rounded to 1, 2, 3 etc.
+            shortWeek: shortWeekAmount,
+            shortTimeAmount: (shortTimeHrs * perHourSalary),
 
             // Deductions
             securityDeposit: employee.securityDeposit || 0,
-            pAAdv: advance ? advance.balance : 0,
+            pAAdv: prevAdvBalance, // Previous Month Advance Balance
+            csMale: currentPayAmount, // Current Month Advance Paid
+            pmAdvRec: prevRecInstallment, // Installment from Previous Balance
+            cmAdvRec: currentRecInstallment, // Installment from Current Month Balance
 
             createdBy: req.user._id
         };
@@ -132,15 +230,24 @@ exports.calculatePayroll = async (req, res) => {
             (calculatedData.securityDeposit || 0) +
             (calculatedData.penalty || 0);
 
-        // Calculate gross and net
-        calculatedData.grossTotal = calculatedData.perMonth + calculatedData.earningsTotal;
-        calculatedData.netTotal = calculatedData.grossTotal - calculatedData.deductionsTotal - (calculatedData.pAAdv || 0);
+        // Calculate gross and net based on user requested formula
+        // GrossTotal = basic salary + earning total - deduction total
+        calculatedData.grossTotal = (calculatedData.perMonth || 0) + (calculatedData.earningsTotal || 0) - (calculatedData.deductionsTotal || 0);
+
+        // Recovered is what actually gets deducted
+        calculatedData.totalAdvRec = (calculatedData.pmAdvRec || 0) + (calculatedData.cmAdvRec || 0);
+        // Balance info
+        calculatedData.totalAdv = (calculatedData.pAAdv || 0) + (calculatedData.csMale || 0);
+
+        // NetTotal = gross total - total adv deduction
+        calculatedData.netTotal = calculatedData.grossTotal - (calculatedData.totalAdvRec || 0);
 
         res.status(200).json({
             success: true,
             data: calculatedData
         });
     } catch (error) {
+        console.error('Calculation Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

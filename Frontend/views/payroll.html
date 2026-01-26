@@ -10,514 +10,831 @@
     <link href="/css/sidebar.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .header-blue {
-            background-color: #0d6efd;
-            color: white;
+        :root {
+            --ref-blue-header: #1f569b;
+            --ref-green: #00b050;
+            --ref-blue-light: #1f84c1;
+            --ref-red: #e15a4b;
+            --ref-purple: #6b5ea5;
+            --ref-white: #ffffff;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            overflow-x: hidden;
+        }
+
+        .page-header {
+            background-color: var(--ref-blue-header) !important;
+            color: white !important;
+            height: 45px !important;
+            border-bottom: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .page-header .header-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .section-container {
+            padding: 10px;
+        }
+
+        .card-custom {
+            border: 1px solid #ccc;
+            border-radius: 0px;
+            margin-bottom: 20px;
+            background: white;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .header-green {
-            background-color: #198754;
+            background-color: var(--ref-green) !important;
+            color: white;
+        }
+
+        .header-blue {
+            background-color: var(--ref-blue-light) !important;
             color: white;
         }
 
         .header-red {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        /* Using danger color for red */
-        .header-orange {
-            background-color: #fd7e14;
+            background-color: var(--ref-red) !important;
             color: white;
         }
 
         .section-header {
             padding: 5px 10px;
-            margin-bottom: 10px;
             font-weight: bold;
-            border-radius: 3px;
-        }
-
-        .bg-custom-blue {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .bg-custom-red {
-            background-color: #d9534f;
-            color: white;
-        }
-
-        .bg-custom-orange {
-            background-color: #f0ad4e;
-            color: white;
-        }
-
-        .bg-custom-green {
-            background-color: #5cb85c;
-            color: white;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .form-label-custom {
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             margin-bottom: 0px;
             display: flex;
             align-items: center;
+            color: #333;
         }
 
-        .form-control-sm-custom {
-            font-size: 0.85rem;
-            padding: 0.2rem 0.4rem;
+        .form-control-custom {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 0px;
+            border: 1px solid #ccc;
+            height: 34px;
+        }
+
+        /* Input Background Colors */
+        .bg-green-input {
+            background-color: var(--ref-green) !important;
+            color: white !important;
+        }
+
+        .bg-blue-input {
+            background-color: var(--ref-blue-light) !important;
+            color: white !important;
+        }
+
+        .bg-red-input {
+            background-color: var(--ref-red) !important;
+            color: white !important;
+        }
+
+        .bg-purple-input {
+            background-color: var(--ref-purple) !important;
+            color: white !important;
         }
 
         .row-custom {
-            margin-bottom: 5px;
+            margin-bottom: 7px;
+            padding: 0 5px;
+        }
+
+        /* Hide Number Input Arrows (Spinners) */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: none;
+        }
+
+        .btn-ref-save {
+            background-color: #2e7d32;
+            color: white;
+            border-radius: 0px;
+            font-size: 0.9rem;
+            padding: 2px 15px;
+        }
+
+        .btn-ref-list {
+            background-color: #1f569b;
+            color: white;
+            border-radius: 0px;
+            font-size: 0.9rem;
+            padding: 2px 15px;
+        }
+
+        .footer-banner {
+            background-color: var(--ref-red);
+            color: white;
+            text-align: center;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Checkbox styling matched to reference */
+        .section-header .form-check-label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            font-family: 'Times New Roman', Times, serif;
+            color: #fff !important;
+            margin-left: 2px;
+            cursor: pointer;
+        }
+
+        .section-header .form-check-input {
+            width: 13px;
+            height: 13px;
+            margin-top: 0;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            position: relative;
+            vertical-align: middle;
+        }
+
+        .section-header .form-check-input:checked {
+            background-color: #fff;
+            /* Keep it white */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+        }
+
+        #sidebarToggle {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            cursor: pointer;
+        }
+
+        .user-profile-icon {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            color: white;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .user-profile-icon img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+        .refresh-icon {
+            position: absolute;
+            right: 120px;
+            top: 12px;
+            cursor: pointer;
+        }
+
+        .flex-column-custom {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .card-custom {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-body-custom {
+            flex-grow: 1;
+            padding: 10px;
+        }
+
+        /* List Modal Styles */
+        #payrollListModal .modal-header {
+            background-color: var(--ref-blue-header);
+            color: white;
+            padding: 5px 15px;
+            border-bottom: none;
+            border-radius: 0;
+        }
+
+        #payrollListModal .modal-title {
+            font-size: 1.1rem;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        #payrollListModal .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+            font-size: 0.8rem;
+        }
+
+        #payrollListModal .modal-content {
+            border-radius: 0;
+            border: none;
+        }
+
+        #payrollListModal .filters-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            flex-wrap: wrap;
+        }
+
+        #payrollListModal .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #payrollListModal .filter-label {
+            font-weight: bold;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .btn-list-action {
+            border-radius: 0;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            color: white;
+            border: none;
+        }
+
+        .btn-list-search {
+            background-color: #2e7d32;
+        }
+
+        .btn-list-blue {
+            background-color: #1f84c1;
+        }
+
+        .payroll-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .payroll-table thead th {
+            background-color: var(--ref-blue-light);
+            color: white;
+            font-weight: bold;
+            padding: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .payroll-table tbody td {
+            padding: 5px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+        }
+
+        .row-advance {
+            background-color: #d32f2f !important;
+            color: white;
+        }
+
+        .row-paid {
+            background-color: #2e7d32 !important;
+            color: white;
+        }
+
+        .btn-table-print {
+            background-color: var(--ref-blue-light);
+            color: white;
+            border: none;
+            font-size: 0.65rem;
+            padding: 2px 5px;
+        }
+
+        .btn-table-delete {
+            background-color: #c0392b;
+            color: white;
+            border: none;
+            font-size: 0.65rem;
+            padding: 2px 5px;
+        }
+
+        /* Searchable Dropdown Styles */
+        .search-container {
+            position: relative;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            z-index: 1050;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        .search-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #333;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-item:hover,
+        .search-item.active {
+            background-color: #1f84c1;
+            color: white;
+        }
+
+        .search-item b {
+            color: inherit;
         }
     </style>
 </head>
 
 <body>
-    <div class="page-header px-3">
-        <div style="flex: 1; display: flex; align-items: center;">
-            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
-            <i class="fas fa-file-invoice-dollar me-2"></i> Employee PayRoll
-        </div>
-        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
-            <div class="dropdown">
-                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
-                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
-                    <span id="userName" class="me-2">User</span>
-                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
-                </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><a class="dropdown-item logout-btn" href="#"><i
-                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
-                </ul>
-            </div>
+    <div class="page-header">
+        <i class="fas fa-bars" id="sidebarToggle"></i>
+        <div class="header-title">Employee PayRoll</div>
+        <i class="fas fa-sync-alt refresh-icon" onclick="location.reload()"></i>
+        <div class="user-profile-icon">
+            <span id="headerUserName" class="me-2 text-white" style="font-size: 0.85rem; font-weight: 500;">Dynamic
+                User</span>
+            <i class="fas fa-sign-out-alt ms-2 logout-btn" onclick="handleLogout()" title="Logout"
+                style="cursor: pointer; font-size: 1rem; color: #fff;"></i>
         </div>
     </div>
 
-    <div class="container-fluid p-3">
-        <div class="row">
-            <!-- Left Column: Employee Profile -->
-            <div class="col-md-4">
-                <div class="row section-header bg-custom-green d-flex justify-content-between align-items-center">
-                    <div class="col-auto">Employee Profile</div>
-                    <div class="col-auto">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="payAdvSalary">
-                            <label class="form-check-label text-white" style="font-size: 0.7rem;">Pay Adv Salary</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="wkDays30">
-                            <label class="form-check-label text-white" style="font-size: 0.7rem;">30 Wk Days</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="salThrBank">
-                            <label class="form-check-label text-white" style="font-size: 0.7rem;">Sal Thr Bank</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-2 border-0">
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Month-Year</label>
-                        <div class="col-8">
-                            <input type="month" id="monthYear" class="form-control form-control-sm-custom">
+    <div class="container-fluid section-container">
+        <div class="row g-2 align-items-stretch">
+            <!-- Left Column -->
+            <div class="col-md-4 flex-column-custom">
+                <div class="card card-custom">
+                    <div class="section-header header-green">
+                        <span>Employee Profile</span>
+                        <div class="d-flex gap-3 align-items-center">
+                            <div class="form-check p-0 m-0 d-flex align-items-center">
+                                <input class="form-check-input" type="checkbox" id="payAdvSalary">
+                                <label class="form-check-label" for="payAdvSalary">Pay Adv Salary</label>
+                            </div>
+                            <div class="form-check p-0 m-0 d-flex align-items-center">
+                                <input class="form-check-input" type="checkbox" id="wkDays30">
+                                <label class="form-check-label" for="wkDays30">30 Wk Days</label>
+                            </div>
+                            <div class="form-check p-0 m-0 d-flex align-items-center">
+                                <input class="form-check-input" type="checkbox" id="salThrBank">
+                                <label class="form-check-label" for="salThrBank">Sal Thr Bank</label>
+                            </div>
                         </div>
                     </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Branch</label>
-                        <div class="col-8">
-                            <select id="branch" class="form-select form-select-sm form-control-sm-custom">
-                                <option value="">Select Branch</option>
-                            </select>
+                    <div class="card-body-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Month-Year</label></div>
+                            <div class="col-8"><input type="month" id="monthYear"
+                                    class="form-control form-control-custom"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Code</label>
-                        <div class="col-8">
-                            <input type="text" id="code" class="form-control form-control-sm-custom" readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Branch</label></div>
+                            <div class="col-8">
+                                <select id="branch" class="form-select form-control-custom">
+                                    <option value="">Select Branch</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Employee</label>
-                        <div class="col-8">
-                            <select id="employee" class="form-select form-select-sm form-control-sm-custom">
-                                <option value="">Select Employee</option>
-                            </select>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Code</label></div>
+                            <div class="col-8"><input type="text" id="code" class="form-control form-control-custom">
+                            </div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Bank</label>
-                        <div class="col-8">
-                            <input type="text" id="bankName" class="form-control form-control-sm-custom" readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Employee</label></div>
+                            <div class="col-8">
+                                <div class="search-container">
+                                    <input type="text" id="employeeSearch" class="form-control form-control-custom"
+                                        placeholder="Type name to search...">
+                                    <input type="hidden" id="employee">
+                                    <div id="employeeSearchResults" class="search-results"></div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Department</label>
-                        <div class="col-8">
-                            <input type="text" id="department" class="form-control form-control-sm-custom" readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Bank</label></div>
+                            <div class="col-8"><input type="text" id="bankName"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Designation</label>
-                        <div class="col-8">
-                            <input type="text" id="designation" class="form-control form-control-sm-custom" readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Department</label></div>
+                            <div class="col-8"><input type="text" id="department"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">BasicSalary</label>
-                        <div class="col-8">
-                            <input type="number" id="basicSalary" class="form-control form-control-sm-custom" readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Designation</label></div>
+                            <div class="col-8"><input type="text" id="designation"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Total Days</label>
-                        <div class="col-4">
-                            <input type="number" id="totalDays" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">BasicSalary</label></div>
+                            <div class="col-8"><input type="number" id="basicSalary"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
                         </div>
-                        <label class="col-2 form-label-custom" style="font-size: 0.7rem;">Per Month</label>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Total Hrs Per</label>
-                        <div class="col-3">
-                            <input type="number" id="totalHrsPerDay" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Total Days</label></div>
+                            <div class="col-6"><input type="number" id="totalDays"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-2"><span style="font-size: 0.7rem; font-weight:bold;">Per Month</span></div>
                         </div>
-                        <label class="col-1 form-label-custom">Day</label>
-                        <div class="col-3">
-                            <input type="number" id="perMonth" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Total Hrs Per</label></div>
+                            <div class="col-3"><input type="number" id="totalHrsPerDay"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Day</span></div>
+                            <div class="col-3"><input type="number" id="perMonth"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Mon</span></div>
                         </div>
-                        <label class="col-1 form-label-custom">Mon</label>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Off Day</label>
-                        <div class="col-8">
-                            <input type="number" id="offDay" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Off Day</label></div>
+                            <div class="col-8"><input type="text" id="offDay"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">TotalWDsPer(Mon)</label>
-                        <div class="col-3">
-                            <input type="number" id="totalPerDay" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">TotalWDsPer(Mon)</label></div>
+                            <div class="col-3"><input type="number" id="totalWdsPerMonth"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Hrs</span></div>
+                            <div class="col-4"><input type="number" id="totalHrsPerMonth"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
-                        <label class="col-1 form-label-custom">Hrs</label>
-                        <div class="col-3">
-                            <input type="number" id="totalPerHr" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Salary Per</label></div>
+                            <div class="col-3"><input type="number" id="totalPerDay"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Day</span></div>
+                            <div class="col-3"><input type="number" id="totalPerHr"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Hr</span></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Salary Per</label>
-                        <div class="col-3">
-                            <input type="number" id="salaryPer" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Worked(Hrs)</label></div>
+                            <div class="col-3"><input type="number" id="workedHrs"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rs</span></div>
+                            <div class="col-4"><input type="number" id="workedAmount"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
-                        <label class="col-1 form-label-custom">Day</label>
-                        <div class="col-3">
-                            <input type="number" id="salaryPerHr" class="form-control form-control-sm-custom">
-                        </div>
-                        <label class="col-1 form-label-custom">Hr</label>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Worked(Hrs)</label>
-                        <div class="col-3">
-                            <input type="number" id="workedHrs" class="form-control form-control-sm-custom">
-                        </div>
-                        <label class="col-1 form-label-custom">Rs</label>
-                        <div class="col-3">
-                            <input type="number" id="workedAmount" class="form-control form-control-sm-custom">
-                            <!-- Calculated? -->
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Worked Days</label>
-                        <div class="col-8">
-                            <input type="number" id="workedDays" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Worked Days</label></div>
+                            <div class="col-8"><input type="number" id="workedDays"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Middle Column: Earnings & Deductions -->
-            <div class="col-md-4">
+            <!-- Middle Column -->
+            <div class="col-md-4 flex-column-custom">
                 <!-- Earnings -->
-                <div class="section-header bg-custom-blue">Earnings</div>
-                <div class="card p-2 border-0 mb-3">
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">OverTime (Hrs)</label>
-                        <div class="col-4">
-                            <input type="number" id="overTimeHrs" class="form-control form-control-sm-custom">
+                <div class="card card-custom">
+                    <div class="section-header header-blue">Earnings</div>
+                    <div class="card-body-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">OverTime (Hrs)</label></div>
+                            <div class="col-3"><input type="number" id="overTimeHrs"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rs</span></div>
+                            <div class="col-4"><input type="number" id="overTimeAmount"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                        <label class="col-1 form-label-custom">Rs</label>
-                        <div class="col-3">
-                            <input type="number" id="overTimeAmount" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Rotti</label></div>
+                            <div class="col-4"><input type="number" id="rotiAmount"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-4"><input type="number" id="rotiDays"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Roti</label>
-                        <div class="col-4">
-                            <input type="number" id="rotiAmount" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Nashta</label></div>
+                            <div class="col-4"><input type="number" id="nashtaAmount"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-4"><input type="number" id="nashtaDays"
+                                    class="form-control form-control-custom bg-green-input"></div>
                         </div>
-                        <div class="col-4">
-                            <input type="number" id="rotiDays" class="form-control form-control-sm-custom"
-                                placeholder="Days?">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">MonthlyComm</label></div>
+                            <div class="col-8"><input type="number" id="monthlyComm"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Nashta</label>
-                        <div class="col-4">
-                            <input type="number" id="nashtaAmount" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">FixAllowance</label></div>
+                            <div class="col-8"><input type="number" id="fixAllowance"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                        <div class="col-4">
-                            <input type="number" id="nashtaDays" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">ST.LessAllow</label></div>
+                            <div class="col-8"><input type="number" id="stLessAllow"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Monthly Comm</label>
-                        <div class="col-8">
-                            <input type="number" id="monthlyComm" class="form-control form-control-sm-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Other Allow</label></div>
+                            <div class="col-8"><input type="number" id="otherAllow"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Fix Allowance</label>
-                        <div class="col-8">
-                            <input type="number" id="fixAllowance" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">ST.LessAllow</label>
-                        <div class="col-8">
-                            <input type="number" id="stLessAllow" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Other Allow</label>
-                        <div class="col-8">
-                            <input type="number" id="otherAllow" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Total</label>
-                        <div class="col-8">
-                            <input type="number" id="earningsTotal" class="form-control form-control-sm-custom"
-                                readonly>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Total</label></div>
+                            <div class="col-8"><input type="number" id="earningsTotal"
+                                    class="form-control form-control-custom bg-blue-input" readonly></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Deductions -->
-                <div class="section-header bg-custom-red d-flex justify-content-between">
-                    <span>Deductions</span>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="shortWeek">
-                        <label class="form-check-label text-white" style="font-size: 0.7rem;">ShortWeek</label>
-                    </div>
-                </div>
-                <div class="card p-2 border-0">
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">ShortTime (Hrs)</label>
-                        <div class="col-4">
-                            <input type="number" id="shortTimeHrs" class="form-control form-control-sm-custom">
-                        </div>
-                        <label class="col-1 form-label-custom">Rs</label>
-                        <div class="col-3">
-                            <input type="number" id="shortTimeAmount" class="form-control form-control-sm-custom">
+                <div class="card card-custom mt-2">
+                    <div class="section-header header-red justify-content-between">
+                        <span>Deductions</span>
+                        <div class="form-check p-0 m-0 d-flex align-items-center">
+                            <input class="form-check-input checkbox-white-square" type="checkbox" id="checkShortWeek">
+                            <label class="form-check-label checkbox-label-custom" for="checkShortWeek">ShortWeek</label>
                         </div>
                     </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">TSW</label>
-                        <div class="col-4">
-                            <input type="number" id="tsw" class="form-control form-control-sm-custom">
+                    <div class="card-body-custom">
+                        <!-- Row 1: ShortTime -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">ShortTime (Hrs)</label></div>
+                            <div class="col-3"><input type="number" id="shortTimeHrs"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rs</span></div>
+                            <div class="col-4"><input type="number" id="shortTimeAmount"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                        <label class="col-1 form-label-custom">TFC</label>
-                        <div class="col-3">
-                            <input type="number" id="tfc" class="form-control form-control-sm-custom">
+                        <!-- Row 2: TSW and TFC -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">T5W</label></div>
+                            <div class="col-3"><input type="number" id="shortWeekDays"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">TFC</span></div>
+                            <div class="col-4"><input type="number" id="tfc"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Food</label>
-                        <div class="col-4">
-                            <input type="number" id="foodDeduction" class="form-control form-control-sm-custom">
+                        <!-- Row 3: Food and E.B -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Food</label></div>
+                            <div class="col-3"><input type="number" id="foodDeduction"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">E.B</span></div>
+                            <div class="col-4"><input type="number" id="ebDeduction"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                        <!-- Assuming E.B is aligned to the right or takes remaining space -->
-                        <label class="col-1 form-label-custom">E.B</label>
-                        <div class="col-3">
-                            <input type="number" id="ebDeduction" class="form-control form-control-sm-custom">
+                        <!-- Row 4: Umrah and Other Ded -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Umrah</label></div>
+                            <div class="col-3"><input type="number" id="umrahDeduction"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span style="font-size: 0.75rem; font-weight:bold;">Other
+                                    Ded</span></div>
+                            <div class="col-4"><input type="number" id="otherDeduction"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Umrah</label>
-                        <div class="col-4">
-                            <input type="number" id="umrahDeduction" class="form-control form-control-sm-custom">
+                        <!-- Row 5: Security Deposit -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">SecurityDeposit</label></div>
+                            <div class="col-8"><input type="number" id="securityDeposit"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                        <label class="col-1 form-label-custom" style="font-size: 0.65rem">Other</label>
-                        <div class="col-3">
-                            <input type="number" id="otherDeduction" class="form-control form-control-sm-custom">
+                        <!-- Row 6: Penalty and P.Days -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Penalty</label></div>
+                            <div class="col-3"><input type="number" id="penalty"
+                                    class="form-control form-control-custom bg-blue-input"></div>
+                            <div class="col-1 p-0 text-center"><span style="font-size: 0.75rem; font-weight:bold;">P.
+                                    Days</span></div>
+                            <div class="col-4"><input type="number" id="pDays"
+                                    class="form-control form-control-custom bg-blue-input"></div>
                         </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Security Deposit</label>
-                        <div class="col-8">
-                            <input type="number" id="securityDeposit" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Penalty</label>
-                        <div class="col-4">
-                            <input type="number" id="penalty" class="form-control form-control-sm-custom">
-                        </div>
-                        <label class="col-1 form-label-custom" style="font-size: 0.7rem">P.Days</label>
-                        <div class="col-3">
-                            <input type="number" id="pDays" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Total</label>
-                        <div class="col-8">
-                            <input type="number" id="deductionsTotal" class="form-control form-control-sm-custom"
-                                readonly>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Net Calculation -->
-            <div class="col-md-4">
-                <div class="section-header bg-custom-orange">Net Calculation</div> <!-- Actually Red/Orange in image -->
-
-                <div class="card p-2 border-0">
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">GrossTotal</label>
-                        <div class="col-8">
-                            <input type="number" id="grossTotal" class="form-control form-control-sm-custom"
-                                style="background-color: #d9534f; color: white;" readonly>
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">CMAdv</label>
-                        <div class="col-4">
-                            <input type="number" id="cmAdv"
-                                class="form-control form-control-sm-custom bg-success text-white">
-                        </div>
-                        <label class="col-1 form-label-custom">Rec</label>
-                        <div class="col-3">
-                            <input type="number" id="cmAdvRec"
-                                class="form-control form-control-sm-custom bg-success text-white">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">PMAdv</label>
-                        <div class="col-4">
-                            <input type="number" id="pmAdv"
-                                class="form-control form-control-sm-custom bg-success text-white">
-                        </div>
-                        <label class="col-1 form-label-custom">Rec</label>
-                        <div class="col-3">
-                            <input type="number" id="pmAdvRec"
-                                class="form-control form-control-sm-custom bg-success text-white">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">TotalAdv</label>
-                        <div class="col-4">
-                            <input type="number" id="totalAdv"
-                                class="form-control form-control-sm-custom bg-success text-white" readonly>
-                        </div>
-                        <label class="col-1 form-label-custom">Rec</label>
-                        <div class="col-3">
-                            <input type="number" id="totalAdvRec"
-                                class="form-control form-control-sm-custom bg-success text-white" readonly>
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">NetTotal</label>
-                        <div class="col-8">
-                            <input type="number" id="netTotal" class="form-control form-control-sm-custom"
-                                style="background-color: #d9534f; color: white;" readonly>
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">BankAmt</label>
-                        <div class="col-8">
-                            <input type="number" id="bankAmt" class="form-control form-control-sm-custom"
-                                style="background-color: #6f42c1; color: white;">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">WHT</label>
-                        <div class="col-8">
-                            <input type="number" id="wht" class="form-control form-control-sm-custom"
-                                style="background-color: #6f42c1; color: white;">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">BankPaid</label>
-                        <div class="col-8">
-                            <input type="number" id="bankPaid" class="form-control form-control-sm-custom"
-                                style="background-color: #6f42c1; color: white;">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">CashPaid</label>
-                        <div class="col-8">
-                            <input type="number" id="cashPaid" class="form-control form-control-sm-custom"
-                                style="background-color: #d9534f; color: white;">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Balance</label>
-                        <div class="col-8">
-                            <input type="number" id="balance" class="form-control form-control-sm-custom"
-                                style="background-color: #d9534f; color: white;" readonly>
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Remarks</label>
-                        <div class="col-8">
-                            <input type="text" id="remarks" class="form-control form-control-sm-custom">
-                        </div>
-                    </div>
-                    <div class="row row-custom">
-                        <label class="col-4 form-label-custom">Branch Bank</label>
-                        <div class="col-8">
-                            <select id="branchBank"
-                                class="form-select form-select-sm form-control-sm-custom bg-primary text-white">
-                                <option value="">Select Bank</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <button class="btn btn-success w-100" onclick="savePayroll()"><i class="fas fa-save"></i>
-                                Save</button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-primary w-100" onclick="showList()"><i class="fas fa-list"></i>
-                                List</button>
+                        <!-- Row 7: Total -->
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Total</label></div>
+                            <div class="col-8"><input type="number" id="deductionsTotal"
+                                    class="form-control form-control-custom bg-blue-input font-weight-bold" readonly>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row mt-2">
-            <div class="col-12 text-center text-white p-2" style="background-color: #d9534f; font-weight: bold;">
-                Total Present Employee
+            <!-- Right Column -->
+            <div class="col-md-4 flex-column-custom">
+                <div class="card card-custom">
+                    <div class="section-header header-red">Net Calculation</div>
+                    <div class="card-body-custom">
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">GrossTotal</label></div>
+                            <div class="col-8"><input type="number" id="grossTotal"
+                                    class="form-control form-control-custom bg-red-input" readonly></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">CMAdv</label></div>
+                            <div class="col-4"><input type="number" id="cmAdv"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rec</span></div>
+                            <div class="col-3"><input type="number" id="cmAdvRec"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">PMAdv</label></div>
+                            <div class="col-4"><input type="number" id="pmAdv"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rec</span></div>
+                            <div class="col-3"><input type="number" id="pmAdvRec"
+                                    class="form-control form-control-custom bg-green-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">TotalAdv</label></div>
+                            <div class="col-4"><input type="number" id="totalAdv"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
+                            <div class="col-1 p-0 text-center"><span
+                                    style="font-size: 0.75rem; font-weight:bold;">Rec</span></div>
+                            <div class="col-3"><input type="number" id="totalAdvRec"
+                                    class="form-control form-control-custom bg-green-input" readonly></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">NetTotal</label></div>
+                            <div class="col-8"><input type="number" id="netTotal"
+                                    class="form-control form-control-custom bg-red-input" readonly></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">BankAmt</label></div>
+                            <div class="col-8"><input type="number" id="bankAmt"
+                                    class="form-control form-control-custom bg-purple-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">WHT</label></div>
+                            <div class="col-8"><input type="number" id="wht"
+                                    class="form-control form-control-custom bg-purple-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">BankPaid</label></div>
+                            <div class="col-8"><input type="number" id="bankPaid"
+                                    class="form-control form-control-custom bg-purple-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">CashPaid</label></div>
+                            <div class="col-8"><input type="number" id="cashPaid"
+                                    class="form-control form-control-custom bg-red-input"></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Balance</label></div>
+                            <div class="col-8"><input type="number" id="balance"
+                                    class="form-control form-control-custom bg-red-input" readonly></div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Remarks</label></div>
+                            <div class="col-8"><input type="text" id="remarks" class="form-control form-control-custom">
+                            </div>
+                        </div>
+                        <div class="row row-custom align-items-center">
+                            <div class="col-4"><label class="form-label-custom">Branch Bank</label></div>
+                            <div class="col-8">
+                                <select id="branchBank" class="form-select form-control-custom bg-blue-input">
+                                    <option value="">Select Bank</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-auto pt-3 px-2">
+                            <button class="btn btn-ref-save flex-grow-1" onclick="savePayroll()"><i
+                                    class="fas fa-save me-1"></i> Save (Alt+S)</button>
+                            <button class="btn btn-ref-list flex-grow-1" onclick="showList()"><i
+                                    class="fas fa-list me-1"></i> List (Alt+L)</button>
+                        </div>
+                        <div class="footer-banner mt-2">
+                            Total Present Employee - <span id="totalPresentEmployees">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Payroll List Modal (Placeholder) -->
+    <!-- Payroll List Modal (Matched to Reference) -->
     <div class="modal fade" id="payrollListModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Payroll List</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">Employee _ MonthlyPayRoll _ List</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p>List functionality to be implemented...</p>
+                <div class="modal-body p-0">
+                    <div class="filters-bar">
+                        <div class="filter-item">
+                            <span class="filter-label">Month-Year</span>
+                            <input type="month" id="listMonthYear" class="form-control form-control-custom"
+                                style="width: 120px;">
+                        </div>
+                        <div class="filter-item">
+                            <select id="listBranch" class="form-select form-control-custom" style="width: 150px;">
+                                <option value="">Select Branch</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <select id="listDepartment" class="form-select form-control-custom" style="width: 150px;">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <select id="listEmployeeType" class="form-select form-control-custom" style="width: 150px;">
+                                <option value="all">All Emp</option>
+                                <option value="payAdvance">Pay Advance Emp</option>
+                                <option value="commission">Commission Emp</option>
+                                <option value="bank">Bank Emp</option>
+                                <option value="other">Other Emp</option>
+                                <option value="cashPaid">Cash Paid</option>
+                            </select>
+                        </div>
+                        <button class="btn-list-action btn-list-search" onclick="loadPayrollList()">Search</button>
+                        <button class="btn-list-action btn-list-blue" onclick="printSelected()">Print Selected</button>
+                        <button class="btn-list-action btn-list-blue" onclick="printAll()">Print All</button>
+                        <button class="btn-list-action btn-list-blue">Send SMS</button>
+                    </div>
+
+                    <div class="px-2 py-1 bg-white border-bottom">
+                        <input type="text" id="listSearchText" class="form-control form-control-custom"
+                            style="width: 250px;" placeholder="Search">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="payroll-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAllPayrolls"></th>
+                                    <th>Actions (Print, Delete, Checkbox)</th>
+                                    <th>PayRoll ID</th>
+                                    <th>Code</th>
+                                    <th>Date</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Designation</th>
+                                    <th>Branch</th>
+                                    <th>Basic_Salary</th>
+
+                                    <th>OverTime</th>
+                                    <th>Allowances</th>
+                                    <th>Gross_Total</th>
+                                    <th>Short Time & Other Ded</th>
+                                    <th>Advance_Deduction</th>
+                                    <th>WHT</th>
+                                    <th>Net_Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payrollTableBody">
+                                <!-- Example rows will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
