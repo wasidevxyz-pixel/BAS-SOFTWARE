@@ -380,6 +380,13 @@
             }).format(amount || 0);
         }
 
+        // Format difference (show as (val) if negative)
+        function formatDiff(amount) {
+            if (amount === 0) return '0';
+            const formatted = formatCurrency(Math.abs(amount));
+            return amount < 0 ? `(${formatted})` : formatted;
+        }
+
         // Format date
         function formatDate(dateStr) {
             if (!dateStr) return '-';
@@ -673,7 +680,7 @@
                             <td class="text-end" style="background-color: #f0f0f0;">${formatCurrency(sale)}</td> 
                             <td class="text-center">${srDisplay}</td> 
                             <td class="text-end">${formatCurrency(comm)}</td>
-                            <td class="text-end diff-col">(${Math.abs(diff)})</td> 
+                            <td class="text-end diff-col">${formatDiff(diff)}</td> 
                             <td class="text-end">${discPct.toFixed(2)}</td>
                             <td class="text-end">${formatCurrency(discVal)}</td>
                         </tr>
@@ -717,7 +724,7 @@
                 </div>
                 <div class="text-center diff-col">
                     <small class="d-block text-primary fw-bold text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Difference</small>
-                    <div class="fs-5 text-dark fw-bold">(${Math.abs(globalDiff)})</div>
+                    <div class="fs-5 text-dark fw-bold">${formatDiff(globalDiff)}</div>
                 </div> 
             `;
 
@@ -741,7 +748,7 @@
                         <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalTotalSale)}</td>
                         <td class="text-center" style="font-weight: bold; color: #333;">${globalTargetMetCount > 0 ? globalTargetMetCount : ''}</td>
                         <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalCommission)}</td>
-                        <td class="text-end diff-col" style="font-weight: bold; color: #333;">(${Math.abs(globalDiff)})</td>
+                        <td class="text-end diff-col" style="font-weight: bold; color: #333;">${formatDiff(globalDiff)}</td>
                         <td class="text-end" style="font-weight: bold; color: #333;">${globalAvgDiscPct.toFixed(2)}</td>
                         <td class="text-end" style="font-weight: bold; color: #333;">${formatCurrency(globalTotalDiscVal)}</td>
                     </tr>
