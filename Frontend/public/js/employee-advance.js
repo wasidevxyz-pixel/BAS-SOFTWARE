@@ -705,6 +705,12 @@ async function loadEmployeeBalance() {
         document.getElementById('code').value = selectedEmp.code || '';
         document.getElementById('salary').value = selectedEmp.basicSalary || 0;
 
+        // Auto-populate department from employee record
+        if (selectedEmp.department) {
+            const deptId = typeof selectedEmp.department === 'object' ? selectedEmp.department._id : selectedEmp.department;
+            document.getElementById('department').value = deptId;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`/api/v1/employee-advances?employee=${selectedEmp._id}`, {

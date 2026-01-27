@@ -26,7 +26,15 @@ exports.getEmployeeAdvances = async (req, res) => {
 // @route   GET /api/v1/employee-advances/:id
 exports.getEmployeeAdvance = async (req, res) => {
     try {
-        const advance = await EmployeeAdvance.findById(req.params.id).populate('employee');
+        const advance = await EmployeeAdvance.findById(req.params.id)
+            .populate({
+                path: 'employee',
+                populate: [
+                    { path: 'designation', select: 'name' },
+                    { path: 'department', select: 'name' }
+                ]
+            })
+            .populate('department');
         if (!advance) {
             return res.status(404).json({ success: false, message: 'Advance not found' });
         }
