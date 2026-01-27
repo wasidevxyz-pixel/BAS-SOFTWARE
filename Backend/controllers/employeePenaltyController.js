@@ -1,5 +1,6 @@
 const EmployeePenalty = require('../models/EmployeePenalty');
 const Employee = require('../models/Employee');
+const Payroll = require('../models/Payroll');
 
 // @desc    Get all penalties
 // @route   GET /api/v1/employee-penalties
@@ -9,11 +10,10 @@ exports.getPenalties = async (req, res) => {
         let query = {};
 
         if (date) {
-            // Match exact date or date range if needed
-            const startDate = new Date(date);
-            const endDate = new Date(date);
-            endDate.setDate(endDate.getDate() + 1);
-            query.date = { $gte: startDate, $lt: endDate };
+            const d = new Date(date);
+            const startDate = new Date(d.getFullYear(), d.getMonth(), 1);
+            const endDate = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+            query.date = { $gte: startDate, $lte: endDate };
         }
         if (employee) query.employee = employee;
         if (branch) query.branch = branch;
@@ -23,10 +23,26 @@ exports.getPenalties = async (req, res) => {
             .populate('department', 'name')
             .sort({ date: -1 });
 
+        // Check if each penalty is already linked to a saved payroll
+        const penaltiesWithStatus = await Promise.all(penalties.map(async (p) => {
+            const d = new Date(p.date);
+            const monthYear = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            const payroll = await Payroll.findOne({
+                employee: p.employee?._id,
+                monthYear: monthYear
+            });
+
+            return {
+                ...p._doc,
+                isPosted: !!payroll
+            };
+        }));
+
         res.status(200).json({
             success: true,
-            count: penalties.length,
-            data: penalties
+            count: penaltiesWithStatus.length,
+            data: penaltiesWithStatus
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -47,6 +63,25 @@ exports.createPenalty = async (req, res) => {
             success: true,
             data: penalty
         });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update penalty
+// @route   PUT /api/v1/employee-penalties/:id
+exports.updatePenalty = async (req, res) => {
+    try {
+        const penalty = await EmployeePenalty.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
+
+        if (!penalty) {
+            return res.status(404).json({ success: false, message: 'Penalty not found' });
+        }
+
+        res.status(200).json({ success: true, data: penalty });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -22,9 +22,12 @@ const PayrollSchema = new mongoose.Schema({
     designation: String,
     residency: String,
     totalDays: { type: Number, default: 0 },
+    totalWdsPerMonth: { type: Number, default: 0 },
+    totalWdsPerMonthHrs: { type: Number, default: 0 },
+    totalHrsPerMonth: { type: Number, default: 0 },
     totalHrsPerDay: { type: Number, default: 0 },
     perMonth: { type: Number, default: 0 },
-    offDay: { type: Number, default: 0 },
+    offDay: { type: String, default: '' },
     totalPerDay: { type: Number, default: 0 },
     totalPerHr: { type: Number, default: 0 },
     salaryPer: { type: Number, default: 0 },
@@ -68,6 +71,7 @@ const PayrollSchema = new mongoose.Schema({
     shortWeek: { type: Number, default: 0 },
 
     payAdvSalary: { type: Boolean, default: false },
+    thirtyWorkingDays: { type: Boolean, default: false },
     otst30WorkingDays: { type: Boolean, default: false },
     payFullSalaryThroughBank: { type: Boolean, default: false },
 

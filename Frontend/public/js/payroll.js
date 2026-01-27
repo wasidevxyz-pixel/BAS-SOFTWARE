@@ -74,6 +74,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Special handler for 30 Working Days checkbox - force recalculation from backend
+    document.getElementById('wkDays30').addEventListener('change', async () => {
+        const employeeId = document.getElementById('employee').value;
+        const monthYear = document.getElementById('monthYear').value;
+        const branch = document.getElementById('branch').value;
+
+        if (employeeId && monthYear) {
+            await forceRecalculate(employeeId, monthYear, branch);
+        }
+    });
+
     // Handle Employee Selection
     document.getElementById('employee').addEventListener('change', async (e) => {
         const employeeId = e.target.value;
@@ -86,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Handle Month Change
-    document.getElementById('monthYear').addEventListener('change', async (e) => {
+    document.getElementById('monthYear').addEventListener('input', async (e) => {
         const employeeId = document.getElementById('employee').value;
         const monthYear = e.target.value;
         const branch = document.getElementById('branch').value;
@@ -348,13 +359,17 @@ async function loadOrCalculate(employeeId, monthYear, branch) {
             alert('Existing payroll loaded for this month.');
         } else {
             currentPayrollId = null;
+
+            // Get checkbox states from UI
+            const thirtyWorkingDays = document.getElementById('wkDays30').checked;
+
             const calcRes = await fetch('/api/v1/payrolls/calculate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ employeeId, monthYear, branch })
+                body: JSON.stringify({ employeeId, monthYear, branch, thirtyWorkingDays })
             });
 
             const calcData = await calcRes.json();
@@ -365,6 +380,32 @@ async function loadOrCalculate(employeeId, monthYear, branch) {
         calculateTotals();
     } catch (error) {
         console.error('Error processing payroll:', error);
+    }
+}
+
+async function forceRecalculate(employeeId, monthYear, branch) {
+    try {
+        const token = localStorage.getItem('token');
+
+        // Get checkbox states from UI
+        const thirtyWorkingDays = document.getElementById('wkDays30').checked;
+
+        const calcRes = await fetch('/api/v1/payrolls/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ employeeId, monthYear, branch, thirtyWorkingDays })
+        });
+
+        const calcData = await calcRes.json();
+        if (calcData.success) {
+            populateForm(calcData.data);
+            calculateTotals();
+        }
+    } catch (error) {
+        console.error('Error recalculating payroll:', error);
     }
 }
 
@@ -382,11 +423,13 @@ function populateForm(data) {
     setValue('workedDays', data.workedDays);
 
     // Header Checkboxes
-    document.getElementById('wkDays30').checked = data.otst30WorkingDays || false;
+    document.getElementById('wkDays30').checked = data.thirtyWorkingDays || false;
     document.getElementById('salThrBank').checked = data.payFullSalaryThroughBank || false;
     document.getElementById('payAdvSalary').checked = data.payAdvSalary || false;
+    window.isOTST_ThirtyWorkingDays = data.otst30WorkingDays || false;
 
     setValue('workedHrs', parseFloat(data.workedHrs || 0).toFixed(2));
+    setValue('workedAmount', Math.round(data.workedAmount || 0));
     setValue('totalPerDay', parseFloat(data.totalPerDay || 0).toFixed(2));
     setValue('totalPerHr', parseFloat(data.totalPerHr || 0).toFixed(2));
     setValue('totalHrsPerDay', data.totalHrsPerDay || 8);
@@ -468,7 +511,12 @@ function calculateTotals() {
     }
 
     let hourlyRate = getValue('totalPerDay') / (dutyHrs || 8);
-    if (wkDays30) {
+
+    // If OTST_ThirtyWorkingDays is active, always use (Basic / 30 / DutyHrs)
+    if (window.isOTST_ThirtyWorkingDays) {
+        hourlyRate = (basicInfo / 30) / (dutyHrs || 8);
+    } else if (wkDays30) {
+        // Fallback to Thirty Working Days flag if OTST is not specifically set
         hourlyRate = (basicInfo / 30) / (dutyHrs || 8);
     }
 
@@ -528,12 +576,18 @@ function calculateTotals() {
 
     document.getElementById('deductionsTotal').value = deductions;
 
-    const grossTotal = Math.round((basicInfo + updatedEarnings) - shortAmt);
+    const workedHrs = getValue('workedHrs');
+    const workedAmount = Math.round(workedHrs * hourlyRate);
+    setValue('workedAmount', workedAmount);
+
+    // Gross Total = Basic Salary + Earnings - Deductions Total (CONSISTENT FORMULA)
+    const grossTotal = Math.round(basicInfo + updatedEarnings - deductions);
     document.getElementById('grossTotal').value = grossTotal;
 
     const advancesRec = Math.round(getValue('cmAdvRec') + getValue('pmAdvRec'));
     document.getElementById('totalAdv').value = advancesRec;
 
+    // Net Total = Gross Total - Advances Recovered (deductions already subtracted in Gross)
     const netTotal = Math.round(grossTotal - advancesRec);
     document.getElementById('netTotal').value = netTotal;
 
@@ -594,6 +648,9 @@ async function savePayroll() {
         department: document.getElementById('department').value,
         designation: document.getElementById('designation').value,
         totalDays: getValue('totalDays'),
+        totalWdsPerMonth: getValue('totalWdsPerMonth'),
+        totalWdsPerMonthHrs: getValue('totalHrsPerMonth'),
+        totalHrsPerMonth: getValue('totalHrsPerMonth'),
         totalHrsPerDay: getValue('totalHrsPerDay'),
         perMonth: getValue('basicSalary'),
         offDay: getValue('offDay'),
@@ -633,7 +690,7 @@ async function savePayroll() {
 
         // Flags
         payAdvSalary: document.getElementById('payAdvSalary').checked,
-        otst30WorkingDays: document.getElementById('wkDays30').checked,
+        thirtyWorkingDays: document.getElementById('wkDays30').checked,
         payFullSalaryThroughBank: document.getElementById('salThrBank').checked
     };
 

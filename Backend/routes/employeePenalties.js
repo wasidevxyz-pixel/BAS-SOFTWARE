@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     getPenalties,
     createPenalty,
+    updatePenalty,
     deletePenalty
 } = require('../controllers/employeePenaltyController');
 
@@ -15,6 +16,7 @@ router.route('/')
     .post(authorize('admin', 'manager'), createPenalty);
 
 router.route('/:id')
+    .put(authorize('admin', 'manager'), updatePenalty)
     .delete(authorize('admin', 'manager'), deletePenalty);
 
 module.exports = router;

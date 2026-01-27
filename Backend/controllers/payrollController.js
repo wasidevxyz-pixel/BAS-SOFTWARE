@@ -2,6 +2,8 @@ const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const EmployeeAdvance = require('../models/EmployeeAdvance');
+const HolyDay = require('../models/HolyDay');
+const EmployeePenalty = require('../models/EmployeePenalty');
 
 // @desc    Get all payrolls
 // @route   GET /api/v1/payrolls
@@ -52,7 +54,7 @@ exports.getPayroll = async (req, res) => {
 // @route   POST /api/v1/payrolls/calculate
 exports.calculatePayroll = async (req, res) => {
     try {
-        const { employeeId, monthYear, branch } = req.body;
+        const { employeeId, monthYear, branch, thirtyWorkingDays } = req.body;
 
         // Get employee details with populated department and designation
         const employee = await Employee.findById(employeeId)
@@ -127,28 +129,68 @@ exports.calculatePayroll = async (req, res) => {
 
         const prevAdvBalance = lastPrevAdvance ? lastPrevAdvance.balance : (employee.opening || 0);
 
-        // Calculate sundays in month
-        let sundays = 0;
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            if (d.getDay() === 0) sundays++;
-        }
-        const totalWdsPerMonth = daysInMonth - sundays;
+        // Sum all penalties for this month
+        const penalties = await EmployeePenalty.find({
+            employee: employeeId,
+            date: { $gte: startDate, $lte: endDate }
+        });
+        const totalPenalty = penalties.reduce((sum, p) => sum + (p.penaltyAmount || 0), 0);
 
-        // Calculate totals based on Total Working Days (Excluding Sundays)
+        // Calculate sundays and holy days in month
+        let offDaysCount = 0;
+        const religion = employee.religion || 'Islam';
+
+        // Fetch active holy days for this religion in this month
+        const holyDays = await HolyDay.find({
+            religion: religion,
+            isActive: true,
+            date: { $gte: startDate, $lte: endDate }
+        });
+
+        // Convert holy day dates to a simple YYYY-MM-DD set for easy lookup
+        const holidayDates = new Set(holyDays.map(hd => hd.date.toISOString().split('T')[0]));
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const isSunday = d.getDay() === 0;
+            const isHoliday = holidayDates.has(dateStr);
+
+            if (isSunday || isHoliday) {
+                offDaysCount++;
+            }
+        }
+        let totalWdsPerMonth = daysInMonth - offDaysCount;
+
+        // Use the thirtyWorkingDays from request if provided, otherwise fall back to employee setting
+        const isThirtyWorkingDays = thirtyWorkingDays !== undefined ? thirtyWorkingDays : (employee.thirtyWorkingDays || false);
+        const isOTST30Days = employee.otst30WorkingDays || false;
+
+        // If 30 working days flag is active, override the monthly total for display and calculation
+        if (isThirtyWorkingDays) {
+            totalWdsPerMonth = 30;
+        }
+
+        // Calculate totals based on Total Working Days
         const dutyHours = parseFloat(employee.totalHrs) || 8;
         const totalHrsPerMonth = totalWdsPerMonth * dutyHours;
 
         let perDaySalary = 0;
         let perHourSalary = 0;
 
-        const is30DayMonth = employee.thirtyWorkingDays || employee.otst30WorkingDays || false;
-
-        if (is30DayMonth) {
-            // User requested formula: Basic Salary / 30 / Duty Hrs
-            perHourSalary = (employee.basicSalary / 30) / (dutyHours || 8);
+        if (isThirtyWorkingDays) {
+            // Basic Salary calculation uses 30 days
             perDaySalary = employee.basicSalary / 30;
         } else {
+            // Basic Salary calculation uses actual working days of the month
             perDaySalary = employee.basicSalary / (totalWdsPerMonth || daysInMonth);
+        }
+
+        // Determine Hourly Rate for OT and Short-Time
+        if (isOTST30Days) {
+            // Hourly rate is fixed based on 30 days
+            perHourSalary = (employee.basicSalary / 30) / (dutyHours || 8);
+        } else {
+            // Hourly rate is derived from the perDaySalary (which might be based on actual working days)
             perHourSalary = perDaySalary / (dutyHours || 8);
         }
 
@@ -175,6 +217,7 @@ exports.calculatePayroll = async (req, res) => {
             bank: employee.selectBank || 'N/A',
             totalDays: daysInMonth,
             totalWdsPerMonth: totalWdsPerMonth,
+            totalWdsPerMonthHrs: totalHrsPerMonth,
             totalHrsPerMonth: totalHrsPerMonth,
             workedDays: workedDays,
             workedHrs: totalWorkedHours,
@@ -183,7 +226,8 @@ exports.calculatePayroll = async (req, res) => {
             perMonth: employee.basicSalary,
             offDay: employee.offDay || 'N/A',
             totalHrsPerDay: dutyHours,
-            otst30WorkingDays: is30DayMonth,
+            thirtyWorkingDays: isThirtyWorkingDays,
+            otst30WorkingDays: isOTST30Days,
             payFullSalaryThroughBank: employee.payFullSalaryThroughBank || false,
 
             // Earnings
@@ -208,6 +252,7 @@ exports.calculatePayroll = async (req, res) => {
             csMale: currentPayAmount, // Current Month Advance Paid
             pmAdvRec: prevRecInstallment, // Installment from Previous Balance
             cmAdvRec: currentRecInstallment, // Installment from Current Month Balance
+            penalty: totalPenalty,
 
             createdBy: req.user._id
         };
@@ -224,23 +269,35 @@ exports.calculatePayroll = async (req, res) => {
 
         // Calculate deductions total
         calculatedData.deductionsTotal =
+            (calculatedData.shortTimeAmount || 0) +
             (calculatedData.ttw || 0) +
             (calculatedData.fund || 0) +
             (calculatedData.ugrm || 0) +
             (calculatedData.securityDeposit || 0) +
             (calculatedData.penalty || 0);
 
-        // Calculate gross and net based on user requested formula
-        // GrossTotal = basic salary + earning total - deduction total
-        calculatedData.grossTotal = (calculatedData.perMonth || 0) + (calculatedData.earningsTotal || 0) - (calculatedData.deductionsTotal || 0);
+        // Calculate gross total: (Basic + Earnings) - ShortTime
+        // This is mathematically equivalent to (WorkedHrs * HourlyRate) + Earnings
+        calculatedData.grossTotal = (calculatedData.perMonth || 0) + (calculatedData.earningsTotal || 0) - (calculatedData.shortTimeAmount || 0);
 
-        // Recovered is what actually gets deducted
+        // Calculate other deductions (Fund, Security, Penalty, TSW/ShortWeek)
+        const otherDeductions =
+            (calculatedData.ttw || 0) +
+            (calculatedData.fund || 0) +
+            (calculatedData.ugrm || 0) +
+            (calculatedData.securityDeposit || 0) +
+            (calculatedData.penalty || 0);
+
+        // Recovered is what actually gets deducted from net
         calculatedData.totalAdvRec = (calculatedData.pmAdvRec || 0) + (calculatedData.cmAdvRec || 0);
         // Balance info
         calculatedData.totalAdv = (calculatedData.pAAdv || 0) + (calculatedData.csMale || 0);
 
-        // NetTotal = gross total - total adv deduction
-        calculatedData.netTotal = calculatedData.grossTotal - (calculatedData.totalAdvRec || 0);
+        // NetTotal = gross total - other deductions - advances recovered
+        calculatedData.netTotal = calculatedData.grossTotal - otherDeductions - (calculatedData.totalAdvRec || 0);
+
+        // Add workedAmount for display
+        calculatedData.workedAmount = Math.round(totalWorkedHours * perHourSalary);
 
         res.status(200).json({
             success: true,

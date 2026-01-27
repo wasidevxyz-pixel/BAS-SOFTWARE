@@ -42,6 +42,7 @@ const employeeSchema = new mongoose.Schema({
     },
     religion: {
         type: String,
+        enum: ['Islam', 'Christian', 'Hindu', 'Other'],
         default: 'Islam'
     },
     maritalStatus: {

@@ -3,6 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set default date to today
     document.getElementById('date').valueAsDate = new Date();
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveHolyDay();
+        }
+    });
 });
 
 async function loadHolyDays() {
