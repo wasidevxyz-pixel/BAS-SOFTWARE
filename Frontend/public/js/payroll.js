@@ -535,21 +535,30 @@ function calculateTotals() {
     );
     document.getElementById('earningsTotal').value = updatedEarnings;
 
+    // Get worked hours for short week calculation
+    const workedHrs = getValue('workedHrs');
+
+    // Short Week Calculation: TSW = 4 - (TotalWorkedHrs / TotalHrsPerDay / 7)
+    const weeksWorked = workedHrs / (dutyHrs || 8) / 7;
+    const calculatedShortWeeks = Math.max(0, 4 - weeksWorked);
+
     const isShortWeek = getValue('checkShortWeek');
     let shortWeeks = getValue('shortWeekDays');
     let totalShortHrs = baseShortHrs;
-    const weeklyBlock = dutyHrs * 6;
 
     if (activeEl === 'shortWeekDays') {
+        // User manually entered short week days
         totalShortHrs = baseShortHrs + (shortWeeks * dutyHrs);
         setValue('shortTimeHrs', totalShortHrs.toFixed(2));
     } else if (activeEl === 'shortTimeHrs') {
+        // User manually entered short time hours
         totalShortHrs = getValue('shortTimeHrs');
         shortWeeks = (totalShortHrs - baseShortHrs) / (dutyHrs || 8);
         setValue('shortWeekDays', Math.round(shortWeeks));
     } else {
         if (isShortWeek) {
-            shortWeeks = Math.round(baseShortHrs / weeklyBlock);
+            // Auto-calculate using the formula
+            shortWeeks = Math.round(calculatedShortWeeks);
             setValue('shortWeekDays', shortWeeks);
             totalShortHrs = baseShortHrs + (shortWeeks * dutyHrs);
             setValue('shortTimeHrs', totalShortHrs.toFixed(2));
@@ -576,7 +585,7 @@ function calculateTotals() {
 
     document.getElementById('deductionsTotal').value = deductions;
 
-    const workedHrs = getValue('workedHrs');
+    // Use the workedHrs already declared above
     const workedAmount = Math.round(workedHrs * hourlyRate);
     setValue('workedAmount', workedAmount);
 

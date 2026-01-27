@@ -199,12 +199,12 @@ exports.calculatePayroll = async (req, res) => {
         const overTimeHrs = diffHours > 0 ? diffHours : 0;
         const shortTimeHrs = diffHours < 0 ? Math.abs(diffHours) : 0;
 
-        // NEW Short Week Logic: Short Weeks = Short Hours / Weekly Hours
-        const weeklyHours = (dutyHours || 8) * 6;
-        const shortWeeks = shortTimeHrs / (weeklyHours || 48);
+        // Short Week Calculation: TSW = 4 - (TotalWorkedHrs / TotalHrsPerDay / 7)
+        // This assumes 4 weeks in a month and calculates how many weeks were short
+        const weeksWorked = totalWorkedHours / (dutyHours || 8) / 7;
+        const shortWeeks = Math.max(0, 4 - weeksWorked); // Ensure non-negative
 
         // TSW Amount = Short Weeks * (Pay for 7 days)
-        // This includes the 6 working days plus the paid Sunday
         const shortWeekAmount = shortWeeks * (perDaySalary * 7);
 
         const calculatedData = {
