@@ -51,6 +51,8 @@ const PayrollSchema = new mongoose.Schema({
     ugrm: { type: Number, default: 0 },
     securityDeposit: { type: Number, default: 0 },
     penalty: { type: Number, default: 0 },
+    food: { type: Number, default: 0 }, // Food Rate per Time
+    ebDeduction: { type: Number, default: 0 }, // Total EB/Food Deduction
     deductionsTotal: { type: Number, default: 0 },
 
     // Net Calculation

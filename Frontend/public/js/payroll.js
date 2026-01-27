@@ -452,11 +452,12 @@ function populateForm(data) {
     setValue('rotiAmount', data.rent);
 
     setValue('tfc', data.fund);
-    setValue('foodDeduction', data.ugrm);
+    setValue('tfc', data.fund);
+    setValue('foodDeduction', data.food || 0); // Food Rate
     setValue('securityDeposit', data.securityDeposit);
     setValue('penalty', data.penalty);
 
-    setValue('ebDeduction', 0);
+    setValue('ebDeduction', data.ebDeduction || 0); // Total EB Deduction
     setValue('umrahDeduction', 0);
     setValue('otherDeduction', 0);
 
@@ -572,11 +573,15 @@ function calculateTotals() {
     const shortAmt = Math.round(totalShortHrs * hourlyRate); // Rounded
     setValue('shortTimeAmount', shortAmt);
 
+    const foodRate = getValue('foodDeduction');
+    const workedDaysForcalc = getValue('workedDays');
+    const ebDeduction = Math.round(foodRate * workedDaysForcalc);
+    setValue('ebDeduction', ebDeduction);
+
     const deductions = Math.round(
         shortAmt +
         getValue('tfc') +
-        getValue('foodDeduction') +
-        getValue('ebDeduction') +
+        getValue('ebDeduction') + // Use EB deduction as the actual food cost
         getValue('umrahDeduction') +
         getValue('otherDeduction') +
         getValue('securityDeposit') +
@@ -680,7 +685,9 @@ async function savePayroll() {
         shortWeek: getValue('shortTimeAmount'),
         ttw: getValue('tsw'),
         fund: getValue('tfc'),
-        ugrm: getValue('foodDeduction'),
+        food: getValue('foodDeduction'), // Rate
+        ebDeduction: getValue('ebDeduction'), // Total
+        ugrm: 0, // Legacy field
         securityDeposit: getValue('securityDeposit'),
         penalty: getValue('penalty'),
         deductionsTotal: getValue('deductionsTotal'),

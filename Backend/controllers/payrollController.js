@@ -2,8 +2,9 @@ const Payroll = require('../models/Payroll');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const EmployeeAdvance = require('../models/EmployeeAdvance');
-const HolyDay = require('../models/HolyDay');
 const EmployeePenalty = require('../models/EmployeePenalty');
+const HolyDay = require('../models/HolyDay');
+const Store = require('../models/Store');
 
 // @desc    Get all payrolls
 // @route   GET /api/v1/payrolls
@@ -207,6 +208,32 @@ exports.calculatePayroll = async (req, res) => {
         // TSW Amount = Short Weeks * (Pay for 7 days)
         const shortWeekAmount = shortWeeks * (perDaySalary * 7);
 
+        // Food Deduction Calculation
+        // Get store's food expense per time based on employee's branch
+        let foodPerTime = 0;
+        let ebDeduction = 0;
+
+        const store = await Store.findOne({ name: employee.branch });
+        if (store && store.foodExpPerTime) {
+            const foodExpPerTime = store.foodExpPerTime;
+
+            // Calculate food per time based on employee's allowFood setting
+            if (employee.allowFood === '1 Time Deduction') {
+                foodPerTime = foodExpPerTime * 1;
+            } else if (employee.allowFood === '2 Time Deduction') {
+                foodPerTime = foodExpPerTime * 2;
+            } else if (employee.allowFood === 'Free') {
+                foodPerTime = 0;
+            } else {
+                // 'No Food' or any other value
+                foodPerTime = 0;
+            }
+
+            // EB (Electricity Bill) = Food Per Time × Worked Days
+            ebDeduction = foodPerTime * workedDays;
+        }
+
+
         const calculatedData = {
             employee: employeeId,
             monthYear,
@@ -253,6 +280,8 @@ exports.calculatePayroll = async (req, res) => {
             pmAdvRec: prevRecInstallment, // Installment from Previous Balance
             cmAdvRec: currentRecInstallment, // Installment from Current Month Balance
             penalty: totalPenalty,
+            food: foodPerTime, // Food expense per time
+            ebDeduction: ebDeduction, // EB (Electricity Bill) = Food × Worked Days
 
             createdBy: req.user._id
         };
@@ -274,7 +303,8 @@ exports.calculatePayroll = async (req, res) => {
             (calculatedData.fund || 0) +
             (calculatedData.ugrm || 0) +
             (calculatedData.securityDeposit || 0) +
-            (calculatedData.penalty || 0);
+            (calculatedData.penalty || 0) +
+            (calculatedData.ebDeduction || 0);
 
         // Calculate gross total: (Basic + Earnings) - ShortTime
         // This is mathematically equivalent to (WorkedHrs * HourlyRate) + Earnings
