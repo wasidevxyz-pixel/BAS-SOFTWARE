@@ -16,8 +16,8 @@ async function initializePage() {
 
     // Set default dates for list
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    document.getElementById('listFromDate').valueAsDate = firstDay;
+    // const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('listFromDate').valueAsDate = today;
     document.getElementById('listToDate').valueAsDate = today;
 
     await Promise.all([
