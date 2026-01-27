@@ -9,6 +9,13 @@ async function initializePage() {
     // Set default date
     document.getElementById('invoiceDate').valueAsDate = new Date();
 
+    // Set default filter dates
+    const today = new Date();
+    if (document.getElementById('listFromDate')) {
+        document.getElementById('listFromDate').valueAsDate = today;
+        document.getElementById('listToDate').valueAsDate = today;
+    }
+
     await Promise.all([
         loadSuppliers(),
         loadWHCategories(),
@@ -623,7 +630,14 @@ function handleRowEnter(e) {
 
 async function loadPurchaseList() {
     try {
-        const response = await fetch('/api/v1/wh-purchases', {
+        const fromDate = document.getElementById('listFromDate').value;
+        const toDate = document.getElementById('listToDate').value;
+        const search = document.getElementById('listSearch').value;
+
+        let url = `/api/v1/wh-purchases?startDate=${fromDate}&endDate=${toDate}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const result = await response.json();
@@ -937,7 +951,7 @@ async function executeSave(status) {
                 quantity: parseFloat(row.querySelector('input[name="quantity"]').value) || 0,
                 bonus: parseFloat(row.querySelector('input[name="bonus"]').value) || 0,
                 costPrice: parseFloat(row.querySelector('input[name="costPrice"]').value) || 0,
-                salePrice: parseFloat(row.querySelector('input[name="salePrice"]').value) || 0,
+                // salePrice: parseFloat(row.querySelector('input[name="salePrice"]').value) || 0, // Removed as field does not exist
                 retailPrice: parseFloat(row.querySelector('input[name="retailPrice"]').value) || 0,
                 discountPercent: parseFloat(row.querySelector('input[name="discPercent"]').value) || 0,
                 discountAmount: parseFloat(row.querySelector('input[name="discVal"]').value) || 0,

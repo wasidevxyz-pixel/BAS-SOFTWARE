@@ -9,6 +9,13 @@ async function initializePage() {
     // Set default date
     document.getElementById('returnDate').valueAsDate = new Date();
 
+    // Set default filter dates
+    const today = new Date();
+    if (document.getElementById('listFromDate')) {
+        document.getElementById('listFromDate').valueAsDate = today;
+        document.getElementById('listToDate').valueAsDate = today;
+    }
+
     await Promise.all([
         loadSuppliers(),
         loadWHCategories(),
@@ -698,9 +705,16 @@ function handleRowEnter(e) {
 }
 
 
-async function loadReturnList() {
+async function loadPurchaseList() {
     try {
-        const response = await fetch('/api/v1/wh-purchase-returns', {
+        const fromDate = document.getElementById('listFromDate') ? document.getElementById('listFromDate').value : '';
+        const toDate = document.getElementById('listToDate') ? document.getElementById('listToDate').value : '';
+        const search = document.getElementById('listSearch') ? document.getElementById('listSearch').value : '';
+
+        let url = `/api/v1/wh-purchase-returns?startDate=${fromDate}&endDate=${toDate}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const result = await response.json();
@@ -780,7 +794,7 @@ async function deleteReturn(id) {
         const result = await response.json();
         if (result.success) {
             alert('Purchase Deleted');
-            loadReturnList();
+            loadPurchaseList();
         } else {
             alert('Error: ' + result.error);
         }
@@ -1040,7 +1054,7 @@ async function executeSave(status) {
                 quantity: parseFloat(row.querySelector('input[name="quantity"]').value) || 0,
                 bonus: parseFloat(row.querySelector('input[name="bonus"]').value) || 0,
                 costPrice: parseFloat(row.querySelector('input[name="costPrice"]').value) || 0,
-                salePrice: parseFloat(row.querySelector('input[name="salePrice"]').value) || 0,
+                // salePrice: parseFloat(row.querySelector('input[name="salePrice"]').value) || 0, // Removed to avoid crash
                 retailPrice: parseFloat(row.querySelector('input[name="retailPrice"]').value) || 0,
                 discountPercent: parseFloat(row.querySelector('input[name="discPercent"]').value) || 0,
                 discountValue: parseFloat(row.querySelector('input[name="discVal"]').value) || 0,
@@ -1124,7 +1138,7 @@ function switchTab(tabName) {
         document.getElementById('list-tab').classList.add('active');
         document.getElementById('detail-tab').classList.remove('active');
 
-        loadReturnList();
+        loadPurchaseList();
     }
 }
 

@@ -78,11 +78,34 @@ exports.createWHPurchaseReturn = async (req, res) => {
 // Get all Purchase Returns
 exports.getWHPurchaseReturns = async (req, res) => {
     try {
-        const returns = await WHPurchaseReturn.find()
+        const { startDate, endDate, search } = req.query;
+
+        let query = {};
+
+        // Date Filter
+        if (startDate || endDate) {
+            query.returnDate = {};
+            if (startDate) query.returnDate.$gte = new Date(startDate);
+            if (endDate) query.returnDate.$lte = new Date(endDate);
+        }
+
+        let returns = await WHPurchaseReturn.find(query)
             .populate('supplier', 'supplierName')
             .populate('createdBy', 'name')
             .populate('originalPurchase', 'invoiceNo')
             .sort({ createdAt: -1 });
+
+        // In-memory search filter
+        if (search) {
+            const searchLower = search.toLowerCase();
+            returns = returns.filter(p =>
+                (p.returnNo && p.returnNo.toLowerCase().includes(searchLower)) ||
+                (p.remarks && p.remarks.toLowerCase().includes(searchLower)) ||
+                (p.supplier && p.supplier.supplierName && p.supplier.supplierName.toLowerCase().includes(searchLower)) ||
+                (p.postingNumber && String(p.postingNumber).includes(searchLower)) ||
+                (p.originalPurchase && p.originalPurchase.invoiceNo && p.originalPurchase.invoiceNo.toLowerCase().includes(searchLower))
+            );
+        }
 
         res.json({
             success: true,

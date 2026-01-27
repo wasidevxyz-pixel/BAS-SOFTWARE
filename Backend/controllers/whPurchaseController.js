@@ -74,10 +74,32 @@ exports.createWHPurchase = async (req, res) => {
 // @access  Private
 exports.getWHPurchases = async (req, res) => {
     try {
-        const purchases = await WHPurchase.find()
+        const { startDate, endDate, search } = req.query;
+
+        let query = {};
+
+        // Date Filter
+        if (startDate || endDate) {
+            query.invoiceDate = {};
+            if (startDate) query.invoiceDate.$gte = new Date(startDate);
+            if (endDate) query.invoiceDate.$lte = new Date(endDate);
+        }
+
+        let purchases = await WHPurchase.find(query)
             .populate('supplier', 'supplierName')
             .populate('createdBy', 'name')
             .sort({ createdAt: -1 });
+
+        // In-memory search filter (to include populated fields)
+        if (search) {
+            const searchLower = search.toLowerCase();
+            purchases = purchases.filter(p =>
+                (p.invoiceNo && p.invoiceNo.toLowerCase().includes(searchLower)) ||
+                (p.remarks && p.remarks.toLowerCase().includes(searchLower)) ||
+                (p.supplier && p.supplier.supplierName && p.supplier.supplierName.toLowerCase().includes(searchLower)) ||
+                (p.postingNumber && String(p.postingNumber).includes(searchLower))
+            );
+        }
 
         res.status(200).json({
             success: true,
