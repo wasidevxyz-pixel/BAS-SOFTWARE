@@ -327,10 +327,22 @@
 </head>
 
 <body>
-    <div class="print-header" style="display:none; text-align:center; margin-bottom:20px;">
-        <h2 style="margin:0; text-transform:uppercase; letter-spacing:1px;">Department Wise Sale</h2>
-        <h4 id="printBranchName" style="margin:5px 0 0; color:#555;">(PWD-1)</h4>
-        <p id="printDateRange" style="margin:5px 0 0; font-size:12px; color:#666;">-</p>
+    <!-- Print Header (Hidden on screen, visible on print) -->
+    <div class="print-header"
+        style="display: none; position: relative; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px;">
+        <img id="companyLogo" src="" alt="Logo"
+            style="position: absolute; left: 10px; top: 0; max-height: 60px; display: none;">
+        <div style="text-align: center; width: 100%;">
+            <h3 id="companyName" style="margin: 0; font-size: 20px; font-weight: 800; color: #014d35;">D.Watson Group Of
+                Pharmacies</h3>
+            <p id="companyAddress" style="margin: 0; font-size: 10px; color: #666;"></p>
+            <h2 style="margin: 5px 0 0; font-size: 24px; font-weight: 800; color: #333; text-transform: uppercase;">
+                DEPARTMENT WISE SALE</h2>
+            <p id="printBranchName" style="margin: 5px 0 0; font-size: 11px; font-weight: 600; color: #333;"></p>
+            <p id="printDateRange" style="margin: 2px 0 0; font-size: 11px; color: #555;"></p>
+        </div>
+        <p id="printGenerated" style="position: absolute; right: 0; top: 0; margin: 0; font-size: 9px; color: #999;">
+        </p>
     </div>
 
     <div class="page-header px-3">
@@ -482,10 +494,47 @@
 
             await loadBranches();
             await loadDepartments();
+            await loadCompanyInfo();
 
             document.getElementById('filterBranch').addEventListener('change', loadDepartments);
             toggleDifference();
         });
+
+        // Load Company Info for Print Header
+        async function loadCompanyInfo() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/v1/settings/company-info', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const company = data.data || {};
+
+                    if (company.companyName) {
+                        document.getElementById('companyName').textContent = company.companyName;
+                    }
+                    if (company.address) {
+                        document.getElementById('companyAddress').textContent = company.address;
+                    }
+                    if (company.logo) {
+                        const logoImg = document.getElementById('companyLogo');
+                        logoImg.src = company.logo;
+                        logoImg.style.display = 'block';
+                    }
+                }
+
+                // Add Generated Date
+                const today = new Date();
+                const genDate = document.getElementById('printGenerated');
+                if (genDate) {
+                    genDate.textContent = `Generated: ${today.toLocaleDateString('en-GB')} ${today.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+                }
+            } catch (error) {
+                console.error('Error loading company info:', error);
+            }
+        }
 
         async function loadBranches() {
             try {

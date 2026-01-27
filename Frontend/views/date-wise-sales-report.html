@@ -237,47 +237,127 @@
             background: #f8f9fa;
         }
 
-        .branch-header {
-            background: #014d35 !important;
-            color: white !important;
-            font-weight: 600 !important;
-            font-size: 0.95rem !important;
-        }
+        /* Professional Print Styles */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 5mm;
+            }
 
-        .branch-header td {
-            background: #014d35 !important;
-            padding: 10px 15px !important;
-            color: white !important;
-            border: 1px solid #333 !important;
-            text-align: left !important;
-        }
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 9px !important;
+            }
 
-        .branch-total-row {
-            background: #f8d7da !important;
-            font-weight: 700;
-            color: #2c3e50;
-        }
+            /* Hide Navigation, Filters, and Interactive Elements */
+            .page-header,
+            .page-title,
+            .page-subtitle,
+            .card-header-custom,
+            .filters-section,
+            .report-detail-header,
+            .btn,
+            button,
+            #sidebarToggle,
+            .sidebar,
+            .main-container>.mb-3,
+            footer,
+            .dropdown {
+                display: none !important;
+            }
 
-        .branch-total-row td {
-            background: #f8d7da !important;
-            color: white !important;
-            font-size: 10px;
-        }
+            /* Reset Containers for Full Width */
+            .main-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
 
-        .data-table tbody td {
-            font-size: 11px;
-            padding: 8px 12px;
-        }
+            .report-card {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
 
-        .branch-header {
-            background: #014d35 !important;
-            page-break-after: avoid;
-        }
+            /* Show Custom Print Header */
+            .print-header {
+                display: block !important;
+                margin-bottom: 15px !important;
+            }
 
-        .branch-header td {
-            background: #014d35 !important;
-            color: white !important;
-            background: transparent !important;
+            .summary-cards {
+                padding: 0 !important;
+                margin-bottom: 15px !important;
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 10px !important;
+                page-break-inside: avoid;
+            }
+
+            .summary-card {
+                padding: 10px !important;
+                border: 1px solid #ddd !important;
+                border-radius: 8px !important;
+                color: black !important;
+                background: #f8f9fa !important;
+            }
+
+            .summary-card .value {
+                font-size: 1.2rem !important;
+                color: #333 !important;
+                font-weight: 700 !important;
+            }
+
+            .summary-card .label {
+                color: #666 !important;
+                font-size: 0.7rem !important;
+                text-transform: uppercase !important;
+            }
+
+            /* Table Styles */
+            .data-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 5px !important;
+            }
+
+            .data-table thead th {
+                background-color: #000 !important;
+                color: white !important;
+                border: 1px solid white !important;
+                padding: 6px 4px !important;
+                font-size: 9px !important;
+            }
+
+            .data-table tbody td {
+                padding: 6px 4px !important;
+                border: 1px solid #ddd !important;
+                font-size: 9px !important;
+            }
+
+            .branch-header td {
+                background-color: #014d35 !important;
+                color: white !important;
+                text-align: center !important;
+                font-size: 11px !important;
+                padding: 8px !important;
+            }
+
+            .branch-total-row td {
+                background-color: #f8d7da !important;
+                color: #721c24 !important;
+                font-weight: bold !important;
+                font-size: 9px !important;
+                padding: 8px !important;
+            }
+
+            tr {
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
@@ -305,25 +385,21 @@
     </div>
 
     <!-- Print Header (Hidden on screen, visible on print) -->
-    <div class="print-header" style="display: none;">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-                <img id="companyLogo" src="" class="company-logo" alt="Logo"
-                    style="max-width: 150px; max-height: 80px; object-fit: contain; display: none;">
-                <h3 id="companyName" class="mt-2 mb-0">D.Watson Group Of Pharmacies</h3>
-                <p id="companyAddress" class="text-muted mb-0"></p>
-            </div>
-            <div class="text-end">
-                <div class="report-title"
-                    style="font-size: 1.5rem; color: #17a2b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">
-                    DATE-WISE SALES REPORT</div>
-            </div>
+    <div class="print-header"
+        style="display: none; position: relative; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 15px;">
+        <img id="companyLogo" src="" alt="Logo"
+            style="position: absolute; left: 10px; top: 0; max-height: 60px; display: none;">
+        <div style="text-align: center; width: 100%;">
+            <h3 id="companyName" style="margin: 0; font-size: 20px; font-weight: 800; color: #014d35;">D.Watson Group Of
+                Pharmacies</h3>
+            <p id="companyAddress" style="margin: 0; font-size: 10px; color: #666;"></p>
+            <h2 style="margin: 5px 0 0; font-size: 24px; font-weight: 800; color: #333; text-transform: uppercase;">
+                DATE-WISE SALES REPORT</h2>
+            <p id="printFilterInfo" style="margin: 5px 0 0; font-size: 11px; font-weight: 600; color: #333;"></p>
+            <p id="printPeriod" style="margin: 2px 0 0; font-size: 11px; color: #555;"></p>
         </div>
-        <div class="text-center" style="font-size: 0.85rem; color: #666;">
-            <p id="printFilterInfo" class="mb-1">Branch: All Branches | Category: All Categories</p>
-            <p id="printPeriod" class="mb-1">Period: 01/12/2025 - 23/12/2025</p>
-            <p id="printGenerated" class="mb-0" style="font-size: 0.75rem; color: #999;">Generated: 23/12/2025</p>
-        </div>
+        <p id="printGenerated" style="position: absolute; right: 0; top: 0; margin: 0; font-size: 9px; color: #999;">
+        </p>
     </div>
 
     <!-- Main Container -->

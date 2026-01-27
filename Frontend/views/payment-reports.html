@@ -575,25 +575,23 @@
 
 <body>
     <!-- Professional Print Header -->
-    <div class="print-header" style="display: none;">
-        <div class="header-content">
-            <div class="logo-box">
-                <img id="printCompanyLogo" src="" alt="" class="company-logo" style="display:none;">
-            </div>
-            <div class="company-details">
-                <h1 id="printCompanyName" class="company-name">BILAL ACCOUNTING SYSTEM</h1>
-                <div id="printCompanyInfo" class="company-info">
-                    Loading company information...
-                </div>
-            </div>
+    <div class="print-header"
+        style="display: none; position: relative; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px;">
+        <img id="printCompanyLogo" src="" alt="Logo"
+            style="position: absolute; left: 10px; top: 0; max-height: 70px; display: none;">
+        <div style="text-align: center; width: 100%;">
+            <h3 id="printCompanyName" style="margin: 0; font-size: 20px; font-weight: 800; color: #014d35;">D.Watson
+                Group Of Pharmacies</h3>
+            <p id="printCompanyInfo" style="margin: 0; font-size: 10px; color: #666;"></p>
+            <h2 class="report-title-print"
+                style="margin: 5px 0 0; font-size: 22px; font-weight: 800; color: #333; text-transform: uppercase; border: none; padding: 0;">
+                WAREHOUSE PAYMENT REPORT</h2>
         </div>
-        <div style="text-align: center;">
-            <div class="report-title-print">Warehouse Payment Report</div>
-        </div>
-        <div class="report-meta">
+        <p id="printDateNow" style="position: absolute; right: 0; top: 0; margin: 0; font-size: 9px; color: #999;"></p>
+        <div
+            style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 10px; border-top: 1px dashed #eee; padding-top: 5px;">
             <span><strong>Branch:</strong> <span id="printBranchMeta">All Branches</span></span>
-            <span><strong>Date Range:</strong> <span id="printDateMeta">-</span></span>
-            <span><strong>Printed On:</strong> <span id="printDateNow">-</span></span>
+            <span><strong>Period:</strong> <span id="printDateMeta">-</span></span>
         </div>
     </div>
 
@@ -815,17 +813,21 @@
 
                 if (result.success && result.data) {
                     const settings = result.data;
-                    document.getElementById('printCompanyName').textContent = settings.companyName || 'BILAL ACCOUNTING SYSTEM';
-                    document.getElementById('printCompanyInfo').innerHTML = `
-                        ${settings.address || ''} ${settings.phone ? ' | Phone: ' + settings.phone : ''}
-                        ${settings.email ? ' | Email: ' + settings.email : ''}
-                    `;
+                    document.getElementById('printCompanyName').textContent = settings.companyName || 'D.Watson Group Of Pharmacies';
+                    document.getElementById('printCompanyInfo').textContent = settings.address || '';
 
                     if (settings.logo) {
                         const logoImg = document.getElementById('printCompanyLogo');
                         logoImg.src = settings.logo;
                         logoImg.style.display = 'block';
                     }
+                }
+
+                // Add Generated Date
+                const today = new Date();
+                const genDate = document.getElementById('printDateNow');
+                if (genDate) {
+                    genDate.textContent = `Generated: ${today.toLocaleDateString('en-GB')} ${today.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
                 }
             } catch (err) {
                 console.error('Error loading company info:', err);

@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load data
     await loadInitialData();
+    await loadCompanyInfo();
 
     // User info
     const user = JSON.parse(localStorage.getItem('user')) || { name: 'User' };
@@ -324,4 +325,43 @@ function renderReport(data, startDate, endDate) {
 
 function formatCurrency(amount) {
     return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+// Load Company Info for Print Header
+async function loadCompanyInfo() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('/api/v1/settings/company-info', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const company = data.data || {};
+
+            if (company.companyName) {
+                const nameEl = document.getElementById('companyName');
+                if (nameEl) nameEl.textContent = company.companyName;
+            }
+            if (company.address) {
+                const addrEl = document.getElementById('companyAddress');
+                if (addrEl) addrEl.textContent = company.address;
+            }
+            if (company.logo) {
+                const logoImg = document.getElementById('companyLogo');
+                if (logoImg) {
+                    logoImg.src = company.logo;
+                    logoImg.style.display = 'block';
+                }
+            }
+        }
+
+        // Add Generated Date
+        const today = new Date();
+        const genDate = document.getElementById('printGenerated');
+        if (genDate) {
+            genDate.textContent = `Generated: ${today.toLocaleDateString('en-GB')} ${today.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+    } catch (error) {
+        console.error('Error loading company info:', error);
+    }
 }
