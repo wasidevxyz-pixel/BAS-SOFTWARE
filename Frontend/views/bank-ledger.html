@@ -11,38 +11,163 @@
     <link href="/css/sidebar.css" rel="stylesheet">
     <style>
         @media print {
-            .no-print {
-                display: none !important;
+            @page {
+                size: A4 portrait;
+                margin: 5mm;
             }
 
             .main-content {
                 margin: 0 !important;
                 padding: 0 !important;
+                width: 100% !important;
+            }
+
+            .no-print {
+                display: none !important;
             }
 
             body {
                 background: white !important;
+                font-size: 9px !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             .print-header {
                 display: block !important;
+                text-align: center !important;
+                margin-bottom: 5px !important;
+            }
+
+            .print-header h2 {
+                font-size: 14px !important;
+                margin: 0 !important;
+            }
+
+            .print-header h4 {
+                font-size: 11px !important;
+                margin: 2px 0 !important;
+            }
+
+            .print-header h5 {
+                font-size: 10px !important;
+                margin: 2px 0 !important;
+                border: none !important;
+            }
+
+            .print-header p {
+                font-size: 9px !important;
+                margin: 2px 0 !important;
             }
 
             .ledger-header {
-                background: none !important;
+                background: #f8f9fa !important;
                 color: black !important;
-                border: 1px solid #dee2e6;
-                padding: 15px !important;
+                border: 1px solid #ccc !important;
+                padding: 5px !important;
+                margin-bottom: 8px !important;
+                border-radius: 4px !important;
+                text-align: center !important;
+            }
+
+            .ledger-header .col-md-8,
+            .ledger-header .col-md-4 {
+                width: 100% !important;
+                text-align: center !important;
+                padding: 0 !important;
+            }
+
+            .ledger-header h2 {
+                font-size: 14px !important;
+                margin: 0 !important;
             }
 
             .ledger-header p {
-                color: black !important;
+                display: none !important;
+            }
+
+            .ledger-header .fs-4 {
+                font-size: 10px !important;
+                display: inline;
+            }
+
+            .ledger-header .fs-3 {
+                font-size: 11px !important;
+                font-weight: bold;
+                display: inline;
+                margin-left: 5px;
+            }
+
+            .stat-card {
+                padding: 4px !important;
+                margin-bottom: 8px !important;
+                border: 1px solid #eee !important;
+                box-shadow: none !important;
+                text-align: center !important;
+            }
+
+            .stat-card .fs-4 {
+                font-size: 10px !important;
+            }
+
+            .stat-card .text-muted {
+                font-size: 8px !important;
+            }
+
+            .ledger-table {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+            }
+
+            .ledger-table table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
             }
 
             .ledger-table th {
-                background: #333 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                background: #222 !important;
+                color: white !important;
+                border: 1px solid white !important;
+                padding: 4px 2px !important;
+                font-size: 8px !important;
+                text-align: center !important;
+                white-space: normal !important;
+            }
+
+            .ledger-table td {
+                padding: 3px 2px !important;
+                border: 1px solid #ddd !important;
+                font-size: 8px !important;
+                word-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            .ledger-table thead th {
+                background: #000 !important;
+                color: #fff !important;
+            }
+
+            .amount-debit,
+            .amount-credit {
+                font-weight: bold !important;
+            }
+
+            .badge-type {
+                font-size: 7px !important;
+                padding: 2px 4px !important;
+                border: 1px solid #ccc !important;
+            }
+
+            .table-dark {
+                background-color: #333 !important;
+                color: white !important;
+            }
+
+            .table-dark td {
+                border-color: #555 !important;
+                white-space: nowrap !important;
             }
         }
 
@@ -245,15 +370,15 @@
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th width="10%">Date</th>
-                                <th width="20%">Narration</th>
-                                <th width="10%">Type</th>
+                                <th width="8%">Date</th>
+                                <th width="24%">Narration</th>
+                                <th width="8%">Type</th>
                                 <th width="10%">Batch / Inv No</th>
-                                <th width="10%">Inv. Date</th>
+                                <th width="9%">Inv. Date</th>
                                 <th width="10%">Department</th>
                                 <th width="10%" class="text-end">Received</th>
                                 <th width="10%" class="text-end">Paid</th>
-                                <th width="10%" class="text-end">Balance</th>
+                                <th width="11%" class="text-end">Balance</th>
                             </tr>
                         </thead>
                         <tbody id="ledgerBody">
