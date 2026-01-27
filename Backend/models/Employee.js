@@ -59,7 +59,11 @@ const employeeSchema = new mongoose.Schema({
     fixAllowance: { type: Number, default: 0 },
     otherAllowance: { type: Number, default: 0 },
     commEmp: { type: Boolean, default: false },
-    allowFood: { type: String, default: 'No Food' },
+    allowFood: {
+        type: String,
+        enum: ['1 Time Deduction', '2 Time Deduction', 'Free', 'No Food'],
+        default: 'No Food'
+    },
     foodAllowanceRs: { type: Number, default: 0 },
     bankCash: { type: String, default: 'Cash' },
     deduction: { type: Number, default: 0 },

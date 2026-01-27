@@ -13,6 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         renderTable(filtered);
     });
+
+    // Keyboard Shortcut: Alt+S to Save
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveStore();
+        }
+    });
 });
 
 async function loadStores() {
@@ -72,6 +80,8 @@ async function saveStore() {
         kamla: document.getElementById('kamla').value,
         targetSale: document.getElementById('targetSale').value,
         simpleNadraCard: document.getElementById('simpleNadraCard').value,
+        foodExpPerTime: parseFloat(document.getElementById('foodExpPerTime').value) || 0,
+        rotiPrice: parseFloat(document.getElementById('rotiPrice').value) || 0,
         isActive: document.getElementById('isActive').checked,
         showOnDashboard: document.getElementById('showOnDashboard').checked
     };
@@ -132,6 +142,8 @@ async function editStore(id) {
             document.getElementById('kamla').value = store.kamla || '';
             document.getElementById('targetSale').value = store.targetSale || '';
             document.getElementById('simpleNadraCard').value = store.simpleNadraCard || '';
+            document.getElementById('foodExpPerTime').value = store.foodExpPerTime || 0;
+            document.getElementById('rotiPrice').value = store.rotiPrice || 0;
             document.getElementById('isActive').checked = store.isActive;
             document.getElementById('showOnDashboard').checked = store.showOnDashboard || false;
         }
@@ -178,6 +190,8 @@ function clearForm() {
     document.getElementById('kamla').value = '';
     document.getElementById('targetSale').value = '';
     document.getElementById('simpleNadraCard').value = '';
+    document.getElementById('foodExpPerTime').value = '';
+    document.getElementById('rotiPrice').value = '';
     document.getElementById('isActive').checked = true;
     document.getElementById('showOnDashboard').checked = false;
 }

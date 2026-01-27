@@ -15,6 +15,14 @@ const storeSchema = new mongoose.Schema({
     kamla: String,
     targetSale: String,
     simpleNadraCard: String,
+    foodExpPerTime: {
+        type: Number,
+        default: 0
+    },
+    rotiPrice: {
+        type: Number,
+        default: 0
+    },
     isActive: {
         type: Boolean,
         default: true
