@@ -22,6 +22,15 @@ const EmployeeCommissionSchema = new mongoose.Schema({
         enum: ['dep_item_wise', 'employee_wise', 'distribute', 'rotti_nashta', 'rotti_perks'],
         required: true
     },
+    // Category Wise Saving for Item Wise Commission
+    whCategory: {
+        type: String,
+        default: ''
+    },
+    commissionCategory: {
+        type: String,
+        default: ''
+    },
     // Specific fields for Rotti Perks
     fromDate: Date,
     toDate: Date,
@@ -30,9 +39,11 @@ const EmployeeCommissionSchema = new mongoose.Schema({
     data: [{
         // Common fields
         id: String, // Product ID or Employee ID (custom string ID)
+        code: String, // Barcode or Employee ID Code
         name: String, // Product Name or Employee Name
 
         // Dep Item Wise
+        incentive: Number,
         price: Number,
         qty: Number,
         total: Number,
@@ -70,7 +81,15 @@ const EmployeeCommissionSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Compound index to ensure uniqueness per type/period/branch/dept
-EmployeeCommissionSchema.index({ monthYear: 1, branch: 1, department: 1, subBranch: 1, type: 1 }, { unique: true });
+// Compound index to ensure uniqueness per type/period/branch/dept/category
+EmployeeCommissionSchema.index({
+    monthYear: 1,
+    branch: 1,
+    department: 1,
+    subBranch: 1,
+    type: 1,
+    whCategory: 1,
+    commissionCategory: 1
+}, { unique: true });
 
 module.exports = mongoose.model('EmployeeCommission', EmployeeCommissionSchema);

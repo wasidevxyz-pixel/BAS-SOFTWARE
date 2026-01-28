@@ -68,8 +68,8 @@ class SidebarNavigation {
                     { label: 'User Management', link: '/users.html', permission: 'users' },
                     { label: 'Group Rights', link: '/groups.html', permission: 'groups' },
                     { label: 'Stores', link: '/stores.html', permission: 'stores' },
-                    { label: 'Items', link: '/items.html', permission: 'items' },
                     { label: 'Parties', link: '/parties.html', permission: 'parties' },
+                    { label: 'Commission Item', link: '/commission-item.html', permission: 'commission_item' },
                     { label: 'WHT Supplier', link: '/wht-supplier.html', permission: 'wht_supplier_link' }
                 ]
             },

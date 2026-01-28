@@ -121,13 +121,92 @@
             padding-top: 15px;
         }
 
-        .custom-loader {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
+        /* Exact 'Half-Page' List Style Match */
+        .custom-list-header {
+            background-color: #0076ad;
+            color: white;
+            padding: 5px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: bold;
+            height: 40px;
+        }
+
+        .search-area-container {
+            background: #fff;
+            padding: 15px;
+            border-bottom: 2px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .custom-search-box {
+            background: #fff;
+            border: 1px solid #333;
+            padding: 5px 12px;
+            font-size: 22px;
+            flex: 1;
+            outline: none;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .list-shortcut {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .table-half-page thead th {
+            background-color: #0076ad !important;
+            color: #fff !important;
+            border: 1px solid #fff !important;
+            padding: 10px !important;
+            font-size: 14px;
+            text-transform: capitalize;
+        }
+
+        /* Color Palette from Reference Image */
+        .cell-blue-light {
+            background-color: #e8f0fe !important;
+        }
+
+        .cell-blue-medium {
+            background-color: #a2c4e8 !important;
+        }
+
+        .cell-green {
+            background-color: #9dd8c8 !important;
+        }
+
+        .cell-pink {
+            background-color: #f9adae !important;
+        }
+
+        .cell-purple {
+            background-color: #c5b4e3 !important;
+        }
+
+        .btn-select-custom {
+            background-color: #0076ad;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            text-transform: capitalize;
+        }
+
+        .btn-select-custom:hover {
+            background-color: #005a85;
+            color: #fff;
         }
     </style>
 </head>
@@ -161,17 +240,17 @@
             <div class="row align-items-center g-2">
                 <div class="col-md-2">
                     <label class="fw-bold small">Branch</label>
-                    <select id="mainBranch" class="form-select form-select-sm">
+                    <select id="mainBranch" class="form-select form-select-sm" autocomplete="off">
                         <option value="">Select Branch</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="fw-bold small">Month-Year</label>
-                    <input type="month" id="mainMonthYear" class="form-control form-control-sm">
+                    <input type="month" id="mainMonthYear" class="form-control form-control-sm" autocomplete="off">
                 </div>
                 <div class="col-md-2">
                     <label class="fw-bold small">Department</label>
-                    <select id="mainDepartment" class="form-select form-select-sm">
+                    <select id="globalDepartment" class="form-select form-select-sm" autocomplete="off">
                         <option value="Medicine">Medicine</option>
                         <option value="Cosmetics">Cosmetics</option>
                         <option value="General">General</option>
@@ -181,8 +260,10 @@
                     <!-- Search button triggers data load -->
                     <button class="btn btn-primary btn-sm" onclick="loadCurrentTab()">Search</button>
                     <input type="text" id="globalSearch" class="form-control form-control-sm"
-                        placeholder="Search in table..." style="width: 150px;">
-                    <button class="btn btn-success btn-sm" onclick="saveCurrentTab()">Save</button>
+                        placeholder="Search in table..." style="width: 150px;" onkeyup="applyGlobalSearch()">
+                    <button class="btn btn-success btn-sm" onclick="saveCurrentTab()" title="Alt + S">Save
+                        (Alt+S)</button>
+                    <button class="btn btn-info btn-sm text-white" onclick="showCommissionList()">List</button>
                 </div>
             </div>
         </div>
@@ -193,10 +274,7 @@
                 <button class="nav-link active" id="item-wise-tab" data-bs-toggle="tab" data-bs-target="#item-wise"
                     type="button" role="tab" onclick="setTab('dep_item_wise')">Dep Item Wise Commission</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="emp-wise-tab" data-bs-toggle="tab" data-bs-target="#emp-wise" type="button"
-                    role="tab" onclick="setTab('employee_wise')">Employee Wise Commission</button>
-            </li>
+
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="distribute-tab" data-bs-toggle="tab" data-bs-target="#distribute"
                     type="button" role="tab" onclick="setTab('distribute')">Distribute Employee All Commission</button>
@@ -218,13 +296,27 @@
             <div class="tab-pane fade show active" id="item-wise" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
                     <div class="row mb-2">
-                        <div class="col-md-4">
-                            <select id="itemSubBranch" class="form-select form-select-sm">
-                                <option value="">Select Sub_Branch</option>
+                        <div class="col-md-3">
+                            <select id="whItemCategory" class="form-select form-select-sm"
+                                onchange="filterItemWiseTable()" autocomplete="off">
+                                <option value="">Select WH Category</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <!-- Item Search / Add dropdown could go here -->
+                        <div class="col-md-3">
+                            <select id="commissionItemCategory" class="form-select form-select-sm"
+                                onchange="filterItemWiseTable()" autocomplete="off">
+                                <option value="">Select Comm. Category</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" id="itemSearch" class="form-control form-control-sm"
+                                placeholder="Search Item Name/Code..." onkeyup="applyLocalFilter()">
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary w-50" onclick="clearItemFilters()">Clear
+                                Filters</button>
+                            <button class="btn btn-sm btn-warning text-white w-50"
+                                onclick="printCommission()">Print</button>
                         </div>
                     </div>
 
@@ -234,7 +326,7 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Product</th>
-                                    <th>Price</th>
+                                    <th>Incentive</th>
                                     <th>Qty</th>
                                     <th>Total</th>
                                 </tr>
@@ -247,39 +339,7 @@
                 </div>
             </div>
 
-            <!-- 2. Employee Wise Commission -->
-            <div class="tab-pane fade" id="emp-wise" role="tabpanel">
-                <div class="card p-3 border-0 bg-light">
-                    <div class="row mb-2">
-                        <div class="col-md-4">
-                            <select id="empSubBranch" class="form-select form-select-sm">
-                                <option value="">Select Sub_Branch</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm table-striped table-hover bg-white text-center">
-                            <thead class="table-custom">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Employee Name</th>
-                                    <th>Commission</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="empWiseBody">
-                            </tbody>
-                            <tfoot>
-                                <tr class="fw-bold">
-                                    <td colspan="2" class="text-end">Total</td>
-                                    <td id="empWiseTotal">0.00</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- 3. Distribute Employee All Commission -->
             <div class="tab-pane fade" id="distribute" role="tabpanel">
@@ -289,6 +349,9 @@
                             <select id="distSubBranch" class="form-select form-select-sm">
                                 <option value="">Select Sub_Branch</option>
                             </select>
+                        </div>
+                        <div class="col-md-8 text-end">
+                            <button class="btn btn-sm btn-warning text-white" onclick="printCommission()">Print</button>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -327,6 +390,9 @@
                             <select id="rottiSubBranch" class="form-select form-select-sm">
                                 <option value="">Select Sub_Branch</option>
                             </select>
+                        </div>
+                        <div class="col-md-8 text-end">
+                            <button class="btn btn-sm btn-warning text-white" onclick="printCommission()">Print</button>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -369,11 +435,15 @@
                             <label class="small fw-bold">To</label>
                             <input type="date" id="perksToDate" class="form-control form-control-sm">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="small fw-bold">Sub Branch</label>
                             <select id="perksSubBranch" class="form-select form-select-sm">
                                 <option value="">Select Sub_Branch</option>
                             </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end pt-3">
+                            <button class="btn btn-sm btn-warning text-white w-100"
+                                onclick="printCommission()">Print</button>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -405,6 +475,50 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <div class="modal fade" id="commissionListModal" tabindex="-1">
+        <div class="modal-dialog modal-fullscreen m-0" style="max-width: 100%;">
+            <div class="modal-content border-0 rounded-0 shadow-lg h-100">
+                <!-- Top Blue Bar -->
+                <div class="custom-list-header">
+                    <span></span> <!-- Spacer Or Title if Needed -->
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <!-- Search Box & Shortcuts -->
+                    <div class="search-area-container">
+                        <input type="text" id="modalListSearch" class="custom-search-box" placeholder="Search.."
+                            onkeyup="filterModalList()" autofocus>
+                        <div class="d-flex gap-5">
+                            <span class="list-shortcut">SEARCH : ctrl</span>
+                            <span class="list-shortcut">SELECT ITEM : alt+b</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: calc(100vh - 120px);">
+                        <table class="table table-bordered mb-0 align-middle text-center table-half-page">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Select</th>
+                                    <th>Period</th>
+                                    <th>Branch</th>
+                                    <th>Type</th>
+                                    <th>Category/Search</th>
+                                    <th>Saved At</th>
+                                    <th style="width: 120px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commissionListBody" class="bg-white">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

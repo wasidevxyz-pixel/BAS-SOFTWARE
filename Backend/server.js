@@ -90,6 +90,7 @@ const whSaleRoutes = require('./routes/whSaleRoutes');
 const whSaleReturnRoutes = require('./routes/whSaleReturnRoutes');
 const whCustomerPaymentRoutes = require('./routes/whCustomerPaymentRoutes');
 const whLedgerRoutes = require('./routes/whLedgerRoutes');
+const commissionItemRoutes = require('./routes/commissionItemRoutes');
 const designationRoutes = require('./routes/designations');
 const employeeDepartmentRoutes = require('./routes/employeeDepartments');
 
@@ -409,6 +410,9 @@ app.use('/api/v1/wh-sales', whSaleRoutes);
 app.use('/api/v1/wh-sale-returns', whSaleReturnRoutes);
 app.use('/api/v1/wh-customer-payments', whCustomerPaymentRoutes);
 app.use('/api/v1/wh-ledger', whLedgerRoutes);
+app.use('/api/v1/commission-items', commissionItemRoutes);
+app.use('/api/v1/commission-categories', require('./routes/commissionCategoryRoutes'));
+app.use('/api/v1/commission-suppliers', require('./routes/commissionSupplierRoutes'));
 app.use('/api/v1/designations', designationRoutes);
 app.use('/api/v1/employee-departments', employeeDepartmentRoutes);
 
@@ -701,6 +705,10 @@ app.get('/wh-stock-audit.html', (req, res) => {
 
 app.get('/wh-customer-payment.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'wh-customer-payment.html'));
+});
+
+app.get('/commission-item.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'commission-item.html'));
 });
 
 
