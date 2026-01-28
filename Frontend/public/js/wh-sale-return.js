@@ -14,6 +14,13 @@ let customerSearchIndex = -1;
 async function initializePage() {
     document.getElementById('returnDate').valueAsDate = new Date();
 
+    // Set default filter dates
+    const today = new Date();
+    if (document.getElementById('listFromDate')) {
+        document.getElementById('listFromDate').valueAsDate = today;
+        document.getElementById('listToDate').valueAsDate = today;
+    }
+
     await Promise.all([
         loadCustomers(),
         loadCategories(),
@@ -127,6 +134,15 @@ function setupEventListeners() {
         );
         renderLookupCustomerList(filtered);
     });
+
+    // Auto Search for List View
+    let searchDebounce;
+    if (document.getElementById('listSearch')) {
+        document.getElementById('listSearch').addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(loadReturnList, 300);
+        });
+    }
 }
 
 async function loadCustomers() {
@@ -715,7 +731,14 @@ function resetForm() {
 
 async function loadReturnList() {
     try {
-        const res = await fetch('/api/v1/wh-sale-returns', {
+        const fromDate = document.getElementById('listFromDate') ? document.getElementById('listFromDate').value : '';
+        const toDate = document.getElementById('listToDate') ? document.getElementById('listToDate').value : '';
+        const search = document.getElementById('listSearch') ? document.getElementById('listSearch').value : '';
+
+        let url = `/api/v1/wh-sale-returns?startDate=${fromDate}&endDate=${toDate}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();

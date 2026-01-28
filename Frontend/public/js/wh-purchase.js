@@ -59,6 +59,15 @@ async function initializePage() {
             boxes.forEach(box => box.style.display = 'none');
         }
     });
+
+    // Auto Search for List View
+    let searchDebounce;
+    if (document.getElementById('listSearch')) {
+        document.getElementById('listSearch').addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(loadPurchaseList, 300);
+        });
+    }
 }
 
 async function loadSuppliers() {

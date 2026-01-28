@@ -152,12 +152,19 @@ function setupEventListeners() {
         renderLookupCustomerList(filtered);
     });
 
-    // List Search Enter key handling
+    // List Search Enter key handling (kept for legacy/backup)
     document.getElementById('listSearch').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             loadSaleList();
         }
+    });
+
+    // Auto Search on Input
+    let searchDebounce;
+    document.getElementById('listSearch').addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(loadSaleList, 300);
     });
 }
 
@@ -263,6 +270,7 @@ function selectCustomer(cust) {
     document.getElementById('customerSuggestions').style.display = 'none';
     customerSearchIndex = -1;
     updateGrandTotals();
+    document.getElementById('itemCode').focus();
 }
 
 async function loadCategories() {

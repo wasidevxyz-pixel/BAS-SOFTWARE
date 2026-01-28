@@ -17,7 +17,7 @@
 
         body {
             background: #f0f2f5;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: "Times New Roman", Times, serif;
             color: var(--text-dark);
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -51,9 +51,10 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid var(--primary-dark);
-            padding-bottom: 5px;
-            margin-bottom: 10px;
+            align-items: flex-start;
+            border-bottom: 2px solid black;
+            padding-bottom: 4px;
+            margin-bottom: 5px;
         }
 
         .company-logo {
@@ -67,7 +68,7 @@
         }
 
         .doc-title h1 {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             color: var(--primary-dark);
             margin: 0;
             font-weight: 800;
@@ -76,7 +77,7 @@
 
         .doc-title p {
             margin: 0;
-            color: #666;
+            color: black;
             font-weight: 500;
             text-transform: uppercase;
             font-size: 0.9rem;
@@ -85,20 +86,21 @@
         .details-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         .info-card {
             background: #fff;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
+            padding: 5px;
+            border: 1px solid black;
             border-radius: 8px;
+            color: black;
         }
 
         .info-label {
             font-size: 0.75rem;
-            color: #757575;
+            color: black;
             text-transform: uppercase;
             font-weight: 700;
             margin-bottom: 4px;
@@ -117,30 +119,48 @@
             font-size: 0.7rem;
         }
 
+        /* Updated Header Color */
         .main-table th {
-            background-color: var(--primary-dark);
+            background-color: #2c2c2c;
+            /* Light Black */
             color: white;
-            padding: 2px 2px;
+            padding: 4px 4px;
             text-align: center;
             font-weight: 600;
             border: 1px solid rgba(255, 255, 255, 0.3);
             font-size: 0.7rem;
         }
 
+        .item-name-cell {
+            white-space: nowrap;
+            font-size: 0.6rem;
+            font-weight: normal;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 350px;
+            /* Safety cap */
+        }
+
+
         .main-table td {
             padding: 1px 2px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid black;
         }
 
         .class-group-header {
-            background-color: #f1f3f9;
+            background-color: transparent;
             font-weight: 700;
             color: var(--primary-dark);
         }
 
         .subtotal-row {
-            background-color: #fafbfc;
+            background-color: #C0C0C0;
+            color: black;
             font-weight: 600;
+        }
+
+        .subtotal-row td {
+            padding: 4px 4px !important;
         }
 
         .totals-section {
@@ -155,19 +175,20 @@
         }
 
         .totals-table td {
-            padding: 6px 12px;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 3px 8px;
+            border-bottom: 1px solid black;
         }
 
         .grand-total-box {
-            background: var(--primary-dark);
+            background: black;
             color: white;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             font-weight: 800;
+            border: 2px solid white;
         }
 
         .footer-signatures {
-            margin-top: 80px;
+            margin-top: 40px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 40px;
@@ -175,7 +196,7 @@
         }
 
         .sig-box {
-            border-top: 2px solid #333;
+            border-top: 2px solid black;
             padding-top: 10px;
             font-weight: 600;
             font-size: 0.85rem;
@@ -259,19 +280,30 @@
 
             /* Black & White Printer Fix */
             .main-table th {
-                background-color: #f2f2f2 !important;
+                background-color: #2c2c2c !important;
+                color: white !important;
+                border: 1px solid white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .subtotal-row {
+                background-color: #C0C0C0 !important;
                 color: black !important;
-                border: 1px solid #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             .grand-total-box {
-                background-color: #eee !important;
-                color: black !important;
-                border: 2px solid black !important;
+                background-color: black !important;
+                color: white !important;
+                border: 2px solid white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             .class-group-header {
-                background-color: #f9f9f9 !important;
+                background-color: transparent !important;
                 color: black !important;
                 border: 1px solid #ddd !important;
             }
@@ -310,13 +342,14 @@
 
     <div class="print-canvas" id="printContent">
         <!-- HEADER -->
-        <div class="header-section d-flex justify-content-between align-items-center">
+        <div class="header-section d-flex justify-content-between">
             <div style="width: 30%;">
                 <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                     class="company-logo" id="compLogo" style="display: none;" onerror="this.style.display='none'">
             </div>
-            <div style="flex: 1; text-align: center;">
-                <div style="display: inline-block; border-bottom: 2px solid #ccc; min-width: 150px; padding: 5px 10px;">
+            <div style="flex: 1; text-align: center;" class="align-self-center">
+                <div
+                    style="display: inline-block; border-bottom: 2px solid black; min-width: 150px; padding: 5px 10px;">
                     <span class="fs-2 fw-black text-dark" id="docNo"></span>
                 </div>
             </div>
@@ -331,7 +364,7 @@
             <div class="info-card">
                 <div class="info-label">From: Company Details</div>
                 <div class="info-value" id="compName">My Company Name</div>
-                <div id="compDetails" class="small text-muted">
+                <div id="compDetails" class="small">
                     Address Line 1<br>
                     Phone: 000-00000<br>
                     STRN: 123456 | NTN: 987654
@@ -340,7 +373,7 @@
             <div class="info-card">
                 <div class="info-label" id="partyTypeLabel">To: Bill To</div>
                 <div class="info-value" id="partyName">Customer Name</div>
-                <div id="partyDetails" class="small text-muted">
+                <div id="partyDetails" class="small">
                     Party Address<br>
                     Phone: 000-00000<br>
                     STRN: - | NTN: -
@@ -370,8 +403,14 @@
 
         <!-- TOTALS & REMARKS -->
         <div class="row g-4">
-            <div class="col-6">
-                <div class="info-card h-100">
+            <div class="col-6 d-flex flex-column">
+                <!-- Total Qty Box (Left Side) -->
+                <div class="info-card mb-2" style="width: fit-content; padding: 4px 12px;">
+                    <span class="info-label me-2">TOTAL QTY:</span>
+                    <span class="fw-bold fs-6" id="totalQty">0</span>
+                </div>
+
+                <div class="info-card flex-grow-1">
                     <div class="info-label">Remarks / Terms</div>
                     <div id="docRemarks" class="small">
                         1. Goods once sold are not returnable.<br>
@@ -416,7 +455,7 @@
             <div class="sig-box">Authorized Signature</div>
         </div>
 
-        <div class="mt-5 text-center small text-muted">
+        <div class="mt-5 text-center small" style="color: black;">
             Printed on: <span id="printTime"></span> | System Generated Document
         </div>
     </div>
@@ -509,6 +548,7 @@
                 let calcBase = 0;
                 let calcDisc = 0;
                 let calcTax = 0;
+                let calcQty = 0;
 
                 doc.items.forEach(line => {
                     const price = line.pcsPrice || line.costPrice || line.salePrice || line.price || 0;
@@ -521,22 +561,27 @@
                     // Discount only includes the line-level discount amount (Disc Rs)
                     calcDisc += itDisc;
                     calcTax += itTax;
+
+                    // Aggregate Qty
+                    calcQty += qty;
                 });
+
+                document.getElementById('totalQty').textContent = calcQty;
 
                 const globalDisc = doc.globalDiscountAmount || doc.totalDiscount || 0;
                 const finalGross = calcBase + calcTax;
                 const finalDisc = calcDisc + globalDisc;
                 const finalNet = finalGross - finalDisc;
 
-                document.getElementById('totalGross').textContent = finalGross.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                document.getElementById('totalDisc').textContent = finalDisc.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                document.getElementById('totalSub').textContent = finalNet.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                document.getElementById('totalGross').textContent = finalGross.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                document.getElementById('totalDisc').textContent = finalDisc.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                document.getElementById('totalSub').textContent = finalNet.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-                document.getElementById('totalTax').textContent = (doc.taxAmount || doc.totalTax || doc.globalTaxAmount || calcTax || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-                document.getElementById('totalGrand').textContent = (doc.grandTotal || doc.netTotal || doc.totalAmount || finalNet || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                document.getElementById('totalTax').textContent = (doc.taxAmount || doc.totalTax || doc.globalTaxAmount || calcTax || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                document.getElementById('totalGrand').textContent = (doc.grandTotal || doc.netTotal || doc.totalAmount || finalNet || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
                 if (document.getElementById('totalMisc')) {
-                    document.getElementById('totalMisc').textContent = (doc.miscCharges || doc.freightCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                    document.getElementById('totalMisc').textContent = (doc.miscCharges || doc.freightCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 }
 
                 // Items Logic - GROUP BY ITEM CLASS
@@ -597,20 +642,20 @@
                         <td class="text-center">${globalIndex++}</td>
                         <td class="text-center">${item.itemsCode || item.code || ''}</td>
                         <td>
-                            <div class="fw-bold">${item.name || line.name || 'N/A'}</div>
+                            <div class="item-name-cell">${item.name || line.name || 'N/A'}</div>
                             <small class="text-muted">${item.pack || ''}</small>
                         </td>
                         <td class="text-center">${line.quantity || line.returnQty || 0}</td>
-                        <td class="text-end">${price.toFixed(2)}</td>`;
+                        <td class="text-end">${Math.round(price)}</td>`;
 
                     if (docType.includes('sale')) {
-                        html += `<td class="text-center">${incentive.toFixed(2)}</td>`;
+                        html += `<td class="text-center">${Math.round(incentive)}</td>`;
                     }
 
                     html += `
                         <td class="text-center">${discPercent}%</td>
-                        <td class="text-end">${discRs.toFixed(2)}</td>
-                        <td class="text-end fw-bold">${total.toFixed(2)}</td>
+                        <td class="text-end">${Math.round(discRs)}</td>
+                        <td class="text-end">${Math.round(total)}</td>
                     `;
                     tr.innerHTML = html;
                     tbody.appendChild(tr);
@@ -622,7 +667,7 @@
                 const colSpan = docType.includes('sale') ? 8 : 7;
                 subRow.innerHTML = `
                     <td colspan="${colSpan}" class="text-end">Sub Total (${className}):</td>
-                    <td class="text-end fw-bold">${classTotal.toFixed(2)}</td>
+                    <td class="text-end fw-bold">${Math.round(classTotal)}</td>
                 `;
                 tbody.appendChild(subRow);
             }
@@ -659,8 +704,8 @@
                     <td class="text-center">${line.systemQty || 0}</td>
                     <td class="text-center fw-bold">${line.physicalQty || 0}</td>
                     <td class="text-center ${diff < 0 ? 'text-danger' : (diff > 0 ? 'text-success' : '')} fw-bold">${diff}</td>
-                    <td class="text-end">${(line.costPrice || 0).toFixed(2)}</td>
-                    <td class="text-end">${(line.retailPrice || 0).toFixed(2)}</td>
+                    <td class="text-end">${Math.round(line.costPrice || 0)}</td>
+                    <td class="text-end">${Math.round(line.retailPrice || 0)}</td>
                 `;
                 tbody.appendChild(tr);
             });

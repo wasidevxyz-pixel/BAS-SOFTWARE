@@ -77,27 +77,31 @@ exports.createWHSale = async (req, res) => {
 // @route   GET /api/v1/wh-sales
 exports.getWHSales = async (req, res) => {
     try {
+        const { startDate, endDate, search } = req.query;
         let query = {};
 
         // Date Filtering
-        if (req.query.startDate || req.query.endDate) {
+        if (startDate || endDate) {
             query.invoiceDate = {};
-            if (req.query.startDate) query.invoiceDate.$gte = new Date(req.query.startDate);
-            if (req.query.endDate) query.invoiceDate.$lte = new Date(req.query.endDate);
+            if (startDate) query.invoiceDate.$gte = new Date(startDate);
+            if (endDate) query.invoiceDate.$lte = new Date(endDate);
         }
 
-        // Search Filtering (Invoice No or Remarks)
-        if (req.query.search) {
-            query.$or = [
-                { invoiceNo: { $regex: req.query.search, $options: 'i' } },
-                { remarks: { $regex: req.query.search, $options: 'i' } }
-            ];
-        }
-
-        const sales = await WHSale.find(query)
+        // Fetch all matching date range first with populated customer
+        let sales = await WHSale.find(query)
             .populate('customer', 'customerName customerCategory')
             .populate('createdBy', 'name')
             .sort({ invoiceDate: -1, createdAt: -1 });
+
+        // In-memory Search Filtering
+        if (search) {
+            const searchLower = search.toLowerCase();
+            sales = sales.filter(sale =>
+                (sale.invoiceNo && sale.invoiceNo.toLowerCase().includes(searchLower)) ||
+                (sale.remarks && sale.remarks.toLowerCase().includes(searchLower)) ||
+                (sale.customer && sale.customer.customerName && sale.customer.customerName.toLowerCase().includes(searchLower))
+            );
+        }
 
         res.status(200).json({ success: true, count: sales.length, data: sales });
     } catch (error) {

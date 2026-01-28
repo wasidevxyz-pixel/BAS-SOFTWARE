@@ -574,6 +574,24 @@
 
         <!-- List View (Hidden by default) -->
         <div id="listViewContainer" style="display: none;" class="p-3">
+            <!-- Filter Section -->
+            <div class="card shadow-sm border-0 mb-2">
+                <div class="card-header bg-light py-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold me-2">Filters:</span>
+                        <input type="date" id="listFromDate" class="form-control form-control-sm" style="width: 140px;">
+                        <span class="small">to</span>
+                        <input type="date" id="listToDate" class="form-control form-control-sm" style="width: 140px;">
+                        <input type="text" id="listSearch" class="form-control form-control-sm"
+                            placeholder="Search Return No, Customer, Remarks..." style="width: 250px;"
+                            onkeydown="if(event.key==='Enter') loadReturnList()">
+                        <button class="btn btn-sm btn-primary" onclick="loadReturnList()">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <span>Sale Return List</span>

@@ -70,13 +70,35 @@ exports.createWHSaleReturn = async (req, res) => {
 };
 
 // @desc    Get all WH Sale Returns
+// @desc    Get all WH Sale Returns
 // @route   GET /api/v1/wh-sale-returns
 exports.getWHSaleReturns = async (req, res) => {
     try {
-        const returns = await WHSaleReturn.find()
+        const { startDate, endDate, search } = req.query;
+        let query = {};
+
+        // Date Filtering
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) query.date.$gte = new Date(startDate);
+            if (endDate) query.date.$lte = new Date(endDate);
+        }
+
+        let returns = await WHSaleReturn.find(query)
             .populate('customer', 'customerName')
             .populate('createdBy', 'name')
-            .sort({ createdAt: -1 });
+            .sort({ date: -1, createdAt: -1 });
+
+        // In-memory Search Filtering
+        if (search) {
+            const searchLower = search.toLowerCase();
+            returns = returns.filter(ret =>
+                (ret.returnNo && ret.returnNo.toLowerCase().includes(searchLower)) ||
+                (ret.remarks && ret.remarks.toLowerCase().includes(searchLower)) ||
+                (ret.customer && ret.customer.customerName && ret.customer.customerName.toLowerCase().includes(searchLower))
+            );
+        }
+
         res.status(200).json({ success: true, count: returns.length, data: returns });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
