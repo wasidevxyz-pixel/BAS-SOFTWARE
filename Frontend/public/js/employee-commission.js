@@ -12,7 +12,8 @@ let state = {
     items: [],
     employees: [],
     currentViewData: [], // data currently being rendered (filtered)
-    editingId: null // ID of the record being edited from the list
+    editingId: null, // ID of the record being edited from the list
+    lockedEmployees: [] // List of employee IDs with active payrolls
 };
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -129,11 +130,6 @@ async function loadCategories(isReset = false) {
             const sel = document.getElementById('globalDepartment');
             if (sel) {
                 sel.innerHTML = '<option value="">All Departments</option>';
-                // Add defaults if missing
-                const defaults = ["Medicine", "Cosmetics", "General"];
-                defaults.forEach(d => {
-                    if (!depts.find(x => x.name === d)) sel.innerHTML += `<option value="${d}">${d}</option>`;
-                });
                 depts.forEach(d => {
                     sel.innerHTML += `<option value="${d.name}">${d.name}</option>`;
                 });
@@ -144,6 +140,11 @@ async function loadCategories(isReset = false) {
         console.error('Error loading categories:', e);
     }
 }
+
+// Auto-update when branch changes
+document.getElementById('mainBranch')?.addEventListener('change', () => {
+    loadCurrentTab();
+});
 
 async function loadBranches(isReset = false) {
     try {
@@ -284,6 +285,19 @@ async function loadCurrentTab(forceLoad = false) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        // Fetch payroll status separately
+        state.lockedEmployees = [];
+        try {
+            const pRes = await fetch(`/api/v1/payrolls?monthYear=${state.monthYear}&branch=${state.branch}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const pJson = await pRes.json();
+            if (pJson.success) {
+                // Collect IDs of employees who already have a payroll
+                state.lockedEmployees = pJson.data.map(p => (p.employee?._id || p.employee || '').toString());
+            }
+        } catch (pe) { console.error('Payroll check failed:', pe); }
+
         const json = await res.json();
         let savedData = json.data ? (json.data.data || []) : [];
 
@@ -392,11 +406,17 @@ function mergeWithMaster(masterList, savedList, type) {
     return masterList.map(m => {
         const mId = m._id?.toString() || m.id?.toString();
         const saved = savedList.find(s => s.id === mId);
+
+        // Sanitize Department and Branch - Extract name if it's an object
+        const dept = (m.department && typeof m.department === 'object') ? m.department.name : m.department;
+        const br = (m.branch && typeof m.branch === 'object') ? m.branch.name : m.branch;
+
         return {
             id: mId,
             name: m.name,
             code: m.code || '',
-            department: m.department || '', // From employee master
+            department: dept || '',
+            branch: br || '',
             commission: saved ? saved.commission : 0,
             otherCommission: saved ? saved.otherCommission : 0,
             ugCommission: saved ? saved.ugCommission : 0,
@@ -421,10 +441,19 @@ function renderTable(dataToRender = null) {
     let data = dataToRender || state.data;
 
     // Apply Department Filter from Global Header for Employee Tabs ONLY
-    // Item Wise tab uses department as a separate saving bucket, so we don't filter the LIST by it there.
     const selDept = document.getElementById('globalDepartment')?.value || '';
     if (tab !== 'dep_item_wise' && selDept) {
         data = data.filter(e => e.department === selDept);
+    }
+
+    // Apply Main Branch Filter from Global Header for Employee Tabs
+    const headerBranch = document.getElementById('mainBranch')?.value || state.branch;
+    if (tab !== 'dep_item_wise' && headerBranch) {
+        data = data.filter(e => {
+            const empBranch = (e.branch || '').toString().trim();
+            const targetBranch = headerBranch.toString().trim();
+            return empBranch === targetBranch;
+        });
     }
 
     state.currentViewData = data;
@@ -445,85 +474,98 @@ function renderTable(dataToRender = null) {
         tbodyId = 'empWiseBody';
         let total = 0;
         html = data.map((emp, i) => {
+            const isLocked = state.lockedEmployees.includes(emp.id.toString());
             total += parseFloat(emp.commission || 0);
             return `
-            <tr>
+            <tr data-id="${emp.id}" class="${isLocked ? 'row-locked' : ''}">
                 <td>${emp.code}</td>
-                <td>${emp.name}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.commission}" oninput="updateRow('${emp.id}', 'commission', this.value)"></td>
-                <td><button class="btn btn-sm btn-info" onclick="saveCurrentTab()"><i class="fas fa-save"></i></button></td>
+                <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.commission}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'commission', this.value)"></td>
+                <td>
+                    ${isLocked ? '<i class="fas fa-lock text-warning"></i>' : `<button class="btn btn-sm btn-info" onclick="saveCurrentTab()"><i class="fas fa-save"></i></button>`}
+                </td>
             </tr>
         `}).join('');
-        document.getElementById('empWiseTotal').textContent = total.toFixed(2);
+        const totalEl = document.getElementById('empWiseTotal');
+        if (totalEl) totalEl.textContent = total.toFixed(2);
     }
     else if (tab === 'distribute') {
         tbodyId = 'distributeBody';
         let t1 = 0, t2 = 0, t3 = 0, t4 = 0;
         html = data.map((emp, i) => {
+            const isLocked = state.lockedEmployees.includes(emp.id.toString());
             const tot = (parseFloat(emp.otherCommission) || 0) + (parseFloat(emp.ugCommission) || 0) + (parseFloat(emp.warehouseCommission) || 0);
             t1 += parseFloat(emp.otherCommission) || 0;
             t2 += parseFloat(emp.ugCommission) || 0;
             t3 += parseFloat(emp.warehouseCommission) || 0;
             t4 += tot;
             return `
-            <tr>
+            <tr data-id="${emp.id}" class="${isLocked ? 'row-locked' : ''}">
                 <td>${emp.code}</td>
-                <td>${emp.name}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.otherCommission}" oninput="updateRow('${emp.id}', 'otherCommission', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.ugCommission}" oninput="updateRow('${emp.id}', 'ugCommission', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.warehouseCommission}" oninput="updateRow('${emp.id}', 'warehouseCommission', this.value)"></td>
-                <td class="fw-bold">${tot.toFixed(2)}</td>
+                <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.otherCommission}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'otherCommission', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.ugCommission}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'ugCommission', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.warehouseCommission}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'warehouseCommission', this.value)"></td>
+                <td class="fw-bold row-total">${tot.toFixed(2)}</td>
             </tr>
         `}).join('');
-        document.getElementById('distOtherTotal').innerText = t1.toFixed(2);
-        document.getElementById('distUgTotal').innerText = t2.toFixed(2);
-        document.getElementById('distWarehouseTotal').innerText = t3.toFixed(2);
-        document.getElementById('distGrandTotal').innerText = t4.toFixed(2);
+        const el1 = document.getElementById('distOtherTotal');
+        const el2 = document.getElementById('distUgTotal');
+        const el3 = document.getElementById('distWarehouseTotal');
+        const el4 = document.getElementById('distGrandTotal');
+        if (el1) el1.innerText = t1.toFixed(2);
+        if (el2) el2.innerText = t2.toFixed(2);
+        if (el3) el3.innerText = t3.toFixed(2);
+        if (el4) el4.innerText = t4.toFixed(2);
     }
     else if (tab === 'rotti_nashta') {
         tbodyId = 'rottiNashtaBody';
         let total = 0;
         html = data.map((emp, i) => {
+            const isLocked = state.lockedEmployees.includes(emp.id.toString());
             const nTotal = parseFloat(emp.nashtaTotal) || 0;
             const rTotal = parseFloat(emp.rottiTotal) || 0;
             const grand = nTotal + rTotal;
             total += grand;
             return `
-            <tr>
+            <tr data-id="${emp.id}" class="${isLocked ? 'row-locked' : ''}">
                 <td>${emp.code}</td>
-                <td>${emp.name}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaDays}" oninput="updateRow('${emp.id}', 'nashtaDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaRate}" placeholder="Rate" oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${nTotal}" readonly></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiDays}" oninput="updateRow('${emp.id}', 'rottiDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiRate}" placeholder="Rate" oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${rTotal}" readonly></td>
-                <td class="fw-bold">${grand.toFixed(2)}</td>
+                <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaDays', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaRate}" placeholder="Rate" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light row-n-total" value="${nTotal}" readonly></td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiDays', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiRate}" placeholder="Rate" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light row-r-total" value="${rTotal}" readonly></td>
+                <td class="fw-bold row-total">${grand.toFixed(2)}</td>
             </tr>
         `}).join('');
-        document.getElementById('rottiNashtaTotal').innerText = total.toFixed(2);
+        const totalEl = document.getElementById('rottiNashtaTotal');
+        if (totalEl) totalEl.innerText = total.toFixed(2);
     }
     else if (tab === 'rotti_perks') {
         tbodyId = 'rottiPerksBody';
         let total = 0;
         html = data.map((emp, i) => {
+            const isLocked = state.lockedEmployees.includes((emp.id || '').toString());
             const tot = parseFloat(emp.totalData) || 0;
             total += tot;
             return `
-            <tr>
+            <tr data-id="${emp.id}" class="${isLocked ? 'row-locked' : ''}">
                 <td>${i + 1}</td>
                 <td>${emp.code}</td>
-                <td>${emp.name}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.basicSalary}" oninput="updateRow('${emp.id}', 'basicSalary', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.workedDays}" oninput="updateRow('${emp.id}', 'workedDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiRate}" placeholder="Rotti" oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td> 
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiTimes}" oninput="updateRow('${emp.id}', 'rottiTimes', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaRate}" placeholder="Nashta" oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaTotal}" oninput="updateRow('${emp.id}', 'nashtaTotal', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.totalData}" oninput="updateRow('${emp.id}', 'totalData', this.value)"></td>
+                <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.basicSalary}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'basicSalary', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.workedDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'workedDays', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiRate}" placeholder="Rotti" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td> 
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiTimes}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiTimes', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaRate}" placeholder="Nashta" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaTotal}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaTotal', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.totalData}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'totalData', this.value)"></td>
             </tr>
         `}).join('');
-        document.getElementById('rottiPerksGrandTotal').innerText = total.toFixed(2);
+        const totalEl = document.getElementById('rottiPerksGrandTotal');
+        if (totalEl) totalEl.innerText = total.toFixed(2);
     }
 
     const container = document.getElementById(tbodyId);
@@ -531,6 +573,10 @@ function renderTable(dataToRender = null) {
 }
 
 function updateRow(id, field, value) {
+    if (state.lockedEmployees.includes(id.toString())) {
+        console.warn('Row is locked by payroll');
+        return;
+    }
     const item = state.data.find(i => i.id === id);
     if (!item) return;
 
@@ -548,13 +594,61 @@ function updateRow(id, field, value) {
             if (totalInput) totalInput.value = total;
         }
     }
+    else if (state.currentTab === 'employee_wise') {
+        const total = state.data.reduce((sum, e) => sum + (parseFloat(e.commission) || 0), 0);
+        const totalEl = document.getElementById('empWiseTotal');
+        if (totalEl) totalEl.textContent = total.toFixed(2);
+    }
+    else if (state.currentTab === 'distribute') {
+        const tot = (parseFloat(item.otherCommission) || 0) + (parseFloat(item.ugCommission) || 0) + (parseFloat(item.warehouseCommission) || 0);
+        item.total = tot;
+
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+            const totEl = row.querySelector('.row-total');
+            if (totEl) totEl.innerText = tot.toFixed(2);
+        }
+
+        // Update Footer Totals
+        let t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+        state.data.forEach(e => {
+            t1 += parseFloat(e.otherCommission) || 0;
+            t2 += parseFloat(e.ugCommission) || 0;
+            t3 += parseFloat(e.warehouseCommission) || 0;
+            t4 += (parseFloat(e.otherCommission) || 0) + (parseFloat(e.ugCommission) || 0) + (parseFloat(e.warehouseCommission) || 0);
+        });
+        const el1 = document.getElementById('distOtherTotal');
+        const el2 = document.getElementById('distUgTotal');
+        const el3 = document.getElementById('distWarehouseTotal');
+        const el4 = document.getElementById('distGrandTotal');
+        if (el1) el1.innerText = t1.toFixed(2);
+        if (el2) el2.innerText = t2.toFixed(2);
+        if (el3) el3.innerText = t3.toFixed(2);
+        if (el4) el4.innerText = t4.toFixed(2);
+    }
     else if (state.currentTab === 'rotti_nashta') {
         item.nashtaTotal = item.nashtaDays * (item.nashtaRate || 0);
         item.rottiTotal = item.rottiDays * (item.rottiRate || 0);
-        renderTable(state.currentViewData);
+        const grand = item.nashtaTotal + item.rottiTotal;
+
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+            const ntEl = row.querySelector('.row-n-total');
+            const rtEl = row.querySelector('.row-r-total');
+            const gtEl = row.querySelector('.row-total');
+            if (ntEl) ntEl.value = item.nashtaTotal;
+            if (rtEl) rtEl.value = item.rottiTotal;
+            if (gtEl) gtEl.innerText = grand.toFixed(2);
+        }
+
+        const total = state.data.reduce((sum, e) => sum + (parseFloat(e.nashtaTotal) || 0) + (parseFloat(e.rottiTotal) || 0), 0);
+        const totalEl = document.getElementById('rottiNashtaTotal');
+        if (totalEl) totalEl.innerText = total.toFixed(2);
     }
-    else {
-        renderTable(state.currentViewData);
+    else if (state.currentTab === 'rotti_perks') {
+        const total = state.data.reduce((sum, e) => sum + (parseFloat(e.totalData) || 0), 0);
+        const totalEl = document.getElementById('rottiPerksGrandTotal');
+        if (totalEl) totalEl.innerText = total.toFixed(2);
     }
 }
 
@@ -642,6 +736,24 @@ async function saveCurrentTab() {
 async function showCommissionList() {
     const modal = new bootstrap.Modal(document.getElementById('commissionListModal'));
     modal.show();
+
+    // Populate branch filter in modal
+    const mainBranchSel = document.getElementById('mainBranch');
+    const modalBranchSel = document.getElementById('modalBranchFilter');
+    if (mainBranchSel && modalBranchSel) {
+        modalBranchSel.innerHTML = '<option value="">All Branches</option>';
+        Array.from(mainBranchSel.options).forEach(opt => {
+            if (opt.value) {
+                const newOpt = document.createElement('option');
+                newOpt.value = opt.value;
+                newOpt.textContent = opt.textContent;
+                modalBranchSel.appendChild(newOpt);
+            }
+        });
+        // Set default to current header branch
+        modalBranchSel.value = mainBranchSel.value;
+    }
+
     loadCommissionRecords();
 }
 
@@ -655,7 +767,7 @@ async function loadCommissionRecords() {
         if (!json.success) return;
 
         state.allSavedRecords = json.data; // Store full list for local filter
-        renderModalList(state.allSavedRecords);
+        filterModalList(); // Use the filter function to respect default branch selection
     } catch (e) {
         console.error(e);
     }
@@ -691,20 +803,25 @@ function renderModalList(records) {
 
 function filterModalList() {
     const search = (document.getElementById('modalListSearch')?.value || '').toLowerCase();
+    const branchFilter = document.getElementById('modalBranchFilter')?.value || "";
+    const typeFilter = document.getElementById('modalTypeFilter')?.value || "";
+
     if (!state.allSavedRecords) return;
 
-    if (!search) {
-        renderModalList(state.allSavedRecords);
-        return;
-    }
+    const filtered = state.allSavedRecords.filter(c => {
+        const matchesSearch = !search || (
+            c.monthYear.toLowerCase().includes(search) ||
+            c.branch.toLowerCase().includes(search) ||
+            c.type.toLowerCase().includes(search) ||
+            (c.whCategory && c.whCategory.toLowerCase().includes(search)) ||
+            (c.commissionCategory && c.commissionCategory.toLowerCase().includes(search))
+        );
 
-    const filtered = state.allSavedRecords.filter(c =>
-        c.monthYear.toLowerCase().includes(search) ||
-        c.branch.toLowerCase().includes(search) ||
-        c.type.toLowerCase().includes(search) ||
-        (c.whCategory && c.whCategory.toLowerCase().includes(search)) ||
-        (c.commissionCategory && c.commissionCategory.toLowerCase().includes(search))
-    );
+        const matchesBranch = !branchFilter || c.branch === branchFilter;
+        const matchesType = !typeFilter || c.type === typeFilter;
+
+        return matchesSearch && matchesBranch && matchesType;
+    });
 
     renderModalList(filtered);
 }

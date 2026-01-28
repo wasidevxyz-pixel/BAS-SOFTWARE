@@ -447,7 +447,7 @@
             const displayDate = `${monthNames[parseInt(month) - 1]} ${year}`;
 
             // Logical Earnings (All additions)
-            const earningsSub = (p.overTime || 0) + (p.monthlyComm || 0) + (p.natin || 0) + (p.otherAllow || 0) + (p.rent || 0) + (p.teaAllowance || 0) + (p.stLateAllow || 0);
+            const earningsSub = (p.overTime || 0) + (p.monthlyComm || 0) + (p.warehouseComm || 0) + (p.natin || 0) + (p.otherAllow || 0) + (p.rent || 0) + (p.teaAllowance || 0) + (p.stLateAllow || 0);
             const totalEarnings = (p.perMonth || 0) + earningsSub;
 
             // Logical Deductions (All subtractions)
@@ -499,7 +499,7 @@
                                 <div class="row"><div class="label">Allowance</div><div class="value">0</div></div>
                                 <div class="row"><div class="label">Fix Allowance</div><div class="value">${(p.natin || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Monthly Commission</div><div class="value">${(p.monthlyComm || 0).toLocaleString()}</div></div>
-                                <div class="row"><div class="label">WareHouse Comm</div><div class="value">0</div></div>
+                                <div class="row"><div class="label">WareHouse Comm</div><div class="value">${(p.warehouseComm || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Other Allowance</div><div class="value">${(p.otherAllow || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Breakfast & Roti</div><div class="value">${(p.rent || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Home_Allowance</div><div class="value">0</div></div>

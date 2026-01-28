@@ -39,6 +39,7 @@ const PayrollSchema = new mongoose.Schema({
     rent: { type: Number, default: 0 },
     natin: { type: Number, default: 0 },
     monthlyComm: { type: Number, default: 0 },
+    warehouseComm: { type: Number, default: 0 },
     teaAllowance: { type: Number, default: 0 },
     stLateAllow: { type: Number, default: 0 },
     otherAllow: { type: Number, default: 0 },

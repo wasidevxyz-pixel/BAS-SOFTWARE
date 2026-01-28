@@ -5,6 +5,7 @@ const EmployeeAdvance = require('../models/EmployeeAdvance');
 const EmployeePenalty = require('../models/EmployeePenalty');
 const HolyDay = require('../models/HolyDay');
 const Store = require('../models/Store');
+const EmployeeCommission = require('../models/EmployeeCommission');
 
 // @desc    Get all payrolls
 // @route   GET /api/v1/payrolls
@@ -233,6 +234,41 @@ exports.calculatePayroll = async (req, res) => {
             ebDeduction = foodPerTime * workedDays;
         }
 
+        // Get Commissions from EmployeeCommission module
+        let totalMonthlyComm = 0;
+        let totalWarehouseComm = 0;
+        try {
+            const commissions = await EmployeeCommission.find({
+                monthYear,
+                branch,
+                'data.id': employeeId.toString()
+            });
+
+            commissions.forEach(doc => {
+                const empData = doc.data.find(d => d.id === employeeId.toString());
+                if (!empData) return;
+
+                if (doc.type === 'distribute') {
+                    totalMonthlyComm += (Number(empData.otherCommission) || 0) +
+                        (Number(empData.ugCommission) || 0);
+
+                    totalWarehouseComm += (Number(empData.warehouseCommission) || 0);
+                } else if (doc.type === 'employee_wise') {
+                    totalMonthlyComm += (Number(empData.commission) || 0);
+                }
+            });
+        } catch (commErr) {
+            console.error('Error fetching commissions:', commErr);
+        }
+
+        // Pro-rated ST.LessAllow logic
+        const fullStLessAllow = employee.stLoss || 0;
+        let calculatedStLessAllow = fullStLessAllow;
+
+        if (totalWorkedHours < totalHrsPerMonth) {
+            // Formula: (Full Allowance / 30 / DutyHours) * WorkedHours
+            calculatedStLessAllow = (fullStLessAllow / 30 / (dutyHours || 8)) * totalWorkedHours;
+        }
 
         const calculatedData = {
             employee: employeeId,
@@ -256,14 +292,16 @@ exports.calculatePayroll = async (req, res) => {
             thirtyWorkingDays: isThirtyWorkingDays,
             otst30WorkingDays: isOTST30Days,
             payFullSalaryThroughBank: employee.payFullSalaryThroughBank || false,
+            fullStLessAllow: fullStLessAllow,
 
             // Earnings
             teaAllowance: employee.teaAllowance || 0,
             otherAllow: employee.otherAllowance || 0,
-            stLateAllow: employee.stLoss || 0,
+            stLateAllow: Math.round(calculatedStLessAllow),
             natin: employee.fixAllowance || 0, // This is the Fix Allowance
             rent: employee.foodAllowanceRs || 0, // This is Roti
-            monthlyComm: 0, // Add logic if needed
+            monthlyComm: Math.round(totalMonthlyComm),
+            warehouseComm: Math.round(totalWarehouseComm),
 
             // OT / ShortTime
             overTimeHrs: overTimeHrs,
@@ -292,6 +330,7 @@ exports.calculatePayroll = async (req, res) => {
             (calculatedData.rent || 0) +
             (calculatedData.natin || 0) +
             (calculatedData.monthlyComm || 0) +
+            (calculatedData.warehouseComm || 0) +
             (calculatedData.teaAllowance || 0) +
             (calculatedData.stLateAllow || 0) +
             (calculatedData.otherAllow || 0);

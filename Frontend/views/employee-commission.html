@@ -143,6 +143,32 @@
             gap: 20px;
         }
 
+        /* Locked Row Style - When Payroll Exists */
+        tr.row-locked {
+            background-color: #fff3cd !important;
+            /* Warning yellow */
+            transition: all 0.3s ease;
+        }
+
+        tr.row-locked input {
+            background-color: transparent !important;
+            pointer-events: none;
+            /* Disable mouse interactions */
+            border: 1px solid transparent !important;
+            color: #856404 !important;
+            font-weight: bold !important;
+        }
+
+        tr.row-locked .locked-badge {
+            font-size: 0.65rem;
+            background: #856404;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
         .custom-search-box {
             background: #fff;
             border: 1px solid #333;
@@ -345,12 +371,7 @@
             <div class="tab-pane fade" id="distribute" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
                     <div class="row mb-2">
-                        <div class="col-md-4">
-                            <select id="distSubBranch" class="form-select form-select-sm">
-                                <option value="">Select Sub_Branch</option>
-                            </select>
-                        </div>
-                        <div class="col-md-8 text-end">
+                        <div class="col-md-12 text-end">
                             <button class="btn btn-sm btn-warning text-white" onclick="printCommission()">Print</button>
                         </div>
                     </div>
@@ -386,12 +407,7 @@
             <div class="tab-pane fade" id="rotti-nashta" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
                     <div class="row mb-2">
-                        <div class="col-md-4">
-                            <select id="rottiSubBranch" class="form-select form-select-sm">
-                                <option value="">Select Sub_Branch</option>
-                            </select>
-                        </div>
-                        <div class="col-md-8 text-end">
+                        <div class="col-md-12 text-end">
                             <button class="btn btn-sm btn-warning text-white" onclick="printCommission()">Print</button>
                         </div>
                     </div>
@@ -427,19 +443,13 @@
             <div class="tab-pane fade" id="rotti-perks" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
                     <div class="row align-items-center mb-2">
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <label class="small fw-bold">From</label>
                             <input type="date" id="perksFromDate" class="form-control form-control-sm">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <label class="small fw-bold">To</label>
                             <input type="date" id="perksToDate" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold">Sub Branch</label>
-                            <select id="perksSubBranch" class="form-select form-select-sm">
-                                <option value="">Select Sub_Branch</option>
-                            </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end pt-3">
                             <button class="btn btn-sm btn-warning text-white w-100"
@@ -491,9 +501,23 @@
                 <div class="modal-body p-0">
                     <!-- Search Box & Shortcuts -->
                     <div class="search-area-container">
-                        <input type="text" id="modalListSearch" class="custom-search-box" placeholder="Search.."
-                            onkeyup="filterModalList()" autofocus>
-                        <div class="d-flex gap-5">
+                        <div class="d-flex gap-2 align-items-center flex-grow-1">
+                            <input type="text" id="modalListSearch" class="custom-search-box" placeholder="Search.."
+                                onkeyup="filterModalList()" autofocus style="flex: 2;">
+                            <select id="modalBranchFilter" class="form-select form-select-sm"
+                                onchange="filterModalList()" style="flex: 1; height: 45px; border-radius: 8px;">
+                                <option value="">All Branches</option>
+                            </select>
+                            <select id="modalTypeFilter" class="form-select form-select-sm" onchange="filterModalList()"
+                                style="flex: 1; height: 45px; border-radius: 8px;">
+                                <option value="">All Types</option>
+                                <option value="dep_item_wise">ITEM WISE</option>
+                                <option value="distribute">DISTRIBUTE</option>
+                                <option value="rotti_nashta">ROTTI & NASHTA</option>
+                                <option value="rotti_perks">ROTTI PERKS</option>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-5 ms-3">
                             <span class="list-shortcut">SEARCH : ctrl</span>
                             <span class="list-shortcut">SELECT ITEM : alt+b</span>
                         </div>

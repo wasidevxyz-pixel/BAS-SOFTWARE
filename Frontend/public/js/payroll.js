@@ -107,6 +107,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Handle Branch Change
+    document.getElementById('branch').addEventListener('change', async (e) => {
+        const employeeId = document.getElementById('employee').value;
+        const monthYear = document.getElementById('monthYear').value;
+        const branch = e.target.value;
+
+        if (employeeId && monthYear) {
+            await loadOrCalculate(employeeId, monthYear, branch);
+        }
+    });
+
     // Handle List Search Text
     const listSearchText = document.getElementById('listSearchText');
     if (listSearchText) {
@@ -427,6 +438,7 @@ function populateForm(data) {
     document.getElementById('salThrBank').checked = data.payFullSalaryThroughBank || false;
     document.getElementById('payAdvSalary').checked = data.payAdvSalary || false;
     window.isOTST_ThirtyWorkingDays = data.otst30WorkingDays || false;
+    window.fullStLessAllow = data.fullStLessAllow || 0;
 
     setValue('workedHrs', parseFloat(data.workedHrs || 0).toFixed(2));
     setValue('workedAmount', Math.round(data.workedAmount || 0));
@@ -446,6 +458,7 @@ function populateForm(data) {
     }
     setValue('nashtaAmount', data.teaAllowance);
     setValue('monthlyComm', data.monthlyComm);
+    setValue('warehouseComm', data.warehouseComm);
     setValue('fixAllowance', data.natin);
     setValue('stLessAllow', data.stLateAllow);
     setValue('otherAllow', data.otherAllow);
@@ -525,11 +538,24 @@ function calculateTotals() {
     const otAmt = Math.round(otHrs * hourlyRate); // Rounded
     setValue('overTimeAmount', otAmt);
 
+    // Dynamic ST.LessAllow calculation
+    const workedHrs = getValue('workedHrs');
+    const totalHrsReq = getValue('totalHrsPerMonth');
+    const fullSTAllow = window.fullStLessAllow || 0;
+    let stAllow = fullSTAllow;
+
+    if (workedHrs < totalHrsReq) {
+        // (Full Allowance / 30 / DutyHours) * WorkedHours
+        stAllow = (fullSTAllow / 30 / (dutyHrs || 8)) * workedHrs;
+    }
+    setValue('stLessAllow', Math.round(stAllow));
+
     const updatedEarnings = Math.round(
         otAmt +
         getValue('rotiAmount') +
         getValue('nashtaAmount') +
         getValue('monthlyComm') +
+        getValue('warehouseComm') +
         getValue('fixAllowance') +
         getValue('stLessAllow') +
         getValue('otherAllow')
@@ -537,7 +563,7 @@ function calculateTotals() {
     document.getElementById('earningsTotal').value = updatedEarnings;
 
     // Get worked hours for short week calculation
-    const workedHrs = getValue('workedHrs');
+    // workedHrs already declared above
 
     // Short Week Calculation: TSW = 4 - (TotalWorkedHrs / TotalHrsPerDay / 7)
     const weeksWorked = workedHrs / (dutyHrs || 8) / 7;
@@ -677,6 +703,7 @@ async function savePayroll() {
         rent: getValue('rotiAmount'),
         natin: getValue('fixAllowance'),
         monthlyComm: getValue('monthlyComm'),
+        warehouseComm: getValue('warehouseComm'),
         teaAllowance: getValue('nashtaAmount'),
         stLateAllow: getValue('stLessAllow'),
         otherAllow: getValue('otherAllow'),
@@ -752,7 +779,7 @@ function resetForm() {
         'totalDays', 'totalWdsPerMonth', 'totalHrsPerMonth', 'workedDays',
         'workedHrs', 'totalPerDay', 'totalPerHr', 'totalHrsPerDay', 'perMonth',
         'overTimeHrs', 'overTimeAmount', 'shortTimeHrs', 'shortTimeAmount',
-        'tsw', 'shortWeekDays', 'nashtaAmount', 'monthlyComm', 'fixAllowance',
+        'tsw', 'shortWeekDays', 'nashtaAmount', 'monthlyComm', 'warehouseComm', 'fixAllowance',
         'stLessAllow', 'otherAllow', 'rotiAmount', 'tfc', 'foodDeduction',
         'securityDeposit', 'penalty', 'ebDeduction', 'umrahDeduction',
         'otherDeduction', 'pmAdv', 'pmAdvRec', 'cmAdv', 'cmAdvRec',
