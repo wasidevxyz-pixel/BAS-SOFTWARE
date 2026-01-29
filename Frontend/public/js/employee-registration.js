@@ -51,7 +51,7 @@ async function fetchNextCode() {
     if (currentEmployeeId) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/employees/next-code', {
+        const res = await fetch(`/api/v1/employees/next-code?t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -388,7 +388,7 @@ async function saveEmployee() {
 async function editEmployee(id) {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`/api/v1/employees/${id}`, {
+        const res = await fetch(`/api/v1/employees/${id}?t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

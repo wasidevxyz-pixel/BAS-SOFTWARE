@@ -406,8 +406,12 @@
             <!-- 4. Employee Rotti & Nashta -->
             <div class="tab-pane fade" id="rotti-nashta" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
-                    <div class="row mb-2">
-                        <div class="col-md-12 text-end">
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-md-4">
+                            <input type="text" id="rottiSearch" class="form-control form-control-sm"
+                                placeholder="Search Employee Name/Code..." onkeyup="applyRottiFilter()">
+                        </div>
+                        <div class="col-md-8 text-end">
                             <button class="btn btn-sm btn-warning text-white" onclick="printCommission()">Print</button>
                         </div>
                     </div>
@@ -417,11 +421,9 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Employee Name</th>
-                                    <th>Days</th>
-                                    <th>Nashta</th>
+                                    <th>Nashta Days</th>
                                     <th>Nashta Total</th>
-                                    <th>Days</th>
-                                    <th>Rotti</th>
+                                    <th>Rotti Days</th>
                                     <th>Rotti Total</th>
                                     <th>Total</th>
                                 </tr>
@@ -430,7 +432,10 @@
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold">
-                                    <td colspan="8" class="text-end">Total</td>
+                                    <td colspan="3" class="text-end">Total</td>
+                                    <td id="rottiNashtaColumnTotal">0</td>
+                                    <td></td>
+                                    <td id="rottiColumnTotal">0</td>
                                     <td id="rottiNashtaTotal">0</td>
                                 </tr>
                             </tfoot>
@@ -442,16 +447,21 @@
             <!-- 5. Employee Rotti Perks -->
             <div class="tab-pane fade" id="rotti-perks" role="tabpanel">
                 <div class="card p-3 border-0 bg-light">
-                    <div class="row align-items-center mb-2">
-                        <div class="col-md-5">
+                    <div class="row align-items-end mb-2">
+                        <div class="col-md-3">
                             <label class="small fw-bold">From</label>
                             <input type="date" id="perksFromDate" class="form-control form-control-sm">
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-3">
                             <label class="small fw-bold">To</label>
                             <input type="date" id="perksToDate" class="form-control form-control-sm">
                         </div>
-                        <div class="col-md-2 d-flex align-items-end pt-3">
+                        <div class="col-md-4">
+                            <label class="small fw-bold">Search</label>
+                            <input type="text" id="perksSearch" class="form-control form-control-sm"
+                                placeholder="Search Employee..." onkeyup="applyPerksFilter()">
+                        </div>
+                        <div class="col-md-2">
                             <button class="btn btn-sm btn-warning text-white w-100"
                                 onclick="printCommission()">Print</button>
                         </div>

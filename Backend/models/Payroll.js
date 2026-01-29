@@ -41,8 +41,10 @@ const PayrollSchema = new mongoose.Schema({
     monthlyComm: { type: Number, default: 0 },
     warehouseComm: { type: Number, default: 0 },
     teaAllowance: { type: Number, default: 0 },
+    nashtaDays: { type: Number, default: 0 },
     stLateAllow: { type: Number, default: 0 },
     otherAllow: { type: Number, default: 0 },
+    rotiDays: { type: Number, default: 0 },
     earningsTotal: { type: Number, default: 0 },
 
     // Deductions

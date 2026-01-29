@@ -237,6 +237,11 @@ exports.calculatePayroll = async (req, res) => {
         // Get Commissions from EmployeeCommission module
         let totalMonthlyComm = 0;
         let totalWarehouseComm = 0;
+        let rotiAmount = 0;
+        let rotiDays = 0;
+        let nashtaAmount = 0;
+        let nashtaDays = 0;
+
         try {
             const commissions = await EmployeeCommission.find({
                 monthYear,
@@ -255,6 +260,11 @@ exports.calculatePayroll = async (req, res) => {
                     totalWarehouseComm += (Number(empData.warehouseCommission) || 0);
                 } else if (doc.type === 'employee_wise') {
                     totalMonthlyComm += (Number(empData.commission) || 0);
+                } else if (doc.type === 'rotti_nashta' || doc.type === 'rotti_perks') {
+                    rotiAmount += (Number(empData.rottiTotal) || 0);
+                    rotiDays += (Number(empData.rottiDays) || (doc.type === 'rotti_perks' ? workedDays : 0));
+                    nashtaAmount += (Number(empData.nashtaTotal) || 0);
+                    nashtaDays += (Number(empData.nashtaDays) || 0);
                 }
             });
         } catch (commErr) {
@@ -295,11 +305,13 @@ exports.calculatePayroll = async (req, res) => {
             fullStLessAllow: fullStLessAllow,
 
             // Earnings
-            teaAllowance: employee.teaAllowance || 0,
+            teaAllowance: Math.round(nashtaAmount),
+            nashtaDays: nashtaDays,
             otherAllow: employee.otherAllowance || 0,
             stLateAllow: Math.round(calculatedStLessAllow),
             natin: employee.fixAllowance || 0, // This is the Fix Allowance
-            rent: employee.foodAllowanceRs || 0, // This is Roti
+            rent: Math.round(rotiAmount), // This is Roti
+            rotiDays: rotiDays,
             monthlyComm: Math.round(totalMonthlyComm),
             warehouseComm: Math.round(totalWarehouseComm),
 

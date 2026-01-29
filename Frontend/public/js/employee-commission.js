@@ -11,9 +11,11 @@ let state = {
     masterData: [], // Items or Employees
     items: [],
     employees: [],
-    currentViewData: [], // data currently being rendered (filtered)
-    editingId: null, // ID of the record being edited from the list
-    lockedEmployees: [] // List of employee IDs with active payrolls
+    currentViewData: [],
+    editingId: null,
+    lockedEmployees: [],
+    attendanceCounts: {}, // { empId: count }
+    currentStoreRottiPrice: 0 // Store rotti price
 };
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -74,6 +76,19 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function setupGlobalFilters(isReset = false) {
     const today = new Date();
     document.getElementById('mainMonthYear').value = today.toISOString().slice(0, 7);
+
+    // Default Dates for Rotti Perks
+    const todayStr = today.toISOString().slice(0, 10);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+
+    if (document.getElementById('perksFromDate')) {
+        document.getElementById('perksFromDate').value = todayStr;
+        document.getElementById('perksFromDate').addEventListener('change', () => loadCurrentTab());
+    }
+    if (document.getElementById('perksToDate')) {
+        document.getElementById('perksToDate').value = todayStr;
+        document.getElementById('perksToDate').addEventListener('change', () => loadCurrentTab());
+    }
 
     // Set default user
     if (localStorage.getItem('user')) {
@@ -142,7 +157,8 @@ async function loadCategories(isReset = false) {
 }
 
 // Auto-update when branch changes
-document.getElementById('mainBranch')?.addEventListener('change', () => {
+document.getElementById('mainBranch')?.addEventListener('change', async () => {
+    await loadMasterData();
     loadCurrentTab();
 });
 
@@ -201,13 +217,13 @@ async function loadMasterData() {
 
         state.items = [...commItems, ...whItems];
 
-        // Load Employees
-        const resEmp = await fetch('/api/v1/employees?limit=1000', { headers: { 'Authorization': `Bearer ${token}` } });
+        // Load Employees - Add cache buster
+        const resEmp = await fetch(`/api/v1/employees?limit=1000&t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (resEmp.ok) {
             const json = await resEmp.json();
             state.employees = json.data || [];
         } else {
-            const resParties = await fetch('/api/v1/parties?partyType=employee&limit=1000', { headers: { 'Authorization': `Bearer ${token}` } });
+            const resParties = await fetch(`/api/v1/parties?partyType=employee&limit=1000&t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (resParties.ok) {
                 const json = await resParties.json();
                 state.employees = json.data || [];
@@ -281,34 +297,74 @@ async function loadCurrentTab(forceLoad = false) {
             query.append('commissionCategory', commCat);
         }
 
-        const res = await fetch(`/api/v1/employee-commissions?${query}`, {
+        if (state.currentTab === 'rotti_perks') {
+            // 1. Fetch Store Details for Rotti Price
+            try {
+                const storeRes = await fetch(`/api/v1/stores?active=true&t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const storeJson = await storeRes.json();
+                if (storeJson.success) {
+                    // Find current branch store - trim for safety
+                    const currentStore = storeJson.data.find(s => s.name.trim() === state.branch.trim());
+                    state.currentStoreRottiPrice = currentStore ? (currentStore.rotiPrice || 0) : 0;
+                    console.log('Store Match:', {
+                        searchingFor: state.branch,
+                        found: currentStore ? currentStore.name : 'Not Found',
+                        price: state.currentStoreRottiPrice
+                    });
+                }
+            } catch (e) { console.error('Store fetch error', e); }
+
+            // 2. Fetch Attendance for Worked Days
+            const pFrom = document.getElementById('perksFromDate')?.value;
+            const pTo = document.getElementById('perksToDate')?.value;
+            state.attendanceCounts = {};
+
+            if (pFrom && pTo && state.branch) {
+                try {
+                    const attRes = await fetch(`/api/v1/attendance?from=${pFrom}&to=${pTo}&branch=${state.branch}&t=${Date.now()}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const attJson = await attRes.json();
+                    if (attJson.success) {
+                        attJson.data.forEach(att => {
+                            if (att.isPresent || att.displayStatus === 'Present') {
+                                const eId = (att.employee?._id || att.employee).toString();
+                                state.attendanceCounts[eId] = (state.attendanceCounts[eId] || 0) + 1;
+                            }
+                        });
+                        console.log('Attendance Counts:', state.attendanceCounts);
+                    }
+                } catch (e) { console.error('Attendance fetch error', e); }
+            }
+        }
+
+        const res = await fetch(`/api/v1/employee-commission?${query}&t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        // Fetch payroll status separately
-        state.lockedEmployees = [];
-        try {
-            const pRes = await fetch(`/api/v1/payrolls?monthYear=${state.monthYear}&branch=${state.branch}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const pJson = await pRes.json();
-            if (pJson.success) {
-                // Collect IDs of employees who already have a payroll
-                state.lockedEmployees = pJson.data.map(p => (p.employee?._id || p.employee || '').toString());
-            }
-        } catch (pe) { console.error('Payroll check failed:', pe); }
 
         const json = await res.json();
         let savedData = json.data ? (json.data.data || []) : [];
 
         if (state.currentTab === 'dep_item_wise') {
             state.data = mergeWithMaster(state.items, savedData, 'item');
-            // Only purely local filtering now (text search)
-            applyLocalFilter();
+            applyLocalFilter(); // Respect selected categories
         } else {
+            // Populate state.data for all employee-based tabs
             state.data = mergeWithMaster(state.employees, savedData, 'employee');
+
+            if (state.currentTab === 'rotti_perks') {
+                state.data = state.data.filter(emp => {
+                    const salary = parseFloat(emp.originalBasicSalary || emp.basicSalary || 0);
+                    const allow = emp.allowRottiPerks === true || emp.allowRottiPerks === 'true';
+                    return salary <= 20000 || allow;
+                });
+            }
             renderTable();
         }
+
+        if (state.currentTab === 'dep_item_wise') applyLocalFilter();
 
     } catch (e) {
         console.error(e);
@@ -375,11 +431,36 @@ function applyGlobalSearch() {
     renderTable(filtered);
 }
 
-function clearItemFilters() {
-    document.getElementById('whItemCategory').value = "";
-    document.getElementById('commissionItemCategory').value = "";
-    document.getElementById('itemSearch').value = "";
-    loadCurrentTab(); // Fetch all items for current branch/month/dept
+function applyPerksFilter() {
+    if (state.currentTab !== 'rotti_perks') return;
+    const search = (document.getElementById('perksSearch')?.value || '').toLowerCase();
+
+    let filtered = state.data;
+    if (search) {
+        filtered = filtered.filter(emp =>
+            (emp.name && emp.name.toLowerCase().includes(search)) ||
+            (emp.code && emp.code.toLowerCase().includes(search))
+        );
+    }
+    renderTable(filtered);
+}
+
+function applyRottiFilter() {
+    if (state.currentTab !== 'rotti_nashta') return;
+
+    const search = (document.getElementById('rottiSearch')?.value || '').toLowerCase();
+
+    // Start with all data in state
+    let filtered = state.data;
+
+    if (search) {
+        filtered = filtered.filter(emp =>
+            (emp.name && emp.name.toLowerCase().includes(search)) ||
+            (emp.code && emp.code.toLowerCase().includes(search))
+        );
+    }
+
+    renderTable(filtered);
 }
 
 function mergeWithMaster(masterList, savedList, type) {
@@ -411,6 +492,20 @@ function mergeWithMaster(masterList, savedList, type) {
         const dept = (m.department && typeof m.department === 'object') ? m.department.name : m.department;
         const br = (m.branch && typeof m.branch === 'object') ? m.branch.name : m.branch;
 
+        // Rotti Perks Logic
+        let rRate = saved ? saved.rottiRate : 0;
+        let rTimes = saved ? saved.rottiTimes : 4; // Default 4 times
+        let wDays = saved ? saved.workedDays : 0;
+
+        if (state.currentTab === 'rotti_perks' && !saved) {
+            rRate = state.currentStoreRottiPrice || 0;
+            wDays = state.attendanceCounts[mId] || 0;
+        }
+
+        const nTotal = saved ? saved.nashtaTotal : 0;
+        const rTotalCalc = wDays * rTimes * rRate;
+        const grandTotal = saved ? saved.totalData : (nTotal + rTotalCalc);
+
         return {
             id: mId,
             name: m.name,
@@ -423,14 +518,16 @@ function mergeWithMaster(masterList, savedList, type) {
             warehouseCommission: saved ? saved.warehouseCommission : 0,
             nashtaDays: saved ? saved.nashtaDays : 0,
             nashtaRate: saved ? saved.nashtaRate : 0,
-            nashtaTotal: saved ? saved.nashtaTotal : 0,
-            rottiDays: saved ? saved.rottiDays : 0,
-            rottiRate: saved ? saved.rottiRate : 0,
-            rottiTotal: saved ? saved.rottiTotal : 0,
+            nashtaTotal: nTotal,
+            rottiDays: saved ? saved.rottiDays : wDays,
+            rottiRate: rRate,
+            rottiTotal: saved ? saved.rottiTotal : rTotalCalc,
             basicSalary: saved ? saved.basicSalary : (m.basicSalary || 0),
-            workedDays: saved ? saved.workedDays : 0,
-            rottiTimes: saved ? saved.rottiTimes : 0,
-            totalData: saved ? saved.totalData : 0
+            workedDays: wDays,
+            rottiTimes: rTimes,
+            totalData: grandTotal,
+            allowRottiPerks: m.allowRottiPerks || false,
+            originalBasicSalary: m.basicSalary || 0
         };
     });
 }
@@ -450,9 +547,16 @@ function renderTable(dataToRender = null) {
     const headerBranch = document.getElementById('mainBranch')?.value || state.branch;
     if (tab !== 'dep_item_wise' && headerBranch) {
         data = data.filter(e => {
-            const empBranch = (e.branch || '').toString().trim();
-            const targetBranch = headerBranch.toString().trim();
-            return empBranch === targetBranch;
+            const empBranch = (e.branch || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            const targetBranch = headerBranch.toString().toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            const match = empBranch === targetBranch;
+
+            if (!match && (e.name.includes('BILAL') || e.name.includes('WASI'))) {
+                console.log(`Branch Mismatch for ${e.name}: empBranch='${empBranch}', targetBranch='${targetBranch}'`);
+            } else if (match && (e.name.includes('BILAL') || e.name.includes('WASI'))) {
+                console.log(`Branch Match for ${e.name}: empBranch='${empBranch}', targetBranch='${targetBranch}'`);
+            }
+            return match;
         });
     }
 
@@ -521,27 +625,39 @@ function renderTable(dataToRender = null) {
     else if (tab === 'rotti_nashta') {
         tbodyId = 'rottiNashtaBody';
         let total = 0;
+        let totalNashta = 0;
+        let totalRotti = 0;
+
         html = data.map((emp, i) => {
             const isLocked = state.lockedEmployees.includes(emp.id.toString());
             const nTotal = parseFloat(emp.nashtaTotal) || 0;
             const rTotal = parseFloat(emp.rottiTotal) || 0;
             const grand = nTotal + rTotal;
+
             total += grand;
+            totalNashta += nTotal;
+            totalRotti += rTotal;
+
             return `
             <tr data-id="${emp.id}" class="${isLocked ? 'row-locked' : ''}">
                 <td>${emp.code}</td>
                 <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.nashtaRate}" placeholder="Rate" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center bg-light row-n-total" value="${nTotal}" readonly></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" style="width:60px" value="${emp.rottiRate}" placeholder="Rate" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center bg-light row-r-total" value="${rTotal}" readonly></td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:70px" value="${emp.nashtaDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaDays', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center row-n-total" style="width:100px" value="${nTotal}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaTotal', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center" style="width:70px" value="${emp.rottiDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiDays', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center row-r-total" style="width:100px" value="${rTotal}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiTotal', this.value)"></td>
                 <td class="fw-bold row-total">${grand.toFixed(2)}</td>
             </tr>
         `}).join('');
+
         const totalEl = document.getElementById('rottiNashtaTotal');
         if (totalEl) totalEl.innerText = total.toFixed(2);
+
+        const totalNashtaEl = document.getElementById('rottiNashtaColumnTotal');
+        if (totalNashtaEl) totalNashtaEl.innerText = totalNashta.toFixed(2);
+
+        const totalRottiEl = document.getElementById('rottiColumnTotal');
+        if (totalRottiEl) totalRottiEl.innerText = totalRotti.toFixed(2);
     }
     else if (tab === 'rotti_perks') {
         tbodyId = 'rottiPerksBody';
@@ -555,13 +671,13 @@ function renderTable(dataToRender = null) {
                 <td>${i + 1}</td>
                 <td>${emp.code}</td>
                 <td>${emp.name} ${isLocked ? '<span class="locked-badge">PAID</span>' : ''}</td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.basicSalary}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'basicSalary', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.workedDays}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'workedDays', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiRate}" placeholder="Rotti" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiRate', this.value)"></td> 
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.rottiTimes}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'rottiTimes', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${emp.basicSalary}" readonly></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${emp.workedDays}" readonly></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${emp.rottiRate}" placeholder="Rotti" readonly></td> 
+                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${emp.rottiTimes}" readonly></td>
                 <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaRate}" placeholder="Nashta" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaRate', this.value)"></td>
                 <td><input type="number" class="form-control form-control-sm text-center" value="${emp.nashtaTotal}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'nashtaTotal', this.value)"></td>
-                <td><input type="number" class="form-control form-control-sm text-center" value="${emp.totalData}" ${isLocked ? 'readonly' : ''} oninput="updateRow('${emp.id}', 'totalData', this.value)"></td>
+                <td><input type="number" class="form-control form-control-sm text-center bg-light" value="${emp.totalData}" readonly></td>
             </tr>
         `}).join('');
         const totalEl = document.getElementById('rottiPerksGrandTotal');
@@ -627,25 +743,56 @@ function updateRow(id, field, value) {
         if (el4) el4.innerText = t4.toFixed(2);
     }
     else if (state.currentTab === 'rotti_nashta') {
-        item.nashtaTotal = item.nashtaDays * (item.nashtaRate || 0);
-        item.rottiTotal = item.rottiDays * (item.rottiRate || 0);
-        const grand = item.nashtaTotal + item.rottiTotal;
+        const grand = (parseFloat(item.nashtaTotal) || 0) + (parseFloat(item.rottiTotal) || 0);
 
         const row = document.querySelector(`tr[data-id="${id}"]`);
         if (row) {
             const ntEl = row.querySelector('.row-n-total');
             const rtEl = row.querySelector('.row-r-total');
             const gtEl = row.querySelector('.row-total');
-            if (ntEl) ntEl.value = item.nashtaTotal;
-            if (rtEl) rtEl.value = item.rottiTotal;
+            if (ntEl) ntEl.value = item.nashtaTotal || 0;
+            if (rtEl) rtEl.value = item.rottiTotal || 0;
             if (gtEl) gtEl.innerText = grand.toFixed(2);
         }
 
-        const total = state.data.reduce((sum, e) => sum + (parseFloat(e.nashtaTotal) || 0) + (parseFloat(e.rottiTotal) || 0), 0);
+        let total = 0, totalNashta = 0, totalRotti = 0;
+
+        state.data.forEach(e => {
+            const n = parseFloat(e.nashtaTotal) || 0;
+            const r = parseFloat(e.rottiTotal) || 0;
+            totalNashta += n;
+            totalRotti += r;
+            total += (n + r);
+        });
+
         const totalEl = document.getElementById('rottiNashtaTotal');
         if (totalEl) totalEl.innerText = total.toFixed(2);
+
+        const totalNashtaEl = document.getElementById('rottiNashtaColumnTotal');
+        if (totalNashtaEl) totalNashtaEl.innerText = totalNashta.toFixed(2);
+
+        const totalRottiEl = document.getElementById('rottiColumnTotal');
+        if (totalRottiEl) totalRottiEl.innerText = totalRotti.toFixed(2);
     }
     else if (state.currentTab === 'rotti_perks') {
+        // Recalculate Logic
+        // Total = (WorkedDays * RottiTimes * RottiRate) + NashtaTotal
+        const wDays = parseFloat(item.workedDays) || 0;
+        const rTimes = parseFloat(item.rottiTimes) || 0;
+        const rRate = parseFloat(item.rottiRate) || 0; // Rotti Price
+        const nTotal = parseFloat(item.nashtaTotal) || 0;
+
+        const rTotal = wDays * rTimes * rRate;
+        const grand = rTotal + nTotal;
+
+        item.totalData = grand;
+
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+            const finalTotalEl = row.querySelector('td:last-child input'); // It's an input in this table
+            if (finalTotalEl) finalTotalEl.value = grand.toFixed(2);
+        }
+
         const total = state.data.reduce((sum, e) => sum + (parseFloat(e.totalData) || 0), 0);
         const totalEl = document.getElementById('rottiPerksGrandTotal');
         if (totalEl) totalEl.innerText = total.toFixed(2);
@@ -1008,24 +1155,24 @@ async function printCommission() {
             return [code, item.name || '', item.otherCommission || 0, item.ugCommission || 0, item.warehouseCommission || 0, (parseFloat(item.otherCommission || 0) + parseFloat(item.ugCommission || 0) + parseFloat(item.warehouseCommission || 0)).toFixed(2)];
         });
     } else if (state.currentTab === 'rotti_nashta') {
-        headers = ['Code', 'Employee', 'N. Days', 'N. Rate', 'N. Total', 'R. Days', 'R. Rate', 'R. Total', 'G. Total'];
+        headers = ['Code', 'Employee', 'N. Days', 'N. Total', 'R. Days', 'R. Total', 'G. Total'];
         rows = data.map(item => {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
             return [
-                code, item.name || '', item.nashtaDays || 0, item.nashtaRate || 0, item.nashtaTotal || 0,
-                item.rottiDays || 0, item.rottiRate || 0, item.rottiTotal || 0,
+                code, item.name || '', item.nashtaDays || 0, item.nashtaTotal || 0,
+                item.rottiDays || 0, item.rottiTotal || 0,
                 (parseFloat(item.nashtaTotal || 0) + parseFloat(item.rottiTotal || 0)).toFixed(2)
             ];
         });
     } else if (state.currentTab === 'rotti_perks') {
-        headers = ['Sr.', 'Code', 'Employee Name', 'Basic', 'Days', 'Rotti', 'Nashta', 'Total'];
+        headers = ['Sr.', 'Code', 'Employee Name', 'Basic', 'Worked Days', 'Rotti Total', 'Nashta Total', 'G. Total'];
         rows = data.map((item, idx) => {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
             return [
                 idx + 1, code, item.name || '', item.basicSalary || 0, item.workedDays || 0,
-                item.rottiRate || 0, item.nashtaRate || 0, item.totalData || 0
+                item.rottiTotal || 0, item.nashtaTotal || 0, item.totalData || 0
             ];
         });
     } else {

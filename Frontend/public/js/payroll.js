@@ -3,7 +3,9 @@ const FIELD_MAPPING = {
     // Earnings
     overTimeAmount: 'overTime',
     rotiAmount: 'rent',
+    rotiDays: 'rotiDays',
     nashtaAmount: 'teaAllowance',
+    nashtaDays: 'nashtaDays',
     monthlyComm: 'monthlyComm',
     fixAllowance: 'natin',
     stLessAllow: 'stLateAllow',
@@ -457,12 +459,14 @@ function populateForm(data) {
         setValue('shortWeekDays', data.shortWeekDays || 0);
     }
     setValue('nashtaAmount', data.teaAllowance);
+    setValue('nashtaDays', data.nashtaDays || 0);
     setValue('monthlyComm', data.monthlyComm);
     setValue('warehouseComm', data.warehouseComm);
     setValue('fixAllowance', data.natin);
     setValue('stLessAllow', data.stLateAllow);
     setValue('otherAllow', data.otherAllow);
     setValue('rotiAmount', data.rent);
+    setValue('rotiDays', data.rotiDays || 0);
 
     setValue('tfc', data.fund);
     setValue('tfc', data.fund);
@@ -705,8 +709,10 @@ async function savePayroll() {
         monthlyComm: getValue('monthlyComm'),
         warehouseComm: getValue('warehouseComm'),
         teaAllowance: getValue('nashtaAmount'),
+        nashtaDays: getValue('nashtaDays'),
         stLateAllow: getValue('stLessAllow'),
         otherAllow: getValue('otherAllow'),
+        rotiDays: getValue('rotiDays'),
         earningsTotal: getValue('earningsTotal'),
         overTimeHrs: getValue('overTimeHrs'),
         shortWeek: getValue('shortTimeAmount'),

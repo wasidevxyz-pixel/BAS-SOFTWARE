@@ -6,7 +6,7 @@ let stores = [];
 async function loadStores() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/stores?showAll=true', {
+        const response = await fetch('/api/v1/stores?showAll=true&t=' + Date.now(), {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadDepartments() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/employee-departments', {
+        const response = await fetch('/api/v1/employee-departments?t=' + Date.now(), {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -86,7 +86,7 @@ async function loadEmployees() {
         const religion = document.getElementById('filterReligion').value;
         const status = document.getElementById('filterStatus').value;
 
-        let url = `/api/v1/employees?branch=${branch}&code=${code}&name=${name}&department=${dept}&designation=${desig}&type=${type}&religion=${religion}&maritalStatus=${status}`;
+        let url = `/api/v1/employees?branch=${branch}&code=${code}&name=${name}&department=${dept}&designation=${desig}&type=${type}&religion=${religion}&maritalStatus=${status}&t=${Date.now()}`;
 
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -193,7 +193,7 @@ async function quickSave(id, btn) {
         selectBank: tr.querySelector('.col-bank').value,
         basicSalary: parseFloat(tr.querySelector('.col-salary').value) || 0,
         fixAllowance: parseFloat(tr.querySelector('.col-fixAllow').value) || 0,
-        otherAllowance: parseFloat(tr.querySelector('.col-otherAllow').value) || 0,
+        stLoss: parseFloat(tr.querySelector('.col-st').value) || 0,
         isActive: tr.querySelector('.col-active').checked,
         payFullSalaryThroughBank: tr.querySelector('.col-pfstb').checked,
         eobi: tr.querySelector('.col-eobi').checked,
@@ -216,9 +216,8 @@ async function quickSave(id, btn) {
             btn.textContent = 'Saved!';
             btn.classList.replace('btn-success', 'btn-primary');
             setTimeout(() => {
-                btn.textContent = 'Save';
-                btn.classList.replace('btn-primary', 'btn-success');
-            }, 2000);
+                location.reload(); // Force reload to show updated data from server
+            }, 1000);
         } else {
             alert('Error: ' + data.message);
         }
