@@ -93,6 +93,8 @@ const whLedgerRoutes = require('./routes/whLedgerRoutes');
 const commissionItemRoutes = require('./routes/commissionItemRoutes');
 const designationRoutes = require('./routes/designations');
 const employeeDepartmentRoutes = require('./routes/employeeDepartments');
+const commissionBranchRoutes = require('./routes/commissionBranchRoutes');
+const subBranchRoutes = require('./routes/subBranchRoutes');
 
 
 
@@ -415,6 +417,8 @@ app.use('/api/v1/commission-categories', require('./routes/commissionCategoryRou
 app.use('/api/v1/commission-suppliers', require('./routes/commissionSupplierRoutes'));
 app.use('/api/v1/designations', designationRoutes);
 app.use('/api/v1/employee-departments', employeeDepartmentRoutes);
+app.use('/api/v1/commission-branches', commissionBranchRoutes);
+app.use('/api/v1/sub-branches', subBranchRoutes);
 
 
 
@@ -657,6 +661,10 @@ app.get('/wht-supplier.html', (req, res) => {
 
 app.get('/employee-commission.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-commission.html'));
+});
+
+app.get('/employee-sale-commission.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-sale-commission.html'));
 });
 
 app.get('/backup.html', (req, res) => {

@@ -1,0 +1,1011 @@
+
+// Employee Sale Commission (UG) - Behavioral Logic
+
+let state = {
+    monthYear: new Date().toISOString().slice(0, 7),
+    branch: '',
+    commissionBranch: '',
+    employees: [],
+    branches: [],
+    subBranches: [],
+    commissionBranches: [],
+    tableData: [], // Array of row objects
+    editingId: null, // For existing commission record
+    editingBranchId: null, // For commission branch modal
+    editingSubBranchId: null // For sub branch modal
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!localStorage.getItem('token')) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    // Set default month
+    document.getElementById('monthYear').value = state.monthYear;
+
+    await loadInitialData();
+    setupEventListeners();
+});
+
+async function loadInitialData() {
+    const token = localStorage.getItem('token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    try {
+        // 1. Load Main Branches (Stores)
+        const resStores = await fetch('/api/v1/stores', { headers });
+        if (resStores.ok) {
+            const json = await resStores.json();
+            state.branches = json.data.filter(s => s.isActive);
+            const sel = document.getElementById('mainBranch');
+            const selModal = document.getElementById('modalSubMainBranch');
+            const selList = document.getElementById('listBranchFilter');
+
+            [sel, selModal, selList].forEach(s => {
+                if (s) {
+                    s.innerHTML = '<option value="">Select Branch</option>';
+                    state.branches.forEach(b => {
+                        s.innerHTML += `<option value="${b.name}">${b.name}</option>`;
+                    });
+                }
+            });
+        }
+
+        // 2. Load Commission Branches
+        await refreshCommissionBranches();
+
+        // 3. Load Sub Branches
+        await refreshSubBranches();
+
+        // 4. Load Employees
+        const resEmp = await fetch('/api/v1/employees?limit=1000', { headers });
+        if (resEmp.ok) {
+            const json = await resEmp.json();
+            state.employees = json.data;
+            populateEmployees(); // Default population
+        }
+
+        // 5. Load Employee Departments
+        const resDept = await fetch('/api/v1/employee-departments', { headers });
+        if (resDept.ok) {
+            const json = await resDept.json();
+            const depts = json.data;
+            const sel = document.getElementById('department');
+            if (sel) {
+                sel.innerHTML = '<option value="">Select Department</option>';
+                depts.forEach(d => {
+                    sel.innerHTML += `<option value="${d.name}">${d.name}</option>`;
+                });
+            }
+        }
+
+        // Show current user name
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && document.getElementById('userName')) {
+            document.getElementById('userName').innerText = user.name;
+        }
+
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+    }
+}
+
+function setupEventListeners() {
+    // Branch change -> update sub-branches & employees
+    document.getElementById('mainBranch').addEventListener('change', (e) => {
+        state.branch = e.target.value;
+        filterSubBranches();
+        populateEmployees(document.getElementById('department').value);
+    });
+
+    // Department change -> filter employees
+    document.getElementById('department').addEventListener('change', (e) => {
+        populateEmployees(e.target.value);
+    });
+
+    // Add input listeners for all calculation fields
+    ['saleInput', 'percentage', 'itemWiseCommission', 'dailyTarget', 'monthlyTarget'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calculateRowCom);
+    });
+
+    // Enter key navigation or adding row
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveData();
+        }
+
+        // Enter key in target fields to Add Row
+        if (e.key === 'Enter') {
+            const activeId = document.activeElement.id;
+            if (activeId === 'dailyTarget' || activeId === 'monthlyTarget' || activeId === 'paidCommission') {
+                e.preventDefault();
+                addRow();
+            }
+        }
+    });
+}
+
+// --- Commission Branch CRUD ---
+
+async function refreshCommissionBranches() {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/v1/commission-branches', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const json = await res.json();
+        state.commissionBranches = json.data;
+
+        // Update main dropdown
+        const sel = document.getElementById('commissionBranch');
+        if (sel) {
+            const val = sel.value;
+            sel.innerHTML = '<option value="">Select Commission Branch</option>';
+            state.commissionBranches.filter(b => b.active).forEach(b => {
+                sel.innerHTML += `<option value="${b._id}">${b.name}</option>`;
+            });
+            sel.value = val;
+        }
+        renderBranchTable();
+    }
+}
+
+function renderBranchTable() {
+    const search = document.getElementById('modalBranchSearch').value.toLowerCase();
+    const tbody = document.getElementById('modalBranchTableBody');
+    const filtered = state.commissionBranches.filter(b =>
+        b.name.toLowerCase().includes(search)
+    );
+
+    tbody.innerHTML = filtered.map((b, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${b.name}</td>
+            <td><i class="fas ${b.active ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'}"></i></td>
+            <td>
+                <button class="btn btn-sm btn-primary py-0" onclick="editBranch('${b._id}')">Edit</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showBranchModal() {
+    state.editingBranchId = null;
+    document.getElementById('modalBranchName').value = '';
+    document.getElementById('modalBranchActive').checked = true;
+    document.getElementById('modalBranchTarget').value = '';
+    document.getElementById('modalBranchTargetComm').value = '';
+    new bootstrap.Modal(document.getElementById('branchModal')).show();
+}
+
+function editBranch(id) {
+    const branch = state.commissionBranches.find(b => b._id === id);
+    if (!branch) return;
+    state.editingBranchId = id;
+    document.getElementById('modalBranchName').value = branch.name;
+    document.getElementById('modalBranchActive').checked = branch.active;
+    document.getElementById('modalBranchTarget').value = branch.branchTarget || 0;
+    document.getElementById('modalBranchTargetComm').value = branch.targetCommission || 0;
+}
+
+async function saveBranch() {
+    const name = document.getElementById('modalBranchName').value;
+    const active = document.getElementById('modalBranchActive').checked;
+    const branchTarget = document.getElementById('modalBranchTarget').value;
+    const targetCommission = document.getElementById('modalBranchTargetComm').value;
+
+    if (!name) return alert('Name is required');
+
+    const data = { name, active, branchTarget, targetCommission };
+    const token = localStorage.getItem('token');
+    const method = state.editingBranchId ? 'PUT' : 'POST';
+    const url = state.editingBranchId ? `/api/v1/commission-branches/${state.editingBranchId}` : '/api/v1/commission-branches';
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            await refreshCommissionBranches();
+            state.editingBranchId = null;
+            document.getElementById('modalBranchName').value = '';
+            document.getElementById('modalBranchTarget').value = '';
+            document.getElementById('modalBranchTargetComm').value = '';
+        }
+    } catch (e) { console.error(e); }
+}
+
+// --- Sub Branch CRUD ---
+
+async function refreshSubBranches() {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/v1/sub-branches', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const json = await res.json();
+        state.subBranches = json.data;
+        filterSubBranches();
+        renderSubBranchTable();
+    }
+}
+
+function filterSubBranches() {
+    const sel = document.getElementById('saleBranch');
+    if (!sel) return;
+
+    sel.innerHTML = '<option value="">Select Sub Branch</option>';
+    state.subBranches.filter(b => b.active).forEach(b => {
+        sel.innerHTML += `<option value="${b.name}">${b.name}</option>`;
+    });
+}
+
+function renderSubBranchTable() {
+    const search = document.getElementById('modalSubBranchSearch').value.toLowerCase();
+    const tbody = document.getElementById('modalSubBranchTableBody');
+    const filtered = state.subBranches.filter(b =>
+        b.name.toLowerCase().includes(search) || b.branch.toLowerCase().includes(search)
+    );
+
+    tbody.innerHTML = filtered.map(b => `
+        <tr>
+            <td>${b.name}</td>
+            <td><i class="fas ${b.active ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'}"></i></td>
+            <td>
+                <button class="btn btn-sm btn-primary py-0" onclick="editSubBranch('${b._id}')">Edit</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showSubBranchModal() {
+    state.editingSubBranchId = null;
+    document.getElementById('modalSubBranchName').value = '';
+    document.getElementById('modalSubBranchActive').checked = true;
+    new bootstrap.Modal(document.getElementById('subBranchModal')).show();
+}
+
+function editSubBranch(id) {
+    const sb = state.subBranches.find(b => b._id === id);
+    if (!sb) return;
+    state.editingSubBranchId = id;
+    document.getElementById('modalSubBranchName').value = sb.name;
+    document.getElementById('modalSubBranchActive').checked = sb.active;
+}
+
+async function saveSubBranch() {
+    const name = document.getElementById('modalSubBranchName').value;
+    const active = document.getElementById('modalSubBranchActive').checked;
+
+    if (!name) return alert('Name is required');
+
+    const data = { name, active };
+    const token = localStorage.getItem('token');
+    const method = state.editingSubBranchId ? 'PUT' : 'POST';
+    const url = state.editingSubBranchId ? `/api/v1/sub-branches/${state.editingSubBranchId}` : '/api/v1/sub-branches';
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            await refreshSubBranches();
+            state.editingSubBranchId = null;
+            document.getElementById('modalSubBranchName').value = '';
+        }
+    } catch (e) { console.error(e); }
+}
+
+// --- Calculation Logic ---
+
+function loadTargetDetails() {
+    const branchId = document.getElementById('commissionBranch').value;
+    const branch = state.commissionBranches.find(b => b._id === branchId);
+    if (!branch) {
+        document.getElementById('targetAchieved').value = 0;
+        return;
+    }
+
+    const totalSale = parseFloat(document.getElementById('totalSale').value) || 0;
+    if (branch.branchTarget && branch.branchTarget > 0) {
+        const achieved = (totalSale / branch.branchTarget) * 100;
+        document.getElementById('targetAchieved').value = achieved.toFixed(2);
+    } else {
+        document.getElementById('targetAchieved').value = 0;
+    }
+}
+
+function calculateRowCom() {
+    const sale = parseFloat(document.getElementById('saleInput').value) || 0;
+    const per = parseFloat(document.getElementById('percentage').value) || 0;
+    const comm = (sale * per) / 100;
+    document.getElementById('commission').value = comm.toFixed(2);
+
+    const itemWise = parseFloat(document.getElementById('itemWiseCommission').value) || 0;
+    const dailyTarget = parseFloat(document.getElementById('dailyTarget').value) || 0;
+    const monthlyTarget = parseFloat(document.getElementById('monthlyTarget').value) || 0;
+
+    // Total Commission should include all bonuses/incentives
+    const total = comm + itemWise + dailyTarget + monthlyTarget;
+    document.getElementById('totalCommission').value = total.toFixed(2);
+}
+
+// Auto calculate total whenever itemWise changes
+// Event listeners handled in setupEventListeners now
+document.getElementById('paidCommission').addEventListener('input', () => {
+    // Just a placeholder for now
+});
+
+function addRow() {
+    const empId = document.getElementById('employee').value;
+    if (!empId) return alert('Select Employee');
+
+    const saleBranch = document.getElementById('saleBranch').value;
+    const sale = parseFloat(document.getElementById('saleInput').value) || 0;
+    const per = parseFloat(document.getElementById('percentage').value) || 0;
+    const comm = parseFloat(document.getElementById('commission').value) || 0;
+    const itemWise = parseFloat(document.getElementById('itemWiseCommission').value) || 0;
+    const dailyTarget = parseFloat(document.getElementById('dailyTarget').value) || 0;
+    const monthlyTarget = parseFloat(document.getElementById('monthlyTarget').value) || 0;
+    const paidComm = parseFloat(document.getElementById('paidCommission').value) || 0;
+
+    const totalComm = parseFloat(document.getElementById('totalCommission').value) || 0;
+
+    const emp = state.employees.find(e => e._id === empId);
+    if (!emp) return alert('Employee data not found. Please refresh and try again.');
+
+    const rowData = {
+        id: empId,
+        name: emp.name,
+        saleBranch,
+        saleAmount: sale,
+        percentage: per,
+        commission: comm,
+        itemWiseCommission: itemWise,
+        dailyTarget,
+        monthlyTarget,
+        mts: 0, // Placeholder
+        tmTarget: 0, // Placeholder
+        totalCommission: totalComm,
+        paidCommission: paidComm,
+        balanceCommission: totalComm - paidComm
+    };
+
+    state.tableData.push(rowData);
+    renderTable();
+    clearInputs();
+}
+
+function clearInputs() {
+    document.getElementById('employee').value = '';
+    document.getElementById('saleBranch').value = '';
+    document.getElementById('saleInput').value = '';
+    document.getElementById('percentage').value = '';
+    document.getElementById('commission').value = '';
+    document.getElementById('itemWiseCommission').value = '';
+    document.getElementById('dailyTarget').value = '';
+    document.getElementById('monthlyTarget').value = '';
+    document.getElementById('totalCommission').value = '';
+    document.getElementById('paidCommission').value = '';
+}
+
+function removeRow(index) {
+    state.tableData.splice(index, 1);
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById('entryTableBody');
+    tbody.innerHTML = '';
+
+    let totalSale = 0, totalComm = 0, totalItemWise = 0, totalGrand = 0, totalPaid = 0, totalBal = 0;
+
+    state.tableData.forEach((row, index) => {
+        totalSale += row.saleAmount;
+        totalComm += row.commission;
+        totalItemWise += row.itemWiseCommission;
+        totalGrand += row.totalCommission;
+        totalPaid += row.paidCommission;
+        totalBal += row.balanceCommission;
+
+        tbody.innerHTML += `
+            <tr>
+                <td><i class="fas fa-times text-danger" style="cursor:pointer" onclick="removeRow(${index})"></i></td>
+                <td>${row.name || row.employeeName || 'N/A'}</td>
+                <td>${row.saleBranch || ''}</td>
+                <td>${row.saleAmount.toFixed(2)}</td>
+                <td>${row.percentage.toFixed(2)}</td>
+                <td>${row.commission.toFixed(2)}</td>
+                <td>${row.itemWiseCommission.toFixed(2)}</td>
+                <td>${row.dailyTarget.toFixed(2)}</td>
+                <td>${row.monthlyTarget.toFixed(2)}</td>
+                <td>${row.mts || 0}</td>
+                <td>${row.tmTarget || 0}</td>
+                <td>${row.totalCommission.toFixed(2)}</td>
+                <td>${row.paidCommission.toFixed(2)}</td>
+                <td>${row.balanceCommission.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById('footerSale').innerText = totalSale.toFixed(2);
+    document.getElementById('footerComm').innerText = totalComm.toFixed(2);
+    document.getElementById('footerItemWise').innerText = totalItemWise.toFixed(2);
+    document.getElementById('footerTotalComm').innerText = totalGrand.toFixed(2);
+    document.getElementById('footerPaidComm').innerText = totalPaid.toFixed(2);
+    document.getElementById('footerBalComm').innerText = totalBal.toFixed(2);
+
+    // Top headers update
+    document.getElementById('totalSale').value = totalSale.toFixed(0);
+    loadTargetDetails();
+
+    renderSummary();
+}
+
+function renderSummary() {
+    const summary = {}; // { name: { count, total } }
+    state.tableData.forEach(row => {
+        const name = row.name || row.employeeName || 'N/A';
+        if (!summary[name]) {
+            summary[name] = { count: 0, total: 0 };
+        }
+        summary[name].count++;
+        summary[name].total += row.totalCommission;
+    });
+
+    const tbody = document.getElementById('summaryTableBody');
+    tbody.innerHTML = Object.keys(summary).map(name => `
+        <tr>
+            <td>${name}</td>
+            <td>${summary[name].count}</td>
+            <td>${summary[name].total.toFixed(2)}</td>
+        </tr>
+    `).join('');
+}
+
+// --- Save/Load Logic ---
+
+async function saveData() {
+    const monthYear = document.getElementById('monthYear').value;
+    const branch = document.getElementById('mainBranch').value;
+    const department = document.getElementById('department').value;
+    const commBranch = document.getElementById('commissionBranch').value;
+
+    if (!monthYear || !branch || !commBranch) {
+        return alert('Please fill Month-Year, Main Branch, and Commission Branch');
+    }
+
+    if (state.tableData.length === 0) {
+        return alert('Add at least one row');
+    }
+
+    // Map internal state to model expected structure
+    const mappedData = state.tableData.map(r => ({
+        id: r.id,
+        name: r.name,
+        saleBranch: r.saleBranch,
+        saleAmount: r.saleAmount,
+        percentage: r.percentage,
+        commission: r.commission,
+        itemWiseCommission: r.itemWiseCommission,
+        dailyTarget: r.dailyTarget,
+        monthlyTarget: r.monthlyTarget,
+        paidCommission: r.paidCommission,
+        balanceCommission: r.balanceCommission,
+        mts: r.mts,
+        tmTarget: r.tmTarget,
+        totalData: r.totalCommission // Using totalData field for aggregate
+    }));
+
+    const payload = {
+        monthYear,
+        branch,
+        department,
+        commissionBranch: commBranch,
+        type: 'sale_commission',
+        data: mappedData
+    };
+
+    if (state.editingId) payload.id = state.editingId;
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch('/api/v1/employee-commissions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.success) {
+            alert('Saved Successfully');
+            // Refresh Data: Clear table and editing ID for new entry
+            state.tableData = [];
+            state.editingId = null;
+            clearInputs();
+            renderTable();
+        } else {
+            alert(result.message || 'Error saving data');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function showListModal() {
+    new bootstrap.Modal(document.getElementById('listModal')).show();
+    // Default search today/month
+    document.getElementById('listFromDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('listToDate').value = new Date().toISOString().slice(0, 10);
+    fetchList(); // Load automatically
+}
+
+async function fetchList() {
+    const token = localStorage.getItem('token');
+    const fromDate = document.getElementById('listFromDate').value;
+    const toDate = document.getElementById('listToDate').value;
+    const branchFilter = document.getElementById('listBranchFilter').value;
+
+    console.log('Fetching list with filters:', { fromDate, toDate, branchFilter });
+
+    try {
+        const res = await fetch('/api/v1/employee-commissions/list', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const json = await res.json();
+            let filtered = json.data.filter(c => c.type === 'sale_commission');
+
+            // Apply manual filters since we are fetching all for now
+            if (branchFilter) {
+                filtered = filtered.filter(c => c.branch === branchFilter);
+            }
+
+            // MonthYear filtering (approximate for list view)
+            if (fromDate && toDate) {
+                const startMonth = fromDate.slice(0, 7);
+                const endMonth = toDate.slice(0, 7);
+                filtered = filtered.filter(c => c.monthYear >= startMonth && c.monthYear <= endMonth);
+            }
+
+            console.log('Filtered commissions:', filtered.length);
+
+            const tbody = document.getElementById('listTableBody');
+            tbody.innerHTML = filtered.map(c => {
+                const sale = (c.data || []).reduce((acc, curr) => acc + (curr.saleAmount || 0), 0);
+                const itemWise = (c.data || []).reduce((acc, curr) => acc + (curr.itemWiseCommission || 0), 0);
+                const dt = (c.data || []).reduce((acc, curr) => acc + (curr.dailyTarget || 0), 0);
+                const mt = (c.data || []).reduce((acc, curr) => acc + (curr.monthlyTarget || 0), 0);
+                const tc = (c.data || []).reduce((acc, curr) => acc + (curr.totalData || 0), 0);
+                const pc = (c.data || []).reduce((acc, curr) => acc + (curr.paidCommission || 0), 0);
+
+                const cb = state.commissionBranches.find(b => b._id === c.commissionBranch);
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex gap-1 justify-content-center">
+                                <button class="btn btn-sm btn-success py-0" onclick="loadRecord('${c._id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-warning py-0" onclick="printRecord('${c._id}')" title="Print"><i class="fas fa-print"></i></button>
+                                <button class="btn btn-sm btn-danger py-0" onclick="deleteRecord('${c._id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                        <td class="small">${c._id.slice(-5)}</td>
+                        <td>${c.monthYear}</td>
+                        <td class="text-start ps-2">${cb ? cb.name : (c.commissionBranchName || 'N/A')}</td>
+                        <td>${sale.toFixed(0)}</td>
+                        <td>${itemWise.toFixed(0)}</td>
+                        <td>${dt.toFixed(0)}</td>
+                        <td>${mt.toFixed(0)}</td>
+                        <td>${tc.toFixed(0)}</td>
+                        <td>${pc.toFixed(0)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    } catch (error) {
+        console.error('Fetch List Error:', error);
+    }
+}
+
+async function loadRecord(id) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1/employee-commissions/detail/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const json = await res.json();
+        const rec = json.data;
+        state.editingId = rec._id;
+        document.getElementById('monthYear').value = rec.monthYear;
+        document.getElementById('mainBranch').value = rec.branch;
+        const dept = rec.department || '';
+        document.getElementById('department').value = dept;
+        populateEmployees(dept);
+        document.getElementById('commissionBranch').value = rec.commissionBranch;
+
+        state.tableData = rec.data.map(d => {
+            // Unify old and new formats
+            const finalId = d.id || d.employeeId;
+            let finalName = d.name || d.employeeName;
+
+            // If name is still missing or invalid, try to find it in loaded employees
+            if (!finalName || finalName === 'undefined' || finalName === 'null') {
+                const emp = state.employees.find(e => e._id.toString() === (finalId || '').toString());
+                finalName = emp ? emp.name : 'Unknown';
+            }
+
+            return {
+                id: finalId,
+                name: finalName,
+                saleBranch: d.saleBranch,
+                saleAmount: d.saleAmount,
+                percentage: d.percentage,
+                commission: d.commission,
+                itemWiseCommission: d.itemWiseCommission,
+                dailyTarget: d.dailyTarget,
+                monthlyTarget: d.monthlyTarget,
+                mts: d.mts,
+                tmTarget: d.tmTarget,
+                totalCommission: d.totalData || d.totalCommission,
+                paidCommission: d.paidCommission,
+                balanceCommission: d.balanceCommission
+            };
+        });
+
+        renderTable();
+        bootstrap.Modal.getInstance(document.getElementById('listModal')).hide();
+    }
+}
+
+async function deleteRecord(id) {
+    if (!confirm('Are you sure you want to delete this commission record?')) return;
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1/employee-commissions/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        fetchList();
+    }
+}
+
+async function ensureEmployeesLoaded() {
+    if (state.employees && state.employees.length > 0) return;
+    const token = localStorage.getItem('token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const resEmp = await fetch('/api/v1/employees?limit=1000', { headers });
+    if (resEmp.ok) {
+        const json = await resEmp.json();
+        state.employees = json.data;
+    }
+}
+
+// Misc
+async function refreshEmployees() {
+    await loadInitialData();
+}
+
+async function printCommission() {
+    await ensureEmployeesLoaded();
+    const data = {
+        branch: document.getElementById('mainBranch').value,
+        monthYear: document.getElementById('monthYear').value,
+        commissionBranch: document.getElementById('commissionBranch'),
+        data: state.tableData
+    };
+
+    const cbId = data.commissionBranch.value;
+    const cb = state.commissionBranches.find(b => b._id === cbId);
+    const cbName = data.commissionBranch.options[data.commissionBranch.selectedIndex]?.text || 'N/A';
+
+    generatePremiumReport({
+        branch: data.branch,
+        monthYear: data.monthYear,
+        commissionBranchName: cbName,
+        data: data.data,
+        branchTarget: cb ? cb.branchTarget : 0,
+        targetCommission: cb ? cb.targetCommission : 0
+    });
+}
+
+function populateEmployees(departmentName = '') {
+    const sel = document.getElementById('employee');
+    if (!sel) return;
+
+    const selectedBranch = document.getElementById('mainBranch').value;
+
+    sel.innerHTML = '<option value="">Select Employee</option>';
+
+    // Filter by BOTH branch and department
+    let filtered = state.employees;
+
+    if (selectedBranch) {
+        filtered = filtered.filter(e => {
+            const empBranch = typeof e.branch === 'object' ? e.branch.name : e.branch;
+            return empBranch === selectedBranch;
+        });
+    }
+
+    if (departmentName) {
+        filtered = filtered.filter(e => {
+            const empDept = typeof e.department === 'object' ? e.department.name : e.department;
+            return empDept === departmentName;
+        });
+    }
+
+    filtered.forEach(e => {
+        sel.innerHTML += `<option value="${e._id}">${e.name} (${e.code || 'N/A'})</option>`;
+    });
+}
+
+async function printRecord(id) {
+    await ensureEmployeesLoaded();
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1/employee-commissions/detail/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const json = await res.json();
+        const rec = json.data;
+
+        // Find commission branch name
+        const cb = state.commissionBranches.find(b => b._id === rec.commissionBranch);
+        const cbName = cb ? cb.name : (rec.commissionBranchName || 'N/A');
+
+        generatePremiumReport({
+            branch: rec.branch,
+            monthYear: rec.monthYear,
+            commissionBranchName: cbName,
+            data: rec.data,
+            branchTarget: cb ? cb.branchTarget : 0,
+            targetCommission: cb ? cb.targetCommission : 0
+        });
+    }
+}
+
+function generatePremiumReport(reportData) {
+    const { branch, monthYear, commissionBranchName, data, branchTarget = 0, targetCommission = 0 } = reportData;
+
+    // Group data by employee and calculate branch-wise sales
+    const groups = {};
+    const branchSales = {}; // { branchName: amount }
+
+    data.forEach(row => {
+        // Ultra-robust resolution for print
+        let empId = row.id || row.employeeId;
+        let empName = row.name || row.employeeName;
+
+        if (empName === 'undefined' || empName === 'null') empName = null;
+
+        if (!empName || empName.trim() === '') {
+            const empObj = state.employees.find(e => e._id.toString() === (empId || '').toString());
+            empName = empObj ? empObj.name : (empId ? `ID: ${empId}` : 'Unknown Employee');
+        }
+
+        if (!groups[empName]) groups[empName] = [];
+        groups[empName].push(row);
+
+        // Branch-wise sale calculation
+        const bName = (row.saleBranch || 'Unknown').trim();
+        branchSales[bName] = (branchSales[bName] || 0) + (row.saleAmount || 0);
+    });
+
+    let mainBranchSaleAmount = 0;
+    const otherBranchesList = [];
+
+    // Standardize for comparison (remove spaces, hyphens, brackets etc)
+    const std = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const mainStd = std(commissionBranchName);
+
+    for (const [bName, amount] of Object.entries(branchSales)) {
+        const currentStd = std(bName);
+        if (currentStd === mainStd || mainStd.includes(currentStd) || currentStd.includes(mainStd)) {
+            mainBranchSaleAmount += amount;
+        } else {
+            otherBranchesList.push({ name: bName, amount: amount });
+        }
+    }
+
+    let htmlContent = '';
+    let grandTotalSale = 0, grandTotalComm = 0, grandTotalItemWise = 0, grandTotalNet = 0;
+
+    let srNo = 1;
+    for (const [empName, rows] of Object.entries(groups)) {
+        let empSale = 0, empComm = 0, empItemWise = 0, empNet = 0;
+
+        const rowItems = rows.map((row, idx) => {
+            const s = row.saleAmount || 0;
+            const c = row.commission || 0;
+            const iw = row.itemWiseCommission || 0;
+            const net = row.totalData || row.totalCommission || (c + iw + (row.dailyTarget || 0) + (row.monthlyTarget || 0));
+
+            empSale += s;
+            empComm += c;
+            empItemWise += iw;
+            empNet += net;
+
+            return `
+                <tr>
+                    ${idx === 0 ? `<td rowspan="${rows.length + 1}">${srNo++}</td>` : ''}
+                    <td class="text-start ps-2">${row.saleBranch || ''}</td>
+                    <td>${iw > 0 ? iw.toFixed(0) : '0'}</td>
+                    <td>${(row.dailyTarget || 0).toFixed(0)}</td>
+                    <td>${(row.monthlyTarget || 0).toFixed(0)}</td>
+                    <td>0</td> 
+                    <td>${s.toFixed(0)}</td>
+                    <td>${(row.percentage || 0).toFixed(1)}</td>
+                    <td>${c.toFixed(0)}</td>
+                    <td>${net.toFixed(0)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        grandTotalSale += empSale;
+        grandTotalComm += empComm;
+        grandTotalItemWise += empItemWise;
+        grandTotalNet += empNet;
+
+        htmlContent += `
+            <tr class="emp-group-header">
+                <td colspan="10" class="text-center font-bold" style="padding: 3px; font-size: 11px;">${empName.toUpperCase()}</td>
+            </tr>
+            ${rowItems}
+            <tr class="emp-total-row" style="background: #fdfdfd;">
+                <td class="font-bold">Total</td>
+                <td class="font-bold">${empItemWise.toFixed(0)}</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="font-bold highlight-cell">${empSale.toFixed(0)}</td>
+                <td>-</td>
+                <td class="font-bold">${empComm.toFixed(0)}</td>
+                <td class="font-bold highlight-cell">${empNet.toFixed(0)}</td>
+            </tr>
+        `;
+    }
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>UG Commission Report</title>
+            <style>
+                @media print { 
+                    @page { margin: 8mm; } 
+                    .black-bg { -webkit-print-color-adjust: exact; background-color: #000 !important; color: #fff !important; }
+                    .grand-total-row { -webkit-print-color-adjust: exact; background-color: #000 !important; color: #fff !important; }
+                    .highlight-cell { -webkit-print-color-adjust: exact; background-color: #eee !important; }
+                }
+                body { font-family: 'Segoe UI', Arial, sans-serif; color: #000; margin: 0; padding: 5px; font-size: 10px; }
+                .report-wrapper { max-width: 900px; margin: auto; border: 1px solid #000; padding: 12px; }
+                
+                .top-header { border: 1px solid #000; text-align: center; padding: 6px; margin-bottom: 12px; }
+                .top-header h1 { margin: 0; font-size: 18px; text-transform: uppercase; font-weight: bold; }
+                .top-header h2 { margin: 2px 0; font-size: 12px; font-weight: bold; }
+                .top-header h3 { margin: 0; font-size: 10px; font-weight: normal; }
+                
+                table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                th, td { border: 1px solid #444; padding: 4px; text-align: center; }
+                th { background: #fff; font-size: 9px; font-weight: bold; height: 30px; }
+                
+                /* Specific black headers from ref image */
+                .black-bg { background-color: #000 !important; color: #fff !important; }
+                .highlight-cell { background-color: #eee !important; }
+                
+                .font-bold { font-weight: bold; }
+                .text-start { text-align: left; }
+                
+                .summary-container { margin-top: 20px; display: flex; justify-content: flex-start; gap: 20px; align-items: flex-start; }
+                .summary-box { border: 1px solid #000; min-width: 220px; }
+                .summary-box h4 { background: #000; color: #fff; border-bottom: 1px solid #000; margin: 0; padding: 5px; font-size: 10px; text-align: center; font-weight: bold; text-transform: uppercase; -webkit-print-color-adjust: exact; }
+                .summary-box table { margin-top: 0; border: none; width: 100%; border-collapse: collapse; }
+                .summary-box td { border: none; padding: 4px 8px; text-align: left; font-size: 10px; height: 25px; }
+                .summary-box .val { text-align: center; font-weight: bold; border-left: 1px solid #000; width: 80px; }
+                .grid-row td { border-bottom: 1px solid #000; }
+                .grid-row:last-child td { border-bottom: none; }
+                .summary-box tr.border-top td { border-top: 1px solid #000; }
+                
+                .footer-signs { margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px; }
+                .sign-line { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; font-weight: bold; font-size: 12px; }
+                
+                .grand-total-row { background: #000 !important; color: #fff !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+                .grand-total-row td { border-color: #444; }
+                
+                .emp-group-header td { background: #fff !important; color: #000 !important; font-size: 12px !important; }
+            </style>
+        </head>
+        <body>
+            <div class="report-wrapper">
+                <div class="top-header">
+                    <h1>UG COMMISSION</h1>
+                    <h2>${commissionBranchName}</h2>
+                    <h3>${monthYear}</h3>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">SR. NO.</th>
+                            <th style="width: 140px;">SALE BRANCH NAME</th>
+                            <th>ITEM WISE COMMISSION</th>
+                            <th>DAILY TARGET MONTHLY</th>
+                            <th>TARGET MONTHLY</th>
+                            <th>TARGET/SALE</th>
+                            <th class="black-bg">SALE</th>
+                            <th class="black-bg">SALE_PER</th>
+                            <th class="black-bg">COMMISSION</th>
+                            <th class="black-bg">TOTAL COMMISSION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${htmlContent}
+                        <tr class="grand-total-row">
+                            <td colspan="2">GRAND TOTAL</td>
+                            <td>${grandTotalItemWise.toFixed(0)}</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td style="background:#555 !important;">${grandTotalSale.toFixed(0)}</td>
+                            <td>-</td>
+                            <td>${grandTotalComm.toFixed(0)}</td>
+                            <td style="background:#555 !important;">${grandTotalNet.toFixed(0)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="summary-container">
+                    <div class="summary-box">
+                        <h4>SALE SUMMARY</h4>
+                        <table>
+                            <tr class="grid-row"><td>${commissionBranchName.toUpperCase()} SALE</td><td class="val">${mainBranchSaleAmount.toFixed(0)}</td></tr>
+                        </table>
+                    </div>
+                    <div class="summary-box">
+                        <h4>OTHER BRANCHES SALE</h4>
+                        <table>
+                            ${otherBranchesList.length > 0
+            ? otherBranchesList.map(b => `<tr class="grid-row"><td>${b.name}</td><td class="val">${b.amount.toFixed(0)}</td></tr>`).join('')
+            : '<tr class="grid-row"><td>&nbsp;</td><td class="val">&nbsp;</td></tr>'
+        }
+                        </table>
+                    </div>
+                     <div class="summary-box">
+                        <h4>BRANCH TARGET DETAIL</h4>
+                        <table>
+                            <tr class="grid-row"><td>BRANCH TARGET AMOUNT</td><td class="val">${branchTarget}</td></tr>
+                            <tr class="grid-row border-top"><td>TARGET ACHIEVE AMOUNT</td><td class="val">${targetCommission}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="footer-signs">
+                    <div class="sign-line">Prepared By</div>
+                    <div class="sign-line">Authorized By</div>
+                </div>
+            </div>
+            <script>
+                window.onload = () => { 
+                    setTimeout(() => {
+                        window.print(); 
+                        window.close(); 
+                    }, 600);
+                }
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}

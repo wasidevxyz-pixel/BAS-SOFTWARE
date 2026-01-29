@@ -50,7 +50,6 @@ exports.getCommissionsList = async (req, res) => {
     try {
         // Fetch all, select fields except 'data' for performance
         const commissions = await EmployeeCommission.find()
-            .select('-data')
             .sort({ monthYear: -1, createdAt: -1 });
 
         res.status(200).json({

@@ -219,6 +219,7 @@ class SidebarNavigation {
                     { label: 'Holy Days', link: '/holy-days.html', permission: 'holy_days' },
                     { label: 'Employee Penalty', link: '/employee-penalty.html', permission: 'employee_penalty' },
                     { label: 'Emp. Commission', link: '/employee-commission.html', permission: 'emp_commission' },
+                    { label: 'UG Emp. Commission', link: '/employee-sale-commission.html', permission: 'ug_emp_commission' },
                     { label: 'Emp. Clearance', link: '/employee-clearance.html', permission: 'emp_clearance' },
                     { label: 'Emp. Adjustment', link: '/employee-adjustment.html', permission: 'emp_adjustment' }
                 ]

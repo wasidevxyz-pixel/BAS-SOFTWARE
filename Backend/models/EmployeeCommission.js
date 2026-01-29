@@ -19,8 +19,12 @@ const EmployeeCommissionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['dep_item_wise', 'employee_wise', 'distribute', 'rotti_nashta', 'rotti_perks'],
+        enum: ['dep_item_wise', 'employee_wise', 'distribute', 'rotti_nashta', 'rotti_perks', 'sale_commission'],
         required: true
+    },
+    commissionBranch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CommissionBranch'
     },
     // Category Wise Saving for Item Wise Commission
     whCategory: {
@@ -65,10 +69,17 @@ const EmployeeCommissionSchema = new mongoose.Schema({
         rottiRate: Number,
         rottiTotal: Number,
 
-        // Rotti Perks
-        basicSalary: Number,
-        workedDays: Number,
-        rottiTimes: Number,
+        // Sale Commission (UG)
+        saleBranch: String,
+        saleAmount: Number,
+        percentage: Number,
+        itemWiseCommission: Number,
+        dailyTarget: Number,
+        monthlyTarget: Number,
+        paidCommission: Number,
+        balanceCommission: Number,
+        mts: Number,
+        tmTarget: Number,
 
         // General Total
         totalData: Number // To avoid naming conflict with total count
