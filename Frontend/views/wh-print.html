@@ -390,6 +390,7 @@
                     <th>Item Description</th>
                     <th style="width: 50px;">Qty</th>
                     <th style="width: 60px;">Price</th>
+                    <th style="width: 60px;" id="thRetail">Retail</th>
                     <th style="width: 60px;" id="thIncentive">Incentive</th>
                     <th style="width: 50px;">Disc %</th>
                     <th style="width: 60px;">Disc Rs</th>
@@ -592,9 +593,10 @@
                 if (type === 'stock-audit') {
                     renderAuditItems(doc.items, tbody);
                 } else {
-                    // Hide incentive column if not Sale
+                    // Hide incentive and retail columns if not Sale
                     if (!type.includes('sale')) {
                         document.getElementById('thIncentive').style.display = 'none';
+                        document.getElementById('thRetail').style.display = 'none';
                     }
                     renderStandardItems(doc.items, tbody, type);
                 }
@@ -634,6 +636,7 @@
                     classTotal += total;
 
                     const price = line.pcsPrice || line.costPrice || line.salePrice || line.price || 0;
+                    const retail = line.retailPrice || (item.retailPrice) || 0;
                     const incentive = line.incentive || 0;
                     const discPercent = line.discountPercent || line.disP || 0;
                     const discRs = line.discountAmount || line.disRs || 0;
@@ -649,14 +652,17 @@
                         <td class="text-end">${Math.round(price)}</td>`;
 
                     if (docType.includes('sale')) {
-                        html += `<td class="text-center">${Math.round(incentive)}</td>`;
+                        html += `
+                        <td class="text-end">${Math.round(retail)}</td>
+                        <td class="text-center">${Math.round(incentive)}</td>
+                    `;
                     }
 
                     html += `
-                        <td class="text-center">${discPercent}%</td>
-                        <td class="text-end">${Math.round(discRs)}</td>
-                        <td class="text-end">${Math.round(total)}</td>
-                    `;
+                    <td class="text-center">${discPercent}%</td>
+                    <td class="text-end">${Math.round(discRs)}</td>
+                    <td class="text-end">${Math.round(total)}</td>
+                `;
                     tr.innerHTML = html;
                     tbody.appendChild(tr);
                 });
@@ -664,7 +670,8 @@
                 // Subtotal row for class
                 const subRow = document.createElement('tr');
                 subRow.className = 'subtotal-row';
-                const colSpan = docType.includes('sale') ? 8 : 7;
+                // Increased colspan by 1 for Retail Price in sales
+                const colSpan = docType.includes('sale') ? 9 : 7;
                 subRow.innerHTML = `
                     <td colspan="${colSpan}" class="text-end">Sub Total (${className}):</td>
                     <td class="text-end fw-bold">${Math.round(classTotal)}</td>
