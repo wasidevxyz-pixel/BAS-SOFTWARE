@@ -163,99 +163,146 @@
             font-weight: bold;
         }
 
-        /* Mobile Responsive Styles */
+        /* Professional Mobile Enhancements */
         @media (max-width: 768px) {
             .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: #0288d1 !important;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            #myTab.nav-tabs {
+                border-bottom: 2px solid #0288d1 !important;
+                padding: 5px !important;
+                background-color: #fff !important;
+                overflow-x: auto !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #myTab .nav-link {
+                padding: 6px 12px !important;
+                font-size: 0.8rem !important;
+                border-radius: 8px 8px 0 0 !important;
+                margin-right: 5px !important;
+            }
+
+            .tab-content {
+                height: auto !important;
+                border: none !important;
+                padding: 15px 0 !important;
+            }
+
+            .card.mb-3.p-3 {
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                margin-bottom: 15px !important;
+            }
+
+            .form-label,
+            label.fw-bold {
+                font-size: 0.75rem !important;
+                color: #64748b !important;
+            }
+
+            .form-control,
+            .form-select {
+                height: 38px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            .table-responsive {
+                border-radius: 12px !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                background: white;
+                margin-bottom: 15px;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
                 flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px;
-                padding: 10px;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
             }
 
-            .header-left,
-            .header-center,
-            .header-right {
-                flex: none !important;
-                width: 100%;
-                text-align: center !important;
-                justify-content: center !important;
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
             }
 
-            /* Adjust top controls card */
-            .card .row.align-items-center {
-                flex-direction: column;
-                align-items: stretch !important;
+            .action-btn-mobile.active {
+                color: #0288d1;
             }
 
-            .card .row .col-md-3,
-            .card .row .col-md-2 {
-                width: 100%;
-                margin-bottom: 10px;
+            .btn-search-mobile i {
+                color: #3b82f6;
             }
 
-            .card .row .col-md-3>label {
-                display: block;
-                margin-bottom: 5px;
+            .btn-save-mobile i {
+                color: #10b981;
             }
 
-            .card .row .col-md-3>select,
-            .card .row .col-md-3>input {
-                width: 100% !important;
+            .btn-print-mobile i {
+                color: #8b5cf6;
+            }
+
+            .d-flex.justify-content-between.mb-2,
+            .d-flex.justify-content-between.align-items-center.mb-3 {
+                display: none !important;
+                /* Hide desktop action buttons */
+            }
+
+            .tab-pane .row {
                 display: block !important;
             }
 
-            .card button {
-                width: 100%;
-                margin-bottom: 5px;
-                margin-left: 0 !important;
+            .col-md-6,
+            .col-md-4,
+            .col-md-8,
+            .col-sm-4,
+            .col-sm-8,
+            .col-sm-3,
+            .col-sm-9,
+            .col-sm-6 {
+                width: 100% !important;
+                padding: 0 5px !important;
+                margin-bottom: 10px;
             }
 
-            /* Stack columns in Closing 01/02 tabs */
-            .tab-pane .row {
-                flex-direction: column;
-            }
-
-            .tab-pane .col-md-6,
-            .tab-pane .col-md-4,
-            .tab-pane .col-md-8 {
-                width: 100%;
-                margin-bottom: 20px;
-            }
-
-            /* Adjust forms inside tabs */
-            .row.mb-2.align-items-center {
-                flex-direction: column;
-                align-items: stretch !important;
-            }
-
-            .row.mb-2.align-items-center label {
-                width: 100%;
-                margin-bottom: 5px;
-                text-align: left;
-            }
-
-            .row.mb-2.align-items-center .col-sm-8 {
-                width: 100%;
-                padding-left: 15px;
-                /* restore padding */
-            }
-
-            /* Ensure tables scroll */
-            .table-responsive,
-            #reportOutput {
-                overflow-x: auto;
-            }
-
-            /* Navigation Tabs scrolling is already handled by flex styles in original CSS, 
-               but ensures container doesn't overflow */
-            .nav-tabs {
-                max-width: 100vw;
-            }
-
-            /* Dialog/Modal fixes if any custom ones used */
-            .modal-content {
-                width: 95%;
-                margin: 10px auto;
+            .row.mb-2.align-items-center,
+            .row.mb-2 {
+                display: block !important;
+                margin-bottom: 12px !important;
             }
         }
 
@@ -1215,6 +1262,54 @@
             </div>
         </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-search-mobile" onclick="loadSheet()">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-save-mobile" id="mobileSaveBtn" onclick="saveSheet()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-print-mobile" onclick="handleMobilePrint()">
+            <i class="fas fa-print"></i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    <script>
+        function handleMobilePrint() {
+            const activeTab = document.querySelector('#myTab .nav-link.active');
+            const targetId = activeTab.getAttribute('data-bs-target').replace('#', '');
+
+            if (targetId === 'dept-opening') printSheet('opening');
+            else if (targetId === 'closing01') printSheet('closing01');
+            else if (targetId === 'closing02') printSheet('closing02');
+            else if (targetId === 'income-statement') {
+                // Determine which report to print based on visibility
+                if (document.getElementById('incomeStatementView').style.display !== 'none') printDiv('incomeStatementView');
+                else if (document.getElementById('grossProfitView').style.display !== 'none') printDiv('grossProfitView');
+                else if (document.getElementById('expenditureView').style.display !== 'none') printDiv('expenditureView');
+                else if (document.getElementById('otherExpView').style.display !== 'none') printDiv('otherExpView');
+            }
+            else if (targetId === 'reporting') printReport();
+        }
+
+        // Helper for printing divs
+        function printDiv(divId) {
+            const content = document.getElementById(divId).innerHTML;
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Print Report</title>');
+            printWindow.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">');
+            printWindow.document.write('</head><body><div class="p-3">');
+            printWindow.document.write(content);
+            printWindow.document.write('</div></body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>

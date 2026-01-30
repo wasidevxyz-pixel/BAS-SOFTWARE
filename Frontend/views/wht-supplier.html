@@ -92,28 +92,125 @@
             flex: 1;
         }
 
-        /* Responsive Improvements */
+        /* Professional Mobile Enhancements */
         @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: var(--bs-blue, #2c5ba9) !important;
+                color: white !important;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .form-container,
+            .list-container {
+                width: 100% !important;
+                margin-bottom: 15px !important;
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                padding: 15px !important;
+            }
+
+            .form-row {
+                display: block !important;
+            }
+
             .form-col {
-                min-width: 100%;
-                /* Stack columns on smaller screens */
+                width: 100% !important;
+                min-width: 100% !important;
+            }
+
+            .form-group {
+                display: block !important;
+                margin-bottom: 12px !important;
             }
 
             .form-group label {
-                width: 110px;
-                /* Further reduce label on tablet/mobile */
-            }
-        }
-
-        @media (max-width: 576px) {
-            .form-group {
-                /* On very small screens, maybe keep side-by-side or stack? 
-                   Side-by-side matches the desktop density. 
-                   Let's keep it but ensure label doesn't take too much room */
+                width: 100% !important;
+                font-size: 0.75rem !important;
+                color: #64748b !important;
+                margin-bottom: 4px !important;
             }
 
-            .page-header h4 {
-                font-size: 1.2rem;
+            .form-group .form-control,
+            .form-group .form-select {
+                height: 38px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            .action-btns {
+                display: none !important;
+                /* Hide desktop action buttons */
+            }
+
+            .search-box {
+                width: 100% !important;
+                margin-top: 10px !important;
+            }
+
+            .table-responsive {
+                height: calc(100vh - 250px) !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: #2c5ba9;
+            }
+
+            .btn-save-mobile i {
+                color: #10b981;
+            }
+
+            .btn-toggle-mobile i {
+                color: #3b82f6;
+            }
+
+            .btn-clear-mobile i {
+                color: #f59e0b;
+            }
+
+            #listPanelWrapper {
+                display: none !important;
+                /* Hide list by default on mobile */
             }
         }
 
@@ -244,7 +341,7 @@
 
         <div class="container-fluid mt-1">
             <!-- Form Area -->
-            <div class="form-container shadow-sm">
+            <div class="form-container shadow-sm" id="formPanelWrapper">
                 <form id="supplierForm">
                     <input type="hidden" id="supplierId">
                     <div class="form-row">
@@ -351,7 +448,7 @@
             </div>
 
             <!-- List Area -->
-            <div class="list-container shadow-sm">
+            <div class="list-container shadow-sm" id="listPanelWrapper">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="m-0 fw-bold">Supplier List</h6>
                     <div class="search-box">
@@ -439,6 +536,45 @@
             </div>
         </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-toggle-mobile" id="mobileToggleBtn"
+            onclick="toggleMobileWhtView()">
+            <i class="fas fa-list"></i>
+            <span id="toggleText">View List</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-save-mobile"
+            onclick="document.getElementById('supplierForm').dispatchEvent(new Event('submit'))">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear-mobile" onclick="clearForm()">
+            <i class="fas fa-redo"></i>
+            <span>Clear</span>
+        </button>
+    </div>
+
+    <script>
+        function toggleMobileWhtView() {
+            const formPanel = document.getElementById('formPanelWrapper');
+            const listPanel = document.getElementById('listPanelWrapper');
+            const toggleText = document.getElementById('toggleText');
+            const toggleIcon = document.querySelector('#mobileToggleBtn i');
+
+            if (formPanel.style.display !== 'none') {
+                formPanel.style.setProperty('display', 'none', 'important');
+                listPanel.style.setProperty('display', 'block', 'important');
+                toggleText.innerText = 'View Form';
+                toggleIcon.className = 'fas fa-edit';
+            } else {
+                formPanel.style.setProperty('display', 'block', 'important');
+                listPanel.style.setProperty('display', 'none', 'important');
+                toggleText.innerText = 'View List';
+                toggleIcon.className = 'fas fa-list';
+            }
+        }
+    </script>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

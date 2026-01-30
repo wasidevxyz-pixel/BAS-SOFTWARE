@@ -143,6 +143,207 @@
             background-color: white;
         }
 
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: var(--primary-blue) !important;
+            }
+
+            .main-content {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .nav-tabs-custom {
+                border-bottom: 2px solid var(--primary-blue) !important;
+                padding: 5px !important;
+                background-color: #fff !important;
+                overflow-x: auto !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .nav-tabs-custom .nav-link {
+                padding: 10px 15px !important;
+                font-size: 0.8rem !important;
+                border-radius: 8px 8px 0 0 !important;
+            }
+
+            .card-custom {
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+            }
+
+            .card-body {
+                padding: 15px !important;
+            }
+
+            .form-label {
+                font-size: 0.75rem !important;
+                color: #64748b !important;
+            }
+
+            .form-control,
+            .form-select {
+                height: 38px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: var(--primary-blue);
+            }
+
+            .btn-save-mobile i {
+                color: #10b981;
+            }
+
+            .btn-list-mobile i {
+                color: #3b82f6;
+            }
+
+            .btn-clear-mobile i {
+                color: #f59e0b;
+            }
+
+            .col-12.text-end.mt-4 {
+                display: none !important;
+                /* Hide desktop buttons */
+            }
+        }
+
+        /* Improved Tabs Styling */
+        .nav-tabs-custom {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: flex-start !important;
+            /* Force 1 row */
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 25px;
+            gap: 0px !important;
+            background: #ffffff;
+            padding: 8px 15px 0 15px;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden !important;
+        }
+
+        .nav-tabs-custom .nav-item {
+            margin-bottom: -2px;
+            margin-right: 0 !important;
+            flex: 0 0 auto !important;
+        }
+
+        .nav-tabs-custom .nav-link {
+            border: 2px solid transparent !important;
+            color: #475569 !important;
+            /* Darker grey for visibility */
+            font-weight: 700 !important;
+            padding: 12px 25px !important;
+            border-radius: 8px 8px 0 0 !important;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: transparent;
+        }
+
+        .nav-tabs-custom .nav-link i {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        .nav-tabs-custom .nav-link:hover {
+            color: var(--primary-blue) !important;
+            background-color: #f8fafc !important;
+            border-bottom-color: #cbd5e1 !important;
+        }
+
+        .nav-tabs-custom .nav-link.active {
+            color: white !important;
+            background-color: var(--primary-blue) !important;
+            border: 2px solid var(--primary-blue) !important;
+            border-bottom-color: var(--primary-blue) !important;
+            box-shadow: 0 -4px 10px rgba(58, 134, 255, 0.2);
+        }
+
+        .nav-tabs-custom .nav-link.active i {
+            color: white;
+        }
+
+        /* Category Tab Active Color */
+        #category-tab.active {
+            background-color: var(--success-green) !important;
+            border-color: var(--success-green) !important;
+        }
+
+        #category-tab.active i {
+            color: white;
+        }
+
+        /* Card Styling */
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .card-header-blue {
+            background-color: var(--card-header-bg);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 25px;
+            background-color: white;
+        }
+
         /* Form Controls */
         .form-label {
             font-size: 0.85rem;
@@ -436,6 +637,51 @@
 
     <!-- Hidden Print Container -->
     <div id="printArea" style="display: none;"></div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-save-mobile" onclick="handleMobileSave()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-list-mobile" onclick="handleMobileList()">
+            <i class="fas fa-list"></i>
+            <span>List</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear-mobile" onclick="handleMobileReset()">
+            <i class="fas fa-redo"></i>
+            <span>Reset</span>
+        </button>
+    </div>
+
+    <script>
+        function handleMobileSave() {
+            const activeTab = document.querySelector('#paymentTabs .nav-link.active').getAttribute('data-bs-target');
+            if (activeTab === '#supplier-content') {
+                document.querySelector('#supplierVoucherForm').requestSubmit();
+            } else {
+                document.querySelector('#categoryVoucherForm').requestSubmit();
+            }
+        }
+
+        function handleMobileList() {
+            const activeTab = document.querySelector('#paymentTabs .nav-link.active').getAttribute('data-bs-target');
+            if (activeTab === '#supplier-content') {
+                window.location.href = '/payment-vouchers-list.html?tab=supplier';
+            } else {
+                window.location.href = '/payment-vouchers-list.html?tab=category';
+            }
+        }
+
+        function handleMobileReset() {
+            const activeTab = document.querySelector('#paymentTabs .nav-link.active').getAttribute('data-bs-target');
+            if (activeTab === '#supplier-content') {
+                resetForm('supplierVoucherForm');
+            } else {
+                resetForm('categoryVoucherForm');
+            }
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>

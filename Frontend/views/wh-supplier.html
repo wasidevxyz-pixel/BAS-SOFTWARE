@@ -35,6 +35,139 @@
         .text-center {
             text-align: center !important;
         }
+
+        .table th {
+            background-color: #0d6efd !important;
+            color: white !important;
+            border: 1px solid #dee2e6 !important;
+            text-align: center !important;
+            font-size: 0.85rem;
+            padding: 10px !important;
+            vertical-align: middle;
+        }
+
+        .table td {
+            border: 1px solid #dee2e6 !important;
+            font-size: 0.85rem;
+            padding: 8px !important;
+            vertical-align: middle;
+        }
+
+        .text-end {
+            text-align: right !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: #0d6efd !important;
+            }
+
+            .page-header #userName,
+            .page-header .fa-chevron-down {
+                display: none;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .card {
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                margin-bottom: 15px !important;
+            }
+
+            /* Hide some columns on mobile to keep it clean */
+            .table th:nth-child(3),
+            .table td:nth-child(3),
+            .table th:nth-child(6),
+            .table td:nth-child(6),
+            .table th:nth-child(7),
+            .table td:nth-child(7),
+            .table th:nth-child(8),
+            .table td:nth-child(8) {
+                display: none !important;
+            }
+
+            .table-sm th,
+            .table-sm td {
+                font-size: 0.75rem !important;
+                padding: 8px 4px !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: #0d6efd;
+            }
+
+            .action-btn-mobile.btn-add i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-print i {
+                color: #3b82f6;
+            }
+
+            .action-btn-mobile.btn-import i {
+                color: #f59e0b;
+            }
+
+            .action-btn-mobile.btn-refresh i {
+                color: #6366f1;
+            }
+
+            /* Hide desktop filter buttons */
+            .col-md-3,
+            .col-md-6.text-end {
+                display: none !important;
+            }
+
+            .card.shadow-sm.mb-3 {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -271,6 +404,27 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-refresh" onclick="loadSuppliers()">
+            <i class="fas fa-sync-alt"></i>
+            <span>Refresh</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-add" onclick="showAddModal()">
+            <i class="fas fa-plus-circle"></i>
+            <span>Add New</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-print" onclick="printTable()">
+            <i class="fas fa-print"></i>
+            <span>Print</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-import"
+            onclick="document.getElementById('excelFileInput').click()">
+            <i class="fas fa-file-import"></i>
+            <span>Import</span>
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

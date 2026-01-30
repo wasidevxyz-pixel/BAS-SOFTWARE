@@ -31,6 +31,115 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: var(--bs-blue, #2c5ba9) !important;
+                color: white !important;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .grid-container {
+                display: block !important;
+                height: auto !important;
+            }
+
+            .form-panel,
+            .list-panel {
+                width: 100% !important;
+                margin-bottom: 15px !important;
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+            }
+
+            .form-panel {
+                padding: 15px !important;
+            }
+
+            .form-label {
+                font-size: 0.75rem !important;
+                color: #64748b !important;
+            }
+
+            .form-control,
+            .form-select {
+                height: 38px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            .table-responsive {
+                height: calc(100vh - 250px) !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: #2c5ba9;
+            }
+
+            .btn-save-mobile i {
+                color: #10b981;
+            }
+
+            .btn-toggle-mobile i {
+                color: #3b82f6;
+            }
+
+            .btn-clear-mobile i {
+                color: #f59e0b;
+            }
+
+            .form-panel .row:last-child {
+                display: none !important;
+                /* Hide desktop buttons */
+            }
+
+            #listPanelWrapper {
+                display: none !important;
+                /* Hide list by default on mobile */
+            }
+        }
     </style>
 </head>
 
@@ -58,7 +167,7 @@
     <div class="container-fluid p-3">
         <div class="grid-container">
             <!-- Left Form -->
-            <div class="form-panel">
+            <div class="form-panel" id="formPanelWrapper">
                 <div class="d-flex align-items-center mb-4 border-bottom pb-2">
                     <h5 class="m-0 text-primary"><i class="fas fa-info-circle me-2"></i>Store Information</h5>
                 </div>
@@ -159,7 +268,7 @@
             </div>
 
             <!-- Right List -->
-            <div class="list-panel">
+            <div class="list-panel" id="listPanelWrapper">
                 <div class="p-2 border-bottom d-flex justify-content-between">
                     <h5 class="m-0">Store List</h5>
                     <input type="text" id="searchInput" class="form-control form-control-sm w-auto"
@@ -183,6 +292,44 @@
             </div>
         </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-toggle-mobile" id="mobileToggleBtn"
+            onclick="toggleMobileStoreView()">
+            <i class="fas fa-list"></i>
+            <span id="toggleText">View List</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-save-mobile" onclick="saveStore()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear-mobile" onclick="clearForm()">
+            <i class="fas fa-redo"></i>
+            <span>Clear</span>
+        </button>
+    </div>
+
+    <script>
+        function toggleMobileStoreView() {
+            const formPanel = document.getElementById('formPanelWrapper');
+            const listPanel = document.getElementById('listPanelWrapper');
+            const toggleText = document.getElementById('toggleText');
+            const toggleIcon = document.querySelector('#mobileToggleBtn i');
+
+            if (formPanel.style.display !== 'none') {
+                formPanel.style.setProperty('display', 'none', 'important');
+                listPanel.style.setProperty('display', 'block', 'important');
+                toggleText.innerText = 'View Form';
+                toggleIcon.className = 'fas fa-info-circle';
+            } else {
+                formPanel.style.setProperty('display', 'block', 'important');
+                listPanel.style.setProperty('display', 'none', 'important');
+                toggleText.innerText = 'View List';
+                toggleIcon.className = 'fas fa-list';
+            }
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>

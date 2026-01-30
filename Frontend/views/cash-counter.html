@@ -63,6 +63,155 @@
             padding: 15px;
             border-radius: 4px;
         }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+
+        .header-right {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .form-control-sm,
+        .form-select-sm {
+            font-size: 0.85rem;
+            padding: 4px 6px;
+        }
+
+        .blue-header {
+            background: #0069d9;
+            color: white;
+            padding: 5px 10px;
+            font-weight: bold;
+        }
+
+        .gray-bg {
+            background: #e9ecef;
+        }
+
+        .main-card {
+            border: 1px solid #ddd;
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: #0d6efd !important;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .main-card {
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                margin-bottom: 12px !important;
+            }
+
+            .form-label {
+                font-size: 0.75rem !important;
+                color: #64748b !important;
+            }
+
+            .form-control,
+            .form-select {
+                height: 38px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            .table-responsive {
+                height: calc(100vh - 450px) !important;
+                border-radius: 12px !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                background: white;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: #0d6efd;
+            }
+
+            .action-btn-mobile.btn-save i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-clear i {
+                color: #f59e0b;
+            }
+
+            .action-btn-mobile.btn-list i {
+                color: #3b82f6;
+            }
+
+            .d-flex.gap-2 {
+                display: none !important;
+                /* Hide desktop save/clear buttons */
+            }
+        }
     </style>
 </head>
 
@@ -256,6 +405,26 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-save" onclick="saveSale()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-print" onclick="printSale()">
+            <i class="fas fa-print"></i>
+            <span>Print</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-list" onclick="showList()">
+            <i class="fas fa-list"></i>
+            <span>List</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear" onclick="clearForm()">
+            <i class="fas fa-redo"></i>
+            <span>Clear</span>
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

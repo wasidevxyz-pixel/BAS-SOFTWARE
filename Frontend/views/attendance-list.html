@@ -549,6 +549,90 @@
             }
         }
 
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 0.75rem !important;
+                background: #000 !important;
+            }
+
+            .page-header #userName,
+            .page-header .fa-chevron-down {
+                display: none;
+            }
+
+            .header-controls {
+                display: none !important;
+                /* Hide the bulky filter bar on mobile */
+            }
+
+            .container-fluid {
+                padding-bottom: 75px !important;
+            }
+
+            #globalSearch {
+                padding: 10px 15px !important;
+                font-size: 0.9rem !important;
+                border-bottom: 2px solid #dee2e6 !important;
+            }
+
+            .table-container {
+                height: calc(100vh - 160px) !important;
+                overflow: auto;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile.btn-search i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-print i {
+                color: #3b82f6;
+            }
+
+            .action-btn-mobile.btn-import i {
+                color: #ef4444;
+            }
+
+            .action-btn-mobile.btn-filter i {
+                color: #f59e0b;
+            }
+        }
+
         /* Screen Styles - Hide Print Grid */
         .print-grid {
             display: none;
@@ -673,6 +757,111 @@
             </table>
         </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-filter" data-bs-toggle="modal"
+            data-bs-target="#mobileFilterModal">
+            <i class="fas fa-filter"></i>
+            <span>Filters</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-search" onclick="loadAttendanceList()">
+            <i class="fas fa-search"></i>
+            <span>Refresh</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-print" onclick="handlePrint()">
+            <i class="fas fa-print"></i>
+            <span>Print</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-import" onclick="location.reload()">
+            <i class="fas fa-file-import"></i>
+            <span>Import</span>
+        </button>
+    </div>
+
+    <!-- Mobile Filter Modal -->
+    <div class="modal fade" id="mobileFilterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Attendance Filters</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">From Date</label>
+                            <input type="date" id="mFromDate" class="form-control"
+                                onchange="document.getElementById('fromDate').value = this.value">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">To Date</label>
+                            <input type="date" id="mToDate" class="form-control"
+                                onchange="document.getElementById('toDate').value = this.value">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Branch</label>
+                            <select id="mFilterBranch" class="form-select"
+                                onchange="document.getElementById('filterBranch').value = this.value; document.getElementById('filterBranch').dispatchEvent(new Event('change'))">
+                                <option value="">Select Branch</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Department</label>
+                            <select id="mFilterDept" class="form-select"
+                                onchange="document.getElementById('filterDept').value = this.value">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Status</label>
+                            <select id="mFilterStatus" class="form-select"
+                                onchange="document.getElementById('filterStatus').value = this.value">
+                                <option value="">All Attendance</option>
+                                <option value="less_1hr">Less then 1 Hrs</option>
+                                <option value="greater_17hr">Greater then 17 Hrs</option>
+                                <option value="no_checkinout">No Check In-Out</option>
+                                <option value="checkin_no_out">CheckIn but No Out</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary w-100"
+                        onclick="loadAttendanceList(); bootstrap.Modal.getInstance(document.getElementById('mobileFilterModal')).hide();">Apply
+                        Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sync mobile modal selects with main selects when modal opens
+        document.getElementById('mobileFilterModal').addEventListener('shown.bs.modal', function () {
+            document.getElementById('mFromDate').value = document.getElementById('fromDate').value;
+            document.getElementById('mToDate').value = document.getElementById('toDate').value;
+
+            // Populate branch/dept/desig if not already done
+            const branchSelect = document.getElementById('filterBranch');
+            const mBranchSelect = document.getElementById('mFilterBranch');
+            if (mBranchSelect.options.length <= 1) {
+                Array.from(branchSelect.options).forEach(opt => {
+                    if (opt.value) mBranchSelect.add(new Option(opt.text, opt.value));
+                });
+            }
+            mBranchSelect.value = branchSelect.value;
+
+            const deptSelect = document.getElementById('filterDept');
+            const mDeptSelect = document.getElementById('mFilterDept');
+            if (mDeptSelect.options.length <= 1) {
+                Array.from(deptSelect.options).forEach(opt => {
+                    if (opt.value) mDeptSelect.add(new Option(opt.text, opt.value));
+                });
+            }
+            mDeptSelect.value = deptSelect.value;
+        });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>

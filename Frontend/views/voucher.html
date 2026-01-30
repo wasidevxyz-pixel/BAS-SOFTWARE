@@ -66,6 +66,170 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: #0d6efd !important;
+            }
+
+            .container-fluid {
+                padding: 10px !important;
+                padding-bottom: 80px !important;
+            }
+
+            .card {
+                border-radius: 12px !important;
+                border: none !important;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                margin-bottom: 12px !important;
+            }
+
+            .card-header {
+                font-size: 0.9rem !important;
+                border-top-left-radius: 12px !important;
+                border-top-right-radius: 12px !important;
+            }
+
+            .row.g-2.mb-2.align-items-center>div {
+                margin-bottom: 8px;
+            }
+
+            .d-flex.align-items.center.gap-2 label {
+                width: 70px !important;
+                font-size: 0.75rem !important;
+            }
+
+            .form-control,
+            .form-select {
+                height: 36px !important;
+                font-size: 0.85rem !important;
+                border-radius: 8px !important;
+            }
+
+            .bg-light.p-3.border.rounded.mb-3 {
+                padding: 10px !important;
+                border-radius: 10px !important;
+            }
+
+            .table-responsive {
+                max-height: 350px !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile:active {
+                color: #0d6efd;
+            }
+
+            .action-btn-mobile.btn-save i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-clear i {
+                color: #f59e0b;
+            }
+
+            .action-btn-mobile.btn-list i {
+                color: #3b82f6;
+            }
+
+            .d-flex.gap-2.mt-4 {
+                display: none !important;
+                /* Hide desktop buttons */
+            }
+        }
+
+        .voucher-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px);
+        }
+
+        .header-form {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .grid-section {
+            flex: 1;
+            background: #fff;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .entry-row {
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .totals-bar {
+            background: #e9ecef;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+        }
+
+        .total-box {
+            padding: 5px 15px;
+            border-radius: 4px;
+            min-width: 150px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .total-box.debit {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .total-box.credit {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 
@@ -304,6 +468,22 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-save" onclick="saveVoucher()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear" onclick="clearForm()">
+            <i class="fas fa-redo"></i>
+            <span>Clear</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-list" onclick="showList()">
+            <i class="fas fa-list"></i>
+            <span>List</span>
+        </button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

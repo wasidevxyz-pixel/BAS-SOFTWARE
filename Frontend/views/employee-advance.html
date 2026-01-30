@@ -154,12 +154,118 @@
             color: rgba(255, 255, 255, 0.8) !important;
         }
 
-        #employeeSearchResults {
-            z-index: 1050;
-            max-height: 250px;
-            overflow-y: auto;
-            width: 100%;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 1rem !important;
+                background-color: #0d47a1 !important;
+            }
+
+            .page-header .fs-5 {
+                font-size: 1rem !important;
+            }
+
+            .page-header #userName,
+            .page-header .fa-chevron-down {
+                display: none;
+            }
+
+            .grid-container {
+                display: block !important;
+                height: auto !important;
+            }
+
+            .form-panel {
+                padding: 15px !important;
+                border: none !important;
+                border-radius: 0 !important;
+            }
+
+            .list-panel {
+                display: none;
+                /* Hidden by default on mobile, toggled with JS */
+                height: calc(100vh - 145px) !important;
+                border: none !important;
+            }
+
+            .form-row-compact {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                margin-bottom: 12px !important;
+            }
+
+            .form-label-compact {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                margin-bottom: 4px !important;
+                font-size: 0.8rem !important;
+                color: #64748b !important;
+            }
+
+            .container-fluid {
+                padding: 0 !important;
+                padding-bottom: 80px !important;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile.active,
+            .action-btn-mobile:active {
+                color: #0d47a1;
+            }
+
+            .action-btn-mobile.btn-save i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-clear i {
+                color: #ef4444;
+            }
+
+            .action-btn-mobile.btn-list i {
+                color: #f59e0b;
+            }
+
+            .action-btn-mobile.btn-inst i {
+                color: #3b82f6;
+            }
+
+            .btn-toolbar-custom {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -497,6 +603,48 @@
             </div>
         </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-list" id="mobileToggleBtn" onclick="toggleMobileView()">
+            <i class="fas fa-list-alt"></i>
+            <span id="toggleText">View List</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-save" onclick="saveAdvance()">
+            <i class="fas fa-save"></i>
+            <span>Save</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-clear" onclick="clearForm()">
+            <i class="fas fa-undo"></i>
+            <span>Clear</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-inst" onclick="openInstallmentModal()">
+            <i class="fas fa-layer-group"></i>
+            <span>Installments</span>
+        </button>
+    </div>
+
+    <script>
+        function toggleMobileView() {
+            const formPanel = document.querySelector('.form-panel');
+            const listPanel = document.querySelector('.list-panel');
+            const toggleText = document.getElementById('toggleText');
+            const toggleIcon = document.querySelector('#mobileToggleBtn i');
+
+            if (formPanel.style.display !== 'none') {
+                formPanel.style.setProperty('display', 'none', 'important');
+                listPanel.style.setProperty('display', 'flex', 'important');
+                toggleText.innerText = 'View Entry';
+                toggleIcon.className = 'fas fa-edit';
+                loadAdvances(); // Refresh list when switching
+            } else {
+                formPanel.style.setProperty('display', 'flex', 'important');
+                listPanel.style.setProperty('display', 'none', 'important');
+                toggleText.innerText = 'View List';
+                toggleIcon.className = 'fas fa-list-alt';
+            }
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>
