@@ -240,34 +240,63 @@
             padding: 0 4px;
         }
 
-        .row-present td {
-            background-color: #008000 !important;
-            color: white !important;
+        .row-completed td {
+            background-color: #28a745 !important;
+            /* Darker Green */
+            color: #ffffff !important;
+            font-weight: bold !important;
+        }
+
+        .row-partial td {
+            background-color: #e2ec7a !important;
+            /* Yellow */
+            color: black !important;
             font-weight: bold !important;
         }
 
         .row-absent td {
-            background-color: #CD1C18 !important;
+            background-color: #f8d7da !important;
+            /* Red */
+            color: #721c24 !important;
+            font-weight: bold !important;
+        }
+
+        .row-overtime td {
+            background-color: #9d8df1 !important;
+            /* Purple */
+            color: white !important;
+            font-weight: bold !important;
+        }
+
+        .row-warning td {
+            background-color: #fd7e14 !important;
+            /* Orange Warning */
             color: white !important;
             font-weight: bold !important;
         }
 
         .row-leave td {
-            background-color: #fb6340 !important;
-            color: white !important;
+            background-color: #fff3cd !important;
+            /* Amber */
+            color: #856404 !important;
             font-weight: bold !important;
         }
 
-        .row-present input,
-        .row-present select,
+        .row-completed input,
+        .row-completed select,
+        .row-partial input,
+        .row-partial select,
         .row-absent input,
         .row-absent select,
+        .row-overtime input,
+        .row-overtime select,
+        .row-warning input,
+        .row-warning select,
         .row-leave input,
         .row-leave select {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
-            font-weight: bold !important;
-            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            background-color: white !important;
+            color: black !important;
+            border: 1px solid #ced4da !important;
         }
 
         select option {
@@ -473,15 +502,21 @@
         }
 
         /* Lighter buttons for visibility on dark rows */
-        .row-present .btn-success,
+        .row-completed .btn-success,
+        .row-partial .btn-success,
         .row-absent .btn-success,
+        .row-overtime .btn-success,
+        .row-warning .btn-success,
         .row-leave .btn-success {
             background-color: #51cf66 !important;
             border-color: #51cf66 !important;
         }
 
-        .row-present .btn-danger,
+        .row-completed .btn-danger,
+        .row-partial .btn-danger,
         .row-absent .btn-danger,
+        .row-overtime .btn-danger,
+        .row-warning .btn-danger,
         .row-leave .btn-danger {
             background-color: #ff6b6b !important;
             border-color: #ff6b6b !important;

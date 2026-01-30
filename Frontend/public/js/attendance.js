@@ -144,7 +144,23 @@ async function loadAttendanceList() {
 
             // Status filter (client-side for merged data)
             if (status) {
-                attendanceRecords = attendanceRecords.filter(r => r.displayStatus === status);
+                if (status === 'less_1hr') {
+                    attendanceRecords = attendanceRecords.filter(r => {
+                        const mins = parseTime(r.workedHrs);
+                        return mins > 0 && mins < 60;
+                    });
+                } else if (status === 'greater_17hr') {
+                    attendanceRecords = attendanceRecords.filter(r => {
+                        const mins = parseTime(r.workedHrs);
+                        return mins > 1020; // 17 * 60
+                    });
+                } else if (status === 'no_checkinout') {
+                    attendanceRecords = attendanceRecords.filter(r => !r.checkIn && !r.checkOut);
+                } else if (status === 'checkin_no_out') {
+                    attendanceRecords = attendanceRecords.filter(r => r.checkIn && !r.checkOut);
+                } else {
+                    attendanceRecords = attendanceRecords.filter(r => r.displayStatus === status);
+                }
             }
 
             renderAttendanceTable();
@@ -162,12 +178,21 @@ function renderAttendanceTable() {
     attendanceRecords.forEach((att, index) => {
         const tr = document.createElement('tr');
 
-        // Initial color based on strict rules
+        // Initial color based on activity
         tr.className = '';
-        if (att.checkIn && att.checkOut && att.displayStatus === 'Present') {
-            tr.className = 'row-present';
-        } else if (!att.checkIn && !att.checkOut && att.displayStatus === 'Absent') {
+        const mins = parseTime(att.workedHrs);
+        if (mins >= 1020) {
+            tr.className = 'row-overtime';
+        } else if (mins > 0 && mins <= 60) {
+            tr.className = 'row-warning';
+        } else if (att.checkIn && att.checkOut) {
+            tr.className = 'row-completed';
+        } else if (att.checkIn) {
+            tr.className = 'row-partial';
+        } else if (att.displayStatus === 'Absent') {
             tr.className = 'row-absent';
+        } else if (att.displayStatus === 'Leave') {
+            tr.className = 'row-leave';
         }
 
         tr.dataset.id = att._id;
@@ -179,13 +204,13 @@ function renderAttendanceTable() {
             <td class="text-center col-sr">${index + 1}</td>
             <td class="text-center col-date" style="font-weight: 600;">${dateStr}</td>
             <td class="text-center col-code">
-                <a href="/employee-attendance-detail.html?id=${att.employee?._id || ''}&date=${att.date}" class="code-link-box">
-                    ${att.employee?.code || '-'}
-                </a>
-                <span class="print-value">${att.employee?.code || '-'}</span>
-            </td>
-            <td class="text-center col-action">
-                <button class="btn btn-primary btn-xs" onclick="quickSaveAttendance('${att._id}', this)">Save</button>
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                    <a href="/employee-attendance-detail.html?id=${att.employee?._id || ''}&date=${att.date}" class="code-link-box">
+                        ${att.employee?.code || '-'}
+                    </a>
+                    <button class="btn btn-primary btn-xs py-0 px-1" style="font-size: 0.65rem;" onclick="quickSaveAttendance('${att._id}', this)">Save</button>
+                    <span class="print-value">${att.employee?.code || '-'}</span>
+                </div>
             </td>
             <td class="ps-2 fw-bold text-uppercase col-name">${att.employee?.name || '-'}</td>
             <td class="text-center col-dept">${att.employee?.department?.name || '-'}</td>
@@ -220,11 +245,11 @@ function renderAttendanceTable() {
             <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
             <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
             <td class="px-1 text-center col-status">
-                <select class="form-select form-select-xs fw-bold">
-                    <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>P</option>
-                    <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>A</option>
-                    <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>L</option>
-                    <option value="Half Day" ${att.displayStatus === 'Half Day' ? 'selected' : ''}>H</option>
+                <select class="form-select form-select-xs fw-bold" onchange="updateRowColor(this)">
+                    <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>Present</option>
+                    <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>Absent</option>
+                    <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>Leave</option>
+                    <option value="Half Day" ${att.displayStatus === 'Half Day' ? 'selected' : ''}>Half Day</option>
                 </select>
                 <span class="print-value">${att.displayStatus ? att.displayStatus.charAt(0) : ''}</span>
             </td>
@@ -235,15 +260,31 @@ function renderAttendanceTable() {
 
 function updateRowColor(element) {
     const tr = element.closest('tr');
-    const status = tr.cells[19].querySelector('select').value;
-    const checkIn = tr.cells[8].querySelector('input').value;
-    const checkOut = tr.cells[9].querySelector('input').value;
+    const statusSelect = tr.querySelector('.col-status select');
+    const checkInInput = tr.querySelector('.col-checkin input');
+    const checkOutInput = tr.querySelector('.col-checkout input');
+    const workedHrsText = tr.querySelector('.col-worked').textContent;
+
+    if (!statusSelect || !checkInInput) return;
+
+    const status = statusSelect.value;
+    const checkIn = checkInInput.value;
+    const checkOut = checkOutInput ? checkOutInput.value : '';
+    const mins = parseTime(workedHrsText);
 
     tr.className = '';
-    if (checkIn && checkOut && status === 'Present') {
-        tr.className = 'row-present';
-    } else if (!checkIn && !checkOut && status === 'Absent') {
+    if (mins >= 1020) {
+        tr.className = 'row-overtime';
+    } else if (mins > 0 && mins <= 60) {
+        tr.className = 'row-warning';
+    } else if (checkIn && checkOut) {
+        tr.className = 'row-completed';
+    } else if (checkIn) {
+        tr.className = 'row-partial';
+    } else if (status === 'Absent') {
         tr.className = 'row-absent';
+    } else if (status === 'Leave') {
+        tr.className = 'row-leave';
     }
 }
 
@@ -358,6 +399,7 @@ function updateWorkedHrs(input) {
             tr.querySelector('.col-totalhrs').textContent = '';
         }
     }
+    updateRowColor(input);
 }
 
 async function quickSaveAttendance(id, btn) {
@@ -386,6 +428,20 @@ async function quickSaveAttendance(id, btn) {
         displayStatus: tr.querySelector('.col-status select').value,
         isPresent: tr.querySelector('.col-status select').value === 'Present'
     };
+
+    // Prevent saving if hours are negative (common mistake)
+    if (updatedData.workedHrs && updatedData.workedHrs.startsWith('-')) {
+        alert('Negative Worked Hours are not allowed. Please check IN/OUT times.');
+        return;
+    }
+    if (updatedData.breakHrs && updatedData.breakHrs.startsWith('-')) {
+        alert('Negative Break Hours are not allowed. Please check Break OUT/IN times.');
+        return;
+    }
+    if (updatedData.totalDiffHrs && updatedData.totalDiffHrs.startsWith('-')) {
+        alert('Negative Total Difference is not allowed. Please check Diff times.');
+        return;
+    }
 
     try {
         const token = localStorage.getItem('token');
@@ -437,6 +493,14 @@ function handlePrint() {
     }
 
     window.print();
+}
+
+
+function parseTime(timeStr) {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length !== 2) return 0;
+    return parts[0] * 60 + parts[1];
 }
 
 // Shortcut keys

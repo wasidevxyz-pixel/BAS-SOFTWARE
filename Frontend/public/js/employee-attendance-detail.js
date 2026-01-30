@@ -121,10 +121,19 @@ function renderDetailTable() {
         const tr = document.createElement('tr');
         // Initial color based on strict rules
         tr.className = '';
-        if (att.checkIn && att.checkOut && att.displayStatus === 'Present') {
-            tr.className = 'row-present';
-        } else if (!att.checkIn && !att.checkOut && att.displayStatus === 'Absent') {
+        const mins = parseTime(att.workedHrs);
+        if (mins >= 1020) {
+            tr.className = 'row-overtime';
+        } else if (mins > 0 && mins <= 60) {
+            tr.className = 'row-warning';
+        } else if (att.checkIn && att.checkOut) {
+            tr.className = 'row-completed';
+        } else if (att.checkIn) {
+            tr.className = 'row-partial';
+        } else if (att.displayStatus === 'Absent') {
             tr.className = 'row-absent';
+        } else if (att.displayStatus === 'Leave') {
+            tr.className = 'row-leave';
         }
 
         const date = new Date(att.date);
@@ -187,12 +196,22 @@ function updateRowColor(element) {
     const status = tr.cells[15].querySelector('select').value;
     const checkIn = tr.cells[4].querySelector('input').value;
     const checkOut = tr.cells[5].querySelector('input').value;
+    const workedHrsText = tr.cells[6].textContent;
+    const mins = parseTime(workedHrsText);
 
     tr.className = '';
-    if (checkIn && checkOut && status === 'Present') {
-        tr.className = 'row-present';
-    } else if (!checkIn && !checkOut && status === 'Absent') {
+    if (mins >= 1020) {
+        tr.className = 'row-overtime';
+    } else if (mins > 0 && mins <= 60) {
+        tr.className = 'row-warning';
+    } else if (checkIn && checkOut) {
+        tr.className = 'row-completed';
+    } else if (checkIn) {
+        tr.className = 'row-partial';
+    } else if (status === 'Absent') {
         tr.className = 'row-absent';
+    } else if (status === 'Leave') {
+        tr.className = 'row-leave';
     }
 }
 
@@ -339,6 +358,20 @@ async function saveAllVisible() {
         };
 
         if (isNew && !payload.checkIn && !payload.checkOut && payload.displayStatus === 'Present') continue; // Don't save empty present rows
+
+        // Prevent saving if hours are negative
+        if (payload.workedHrs && payload.workedHrs.startsWith('-')) {
+            alert(`Negative Worked Hours at row ${i + 1} (${dateStr}). Please correct.`);
+            return;
+        }
+        if (payload.breakHrs && payload.breakHrs.startsWith('-')) {
+            alert(`Negative Break Hours at row ${i + 1} (${dateStr}). Please correct.`);
+            return;
+        }
+        if (payload.totalDiffHrs && payload.totalDiffHrs.startsWith('-')) {
+            alert(`Negative Total Difference at row ${i + 1} (${dateStr}). Please correct.`);
+            return;
+        }
 
         try {
             const url = isNew ? '/api/v1/attendance' : `/api/v1/attendance/${attendanceRecords[i]._id}`;
