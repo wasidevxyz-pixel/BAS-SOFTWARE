@@ -744,8 +744,8 @@ async function editPurchase(id, status = 'Draft') {
         if (result.success) {
             const p = result.data;
 
-            // Switch to detail tab
-            switchTab('detail');
+            // Switch to detail view
+            switchToDetail();
 
             // Populate Header
             document.getElementById('purchaseId').value = p._id;
@@ -842,7 +842,7 @@ function resetForm() {
     disableForm(false);
     rowCount = 0;
     addNewRow();
-    switchTab('detail');
+    switchToDetail();
     if (window.updateCurrentStockDisplay) updateCurrentStockDisplay(null);
 }
 
@@ -1025,24 +1025,17 @@ async function executeSave(status) {
 }
 
 
-function switchTab(tabName) {
-    if (tabName === 'detail') {
-        document.getElementById('detail-content').classList.remove('d-none');
-        document.getElementById('detail-content').classList.add('show', 'active');
-        document.getElementById('list-content').classList.add('d-none');
-        document.getElementById('list-content').classList.remove('show', 'active');
+function switchToList() {
+    document.getElementById('detailView').style.display = 'none';
+    document.getElementById('listView').style.display = 'block';
+    document.getElementById('listBtn').style.display = 'none';
+    loadPurchaseList();
+}
 
-        document.getElementById('detail-tab').classList.add('active');
-        document.getElementById('list-tab').classList.remove('active');
-    } else {
-        document.getElementById('list-content').classList.remove('d-none');
-        document.getElementById('list-content').classList.add('show', 'active');
-        document.getElementById('detail-content').classList.add('d-none');
-        document.getElementById('detail-content').classList.remove('show', 'active');
-
-        document.getElementById('list-tab').classList.add('active');
-        document.getElementById('detail-tab').classList.remove('active');
-    }
+function switchToDetail() {
+    document.getElementById('detailView').style.display = 'block';
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('listBtn').style.display = 'inline-block';
 }
 
 window.updateCurrentStockDisplay = async function (itemId) {
@@ -1103,3 +1096,5 @@ async function loadNextInvoiceNumber() {
         console.error('Error loading next Purchase number:', error);
     }
 }
+
+

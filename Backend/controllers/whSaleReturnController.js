@@ -36,7 +36,7 @@ exports.createWHSaleReturn = async (req, res) => {
                     // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
-                        date: saleReturn.date,
+                        date: saleReturn.returnDate,
                         type: 'in',
                         qty: returnQty,
                         previousQty: previousQty,
@@ -52,7 +52,7 @@ exports.createWHSaleReturn = async (req, res) => {
             // Add Ledger Entry for Posted Sale Return
             await addLedgerEntry({
                 customer: saleReturn.customer,
-                date: saleReturn.date,
+                returnDate: saleReturn.returnDate,
                 description: `Sale Return - Memo #${saleReturn.returnNo}`,
                 refType: 'SaleReturn',
                 refId: saleReturn._id,
@@ -79,15 +79,19 @@ exports.getWHSaleReturns = async (req, res) => {
 
         // Date Filtering
         if (startDate || endDate) {
-            query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) query.date.$lte = new Date(endDate);
+            query.returnDate = {};
+            if (startDate) query.returnDate.$gte = new Date(startDate);
+            if (endDate) query.returnDate.$lte = new Date(endDate);
         }
 
         let returns = await WHSaleReturn.find(query)
-            .populate('customer', 'customerName')
+            .populate({
+                path: 'customer',
+                select: 'customerName customerCategory',
+                populate: { path: 'customerCategory', select: 'name' }
+            })
             .populate('createdBy', 'name')
-            .sort({ date: -1, createdAt: -1 });
+            .sort({ returnDate: -1, createdAt: -1 });
 
         // In-memory Search Filtering
         if (search) {
@@ -159,7 +163,7 @@ exports.updateWHSaleReturn = async (req, res) => {
 
                         await WHStockLog.create({
                             item: whItem._id,
-                            date: saleReturn.date,
+                            date: saleReturn.returnDate,
                             type: 'out',
                             qty: oldReturnQty,
                             previousQty: previousQty,
@@ -191,7 +195,7 @@ exports.updateWHSaleReturn = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
-                        date: saleReturn.date,
+                        date: saleReturn.returnDate,
                         type: 'in',
                         qty: returnQty,
                         previousQty: previousQty,
@@ -212,7 +216,7 @@ exports.updateWHSaleReturn = async (req, res) => {
             });
             await addLedgerEntry({
                 customer: saleReturn.customer,
-                date: saleReturn.date,
+                date: saleReturn.returnDate,
                 description: `Sale Return (Updated) - Memo #${saleReturn.returnNo}`,
                 refType: 'SaleReturn',
                 refId: saleReturn._id,
@@ -247,7 +251,7 @@ exports.updateWHSaleReturn = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
-                        date: saleReturn.date,
+                        date: saleReturn.returnDate,
                         type: 'out',
                         qty: oldReturnQty,
                         previousQty: previousQty,
@@ -291,7 +295,7 @@ exports.deleteWHSaleReturn = async (req, res) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
-                        date: saleReturn.date,
+                        date: saleReturn.returnDate,
                         type: 'out',
                         qty: returnQty,
                         previousQty: previousQty,

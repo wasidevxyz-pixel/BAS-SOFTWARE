@@ -247,6 +247,7 @@ function selectCustomer(cust) {
     document.getElementById('customerSuggestions').style.display = 'none';
     customerSearchIndex = -1;
     updateGrandTotals();
+    document.getElementById('itemCode').focus();
 }
 
 async function loadCategories() {
@@ -852,6 +853,7 @@ async function deleteReturn(id) {
 function switchToList() {
     document.querySelector('.container-fluid').style.display = 'none';
     document.getElementById('listViewContainer').style.display = 'block';
+    loadReturnList();
 }
 
 function switchToDetail() {
