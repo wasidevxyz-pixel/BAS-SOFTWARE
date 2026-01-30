@@ -48,12 +48,20 @@ exports.getEmployeeAdvance = async (req, res) => {
     }
 };
 
+const { recalculateEmployeeLedger } = require('./employeeLedgerController');
+
 // @desc    Create employee advance
 // @route   POST /api/v1/employee-advances
 exports.createEmployeeAdvance = async (req, res) => {
     try {
         req.body.createdBy = req.user.id;
         const advance = await EmployeeAdvance.create(req.body);
+
+        // Sync Ledger
+        if (advance.employee) {
+            await recalculateEmployeeLedger(advance.employee);
+        }
+
         res.status(201).json({ success: true, data: advance });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -72,6 +80,12 @@ exports.updateEmployeeAdvance = async (req, res) => {
         if (!advance) {
             return res.status(404).json({ success: false, message: 'Advance not found' });
         }
+
+        // Sync Ledger
+        if (advance.employee) {
+            await recalculateEmployeeLedger(advance.employee);
+        }
+
         res.status(200).json({ success: true, data: advance });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -86,8 +100,15 @@ exports.deleteEmployeeAdvance = async (req, res) => {
         if (!advance) {
             return res.status(404).json({ success: false, message: 'Advance not found' });
         }
+
+        // Sync Ledger
+        if (advance.employee) {
+            await recalculateEmployeeLedger(advance.employee);
+        }
+
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

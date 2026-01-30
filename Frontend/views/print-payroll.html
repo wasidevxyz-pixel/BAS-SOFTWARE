@@ -513,7 +513,7 @@
                                 <div class="row"><div class="label">Pre_Month_Balance</div><div class="value">${(p.pAAdv || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Current_Advance</div><div class="value">${(p.csMale || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Advance Deduction</div><div class="value">${(p.totalAdv || 0).toLocaleString()}</div></div>
-                                <div class="row" style="background:#ddd"><div class="label">Balance</div><div class="value">${(p.rebate || 0).toLocaleString()}</div></div>
+                                <div class="row" style="background:#ddd"><div class="label">Balance</div><div class="value">${((p.pAAdv || 0) + (p.csMale || 0) - (p.totalAdv || 0)).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Other Deduction/Penalty</div><div class="value">${(p.penalty || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Salary WHT</div><div class="value">${(p.wht || 0).toLocaleString()}</div></div>
                                 <div class="row"><div class="label">Security Deposit</div><div class="value">${(p.securityDeposit || 0).toLocaleString()}</div></div>

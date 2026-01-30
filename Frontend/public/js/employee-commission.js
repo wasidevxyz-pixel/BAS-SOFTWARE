@@ -340,6 +340,20 @@ async function loadCurrentTab(forceLoad = false) {
             }
         }
 
+        // Fetch created payrolls to lock rows
+        state.lockedEmployees = [];
+        try {
+            const payrollRes = await fetch(`/api/v1/payrolls?monthYear=${state.monthYear}&branch=${state.branch}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const payrollJson = await payrollRes.json();
+            if (payrollJson.success) {
+                state.lockedEmployees = payrollJson.data.map(p => (p.employee?._id || p.employee).toString());
+            }
+        } catch (e) {
+            console.error('Error checking locked payrolls:', e);
+        }
+
         const res = await fetch(`/api/v1/employee-commission?${query}&t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1138,31 +1152,34 @@ async function printCommission() {
         rows = data.map(item => {
             const master = state.items.find(mi => mi._id === item.id || mi.id === item.id);
             const code = item.code || master?.itemsCode || master?.barcode || master?.code || '';
-            return [code, item.name || '', item.incentive || 0, item.qty || 0, item.total || 0];
+            return [code, item.name || '', Math.round(item.incentive || 0), Math.round(item.qty || 0), Math.round(item.total || 0)];
         });
-    } else if (state.currentTab === 'employee_wise') {
+    } else if (state.currentTab === 'employee_wise' || state.currentTab === 'sale_commission') {
         headers = ['Code', 'Employee Name', 'Commission'];
         rows = data.map(item => {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
-            return [code, item.name || '', item.commission || 0];
+            const commValue = item.totalData || item.totalCommission || item.commission || 0;
+            return [code, item.name || '', Math.round(commValue)];
         });
     } else if (state.currentTab === 'distribute') {
         headers = ['Code', 'Employee', 'Other', 'UG', 'WH', 'Total'];
         rows = data.map(item => {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
-            return [code, item.name || '', item.otherCommission || 0, item.ugCommission || 0, item.warehouseCommission || 0, (parseFloat(item.otherCommission || 0) + parseFloat(item.ugCommission || 0) + parseFloat(item.warehouseCommission || 0)).toFixed(2)];
+            const totCalc = (parseFloat(item.otherCommission || 0) + parseFloat(item.ugCommission || 0) + parseFloat(item.warehouseCommission || 0));
+            return [code, item.name || '', Math.round(item.otherCommission || 0), Math.round(item.ugCommission || 0), Math.round(item.warehouseCommission || 0), Math.round(totCalc)];
         });
     } else if (state.currentTab === 'rotti_nashta') {
         headers = ['Code', 'Employee', 'N. Days', 'N. Total', 'R. Days', 'R. Total', 'G. Total'];
         rows = data.map(item => {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
+            const gTotal = (parseFloat(item.nashtaTotal || 0) + parseFloat(item.rottiTotal || 0));
             return [
-                code, item.name || '', item.nashtaDays || 0, item.nashtaTotal || 0,
-                item.rottiDays || 0, item.rottiTotal || 0,
-                (parseFloat(item.nashtaTotal || 0) + parseFloat(item.rottiTotal || 0)).toFixed(2)
+                code, item.name || '', Math.round(item.nashtaDays || 0), Math.round(item.nashtaTotal || 0),
+                Math.round(item.rottiDays || 0), Math.round(item.rottiTotal || 0),
+                Math.round(gTotal)
             ];
         });
     } else if (state.currentTab === 'rotti_perks') {
@@ -1171,14 +1188,20 @@ async function printCommission() {
             const master = state.employees.find(me => me._id === item.id || me.id === item.id);
             const code = item.code || master?.code || '';
             return [
-                idx + 1, code, item.name || '', item.basicSalary || 0, item.workedDays || 0,
-                item.rottiTotal || 0, item.nashtaTotal || 0, item.totalData || 0
+                idx + 1, code, item.name || '', Math.round(item.basicSalary || 0), Math.round(item.workedDays || 0),
+                Math.round(item.rottiTotal || 0), Math.round(item.nashtaTotal || 0), Math.round(item.totalData || 0)
             ];
         });
     } else {
         // Fallback or generic
         headers = ['Code', 'Name', 'Total'];
-        rows = data.map(item => [item.code, item.name, item.total || item.totalData || 0]);
+        rows = data.map(item => {
+            const master = state.employees.find(me => me._id === item.id || me.id === item.id) ||
+                state.items.find(mi => mi._id === item.id || mi.id === item.id);
+            const code = item.code || master?.code || master?.itemsCode || '';
+            const totalVal = item.total || item.totalData || item.totalCommission || 0;
+            return [code, item.name || '', Math.round(totalVal)];
+        });
     }
 
     const totalInList = rows.reduce((sum, row) => sum + (parseFloat(row[row.length - 1]) || 0), 0);
@@ -1280,7 +1303,7 @@ async function printCommission() {
                     <tfoot>
                         <tr class="totals-row">
                             <td colspan="${headers.length - 1}" class="text-end">GRAND TOTAL</td>
-                            <td class="text-end">${totalInList.toFixed(2)}</td>
+                            <td class="text-end">${Math.round(totalInList)}</td>
                         </tr>
                     </tfoot>
                 </table>

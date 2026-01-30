@@ -95,6 +95,7 @@ const designationRoutes = require('./routes/designations');
 const employeeDepartmentRoutes = require('./routes/employeeDepartments');
 const commissionBranchRoutes = require('./routes/commissionBranchRoutes');
 const subBranchRoutes = require('./routes/subBranchRoutes');
+const employeeLedgerRoutes = require('./routes/employeeLedgerRoutes');
 
 
 
@@ -384,6 +385,7 @@ app.use('/api/v1/employee-adjustments', employeeAdjustmentRoutes);
 app.use('/api/v1/employee-advances', employeeAdvanceRoutes);
 app.use('/api/v1/employee-clearances', employeeClearanceRoutes);
 app.use('/api/v1/employee-commissions', employeeCommissionRoutes);
+app.use('/api/v1/employee-ledger', employeeLedgerRoutes);
 app.use('/api/v1/employee-penalties', employeePenaltyRoutes);
 app.use('/api/v1/holy-days', holyDayRoutes);
 app.use('/api/v1/supplier-tax-cprs', supplierTaxCPRRoutes);
@@ -782,5 +784,5 @@ process.on('unhandledRejection', (err, promise) => {
 const cronService = require('./services/cronService');
 cronService.init();
 
-// Forced restart for route update
+// Forced restart for route update 2
 

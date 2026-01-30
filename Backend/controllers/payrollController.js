@@ -110,6 +110,10 @@ exports.calculatePayroll = async (req, res) => {
         monthlyAdvances.forEach(adv => {
             if (adv.transactionType === 'Pay') {
                 currentPayAmount += (adv.amount || adv.paid || 0);
+            } else if (adv.transactionType === 'Received') {
+                // Subtract Received amounts (Adjustments/Recoveries) from the Current Month Advance total
+                // This ensures CMAdv shows the NET advance impact (Advances - Cash Recoveries)
+                currentPayAmount -= (adv.amount || adv.paid || 0);
             }
         });
 
@@ -369,10 +373,10 @@ exports.calculatePayroll = async (req, res) => {
             (calculatedData.securityDeposit || 0) +
             (calculatedData.penalty || 0);
 
-        // Recovered is what actually gets deducted from net
+        // Recovery is what actually gets deducted from net
         calculatedData.totalAdvRec = (calculatedData.pmAdvRec || 0) + (calculatedData.cmAdvRec || 0);
         // Balance info
-        calculatedData.totalAdv = (calculatedData.pAAdv || 0) + (calculatedData.csMale || 0);
+        calculatedData.totalAdv = calculatedData.totalAdvRec;
 
         // NetTotal = gross total - other deductions - advances recovered
         calculatedData.netTotal = calculatedData.grossTotal - otherDeductions - (calculatedData.totalAdvRec || 0);
@@ -392,11 +396,38 @@ exports.calculatePayroll = async (req, res) => {
 
 // @desc    Create payroll
 // @route   POST /api/v1/payrolls
+const { recalculateEmployeeLedger } = require('./employeeLedgerController');
+
+// @desc    Create payroll
+// @route   POST /api/v1/payrolls
 exports.createPayroll = async (req, res) => {
     try {
         req.body.createdBy = req.user._id;
 
         const payroll = await Payroll.create(req.body);
+
+        // 1. Create Linked Advance Record (For Employee Advance Screen)
+        if (payroll.totalAdv > 0) {
+            const remBalance = (payroll.pAAdv || 0) + (payroll.csMale || 0) - (payroll.totalAdv || 0);
+            await EmployeeAdvance.create({
+                employee: payroll.employee,
+                date: new Date(payroll.monthYear + "-28"), // Deductions usually end of month
+                branch: payroll.branch,
+                transactionType: 'Received',
+                code: payroll.code,
+                paid: payroll.totalAdv,
+                balance: remBalance,
+                remarks: `Recovery from Payroll - ${payroll.monthYear}`,
+                payroll: payroll._id,
+                createdBy: req.user._id
+            });
+        }
+
+        // 2. Sync Ledger (For Adjustment Screen)
+        // Using await to ensure it completes before response
+        if (payroll.employee) {
+            await recalculateEmployeeLedger(payroll.employee);
+        }
 
         res.status(201).json({
             success: true,
@@ -427,11 +458,39 @@ exports.updatePayroll = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Payroll not found' });
         }
 
+        // 1. Update/Sync Linked Advance Record
+        if (payroll.totalAdv > 0) {
+            const remBalance = (payroll.pAAdv || 0) + (payroll.csMale || 0) - (payroll.totalAdv || 0);
+            const advData = {
+                employee: payroll.employee,
+                date: new Date(payroll.monthYear + "-28"),
+                branch: payroll.branch,
+                transactionType: 'Received',
+                code: payroll.code,
+                paid: payroll.totalAdv,
+                balance: remBalance,
+                remarks: `Recovery from Payroll - ${payroll.monthYear}`,
+                payroll: payroll._id,
+                updatedBy: req.user._id
+            };
+            // Upsert (Create if missing, Update if exists)
+            await EmployeeAdvance.findOneAndUpdate({ payroll: payroll._id }, advData, { upsert: true });
+        } else {
+            // If totalAdv is 0, ensure no record exists
+            await EmployeeAdvance.deleteMany({ payroll: payroll._id });
+        }
+
+        // 2. Sync Ledger
+        if (payroll.employee) {
+            await recalculateEmployeeLedger(payroll.employee);
+        }
+
         res.status(200).json({ success: true, data: payroll });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 // @desc    Delete payroll
 // @route   DELETE /api/v1/payrolls/:id
@@ -441,6 +500,14 @@ exports.deletePayroll = async (req, res) => {
 
         if (!payroll) {
             return res.status(404).json({ success: false, message: 'Payroll not found' });
+        }
+
+        // 1. Remove linked advance record (Cleanup legacy artifact)
+        await EmployeeAdvance.deleteMany({ payroll: payroll._id });
+
+        // 2. Sync Ledger
+        if (payroll.employee) {
+            await recalculateEmployeeLedger(payroll.employee);
         }
 
         res.status(200).json({ success: true, data: {} });

@@ -43,6 +43,7 @@
                         <div class="mb-2">
                             <select id="adjType" class="form-select form-select-sm mb-2">
                                 <option value="Pay">Pay</option>
+                                <option value="Received">Received</option>
                             </select>
                         </div>
 
@@ -52,22 +53,29 @@
                         </div>
 
                         <div class="mb-2">
-                            <label class="fw-bold">Branch</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="fw-bold">Branch</label>
+                                <button class="btn btn-sm btn-outline-warning"
+                                    style="font-size: 0.7rem; padding: 0px 5px;" onclick="rebuildLedger()">Rebuild
+                                    Ledger</button>
+                            </div>
                             <select id="branch" class="form-select form-select-sm">
                                 <option value="">Select Branch</option>
                             </select>
                         </div>
 
-                        <div class="mb-2">
-                            <label class="fw-bold">Code</label>
-                            <input type="text" id="code" class="form-control form-control-sm" readonly>
+                        <div class="mb-2 position-relative">
+                            <label class="fw-bold">Employee *</label>
+                            <input type="text" id="employeeInput" class="form-control form-control-sm"
+                                placeholder="Type Name or Code to Search..." required autocomplete="off">
+                            <div id="employeeSearchResults" class="list-group position-absolute w-100"
+                                style="display:none; z-index: 1000; max-height: 250px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                            </div>
                         </div>
 
                         <div class="mb-2">
-                            <label class="fw-bold">Employee</label>
-                            <select id="employee" class="form-select form-select-sm">
-                                <option value="">Select Employee</option>
-                            </select>
+                            <label class="fw-bold">Code</label>
+                            <input type="text" id="code" class="form-control form-control-sm" readonly>
                         </div>
 
                         <div class="mb-2">

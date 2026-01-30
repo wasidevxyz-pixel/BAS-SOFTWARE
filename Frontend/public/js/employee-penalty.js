@@ -138,8 +138,8 @@ async function loadPenalties() {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const rights = user.rights || {};
             const permissions = user.permissions || [];
-            // Strictly check right_13 (Allow Employee Penalty Modification) even for admins
-            const canModify = rights['right_13'] || permissions.includes('right_13');
+            // Strictly check mod_13 (Allow Employee Penalty Modification) even for admins
+            const canModify = rights['mod_13'] || permissions.includes('mod_13');
 
             data.data.forEach(p => {
                 const tr = document.createElement('tr');
@@ -268,7 +268,7 @@ async function confirmModification() {
         const currentUser = verifyData.user || user;
         const currentRights = currentUser.rights || {};
         const currentPerms = currentUser.permissions || [];
-        const hasRight = currentRights['right_13'] || currentPerms.includes('right_13');
+        const hasRight = currentRights['mod_13'] || currentPerms.includes('mod_13');
 
         if (!hasRight) {
             alert('Access Denied: You do not have Employee Penalty Modification rights.');

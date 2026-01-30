@@ -18,6 +18,10 @@ const employeeAdvanceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Department'
     },
+    payroll: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Payroll'
+    },
     transactionType: {
         type: String,
         enum: ['Pay', 'Received'],
