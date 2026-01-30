@@ -167,8 +167,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Target Achieved</label>
-                    <input type="number" id="targetAchieved" class="form-control form-control-sm" readonly
-                        style="background: #e9ecef;">
+                    <input type="number" id="targetAchieved" class="form-control form-control-sm">
                 </div>
             </div>
 
@@ -290,7 +289,10 @@
                                 <td></td>
                                 <td id="footerComm">0</td>
                                 <td id="footerItemWise">0</td>
-                                <td colspan="4"></td>
+                                <td id="footerDailyTarget">0</td>
+                                <td id="footerMonthlyTarget">0</td>
+                                <td></td>
+                                <td id="footerTmTarget">0</td>
                                 <td id="footerTotalComm">0</td>
                                 <td id="footerPaidComm">0</td>
                                 <td id="footerBalComm">0</td>
@@ -314,6 +316,13 @@
                             <tbody id="summaryTableBody">
                                 <!-- Summary goes here -->
                             </tbody>
+                            <tfoot class="bg-light fw-bold">
+                                <tr>
+                                    <td>Total</td>
+                                    <td id="summaryTotalCount">0</td>
+                                    <td id="summaryGrandTotal">0</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>

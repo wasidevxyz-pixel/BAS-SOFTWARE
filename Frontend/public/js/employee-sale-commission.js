@@ -15,6 +15,8 @@ let state = {
     editingSubBranchId: null // For sub branch modal
 };
 
+const standardizeBranchName = (s) => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+
 document.addEventListener('DOMContentLoaded', async () => {
     if (!localStorage.getItem('token')) {
         window.location.href = '/login.html';
@@ -108,6 +110,8 @@ function setupEventListeners() {
     ['saleInput', 'percentage', 'itemWiseCommission', 'dailyTarget', 'monthlyTarget'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', calculateRowCom);
     });
+
+    document.getElementById('targetAchieved')?.addEventListener('input', renderTable);
 
     // Enter key navigation or adding row
     document.addEventListener('keydown', (e) => {
@@ -311,20 +315,11 @@ async function saveSubBranch() {
 // --- Calculation Logic ---
 
 function loadTargetDetails() {
-    const branchId = document.getElementById('commissionBranch').value;
-    const branch = state.commissionBranches.find(b => b._id === branchId);
-    if (!branch) {
-        document.getElementById('targetAchieved').value = 0;
-        return;
-    }
+    // Always default to 0 as requested
+    document.getElementById('targetAchieved').value = 0;
 
-    const totalSale = parseFloat(document.getElementById('totalSale').value) || 0;
-    if (branch.branchTarget && branch.branchTarget > 0) {
-        const achieved = (totalSale / branch.branchTarget) * 100;
-        document.getElementById('targetAchieved').value = achieved.toFixed(2);
-    } else {
-        document.getElementById('targetAchieved').value = 0;
-    }
+    // Trigger calculation for all rows
+    renderTable();
 }
 
 function calculateRowCom() {
@@ -337,8 +332,26 @@ function calculateRowCom() {
     const dailyTarget = parseFloat(document.getElementById('dailyTarget').value) || 0;
     const monthlyTarget = parseFloat(document.getElementById('monthlyTarget').value) || 0;
 
+    // Projected Target Commission for this row
+    const saleBranch = document.getElementById('saleBranch').value;
+    const commBranchId = document.getElementById('commissionBranch').value;
+    const commBranchObj = state.commissionBranches.find(b => b._id === commBranchId);
+    const commBranchStd = standardizeBranchName(commBranchObj ? commBranchObj.name : '');
+
+    let projectedTmTarget = 0;
+    if (standardizeBranchName(saleBranch) === commBranchStd) {
+        const targetAmt = parseFloat(document.getElementById('targetAchieved').value) || 0;
+        const matchingSaleInTable = state.tableData
+            .filter(r => standardizeBranchName(r.saleBranch) === commBranchStd)
+            .reduce((acc, r) => acc + r.saleAmount, 0);
+
+        const projectedTotalMatching = matchingSaleInTable + sale;
+        const mts = projectedTotalMatching > 0 ? (targetAmt / projectedTotalMatching) : 0;
+        projectedTmTarget = mts * sale;
+    }
+
     // Total Commission should include all bonuses/incentives
-    const total = comm + itemWise + dailyTarget + monthlyTarget;
+    const total = comm + itemWise + dailyTarget + monthlyTarget + projectedTmTarget;
     document.getElementById('totalCommission').value = total.toFixed(2);
 }
 
@@ -366,6 +379,11 @@ function addRow() {
     const emp = state.employees.find(e => e._id === empId);
     if (!emp) return alert('Employee data not found. Please refresh and try again.');
 
+    const totalSale = parseFloat(document.getElementById('totalSale').value) || 0;
+    const targetAmt = parseFloat(document.getElementById('targetAchieved').value) || 0;
+    const mts = totalSale > 0 ? (targetAmt / totalSale) : 0;
+    const tmTarget = mts * sale;
+
     const rowData = {
         id: empId,
         name: emp.name,
@@ -376,11 +394,11 @@ function addRow() {
         itemWiseCommission: itemWise,
         dailyTarget,
         monthlyTarget,
-        mts: 0, // Placeholder
-        tmTarget: 0, // Placeholder
-        totalCommission: totalComm,
+        mts: mts,
+        tmTarget: tmTarget,
+        totalCommission: totalComm + tmTarget,
         paidCommission: paidComm,
-        balanceCommission: totalComm - paidComm
+        balanceCommission: (totalComm + tmTarget) - paidComm
     };
 
     state.tableData.push(rowData);
@@ -410,12 +428,40 @@ function renderTable() {
     const tbody = document.getElementById('entryTableBody');
     tbody.innerHTML = '';
 
+    const targetAmt = parseFloat(document.getElementById('targetAchieved').value) || 0;
+
+    const commBranchId = document.getElementById('commissionBranch').value;
+    const commBranchObj = state.commissionBranches.find(b => b._id === commBranchId);
+    const commBranchStd = standardizeBranchName(commBranchObj ? commBranchObj.name : '');
+
+    const totalMatchingSale = state.tableData
+        .filter(r => standardizeBranchName(r.saleBranch) === commBranchStd)
+        .reduce((acc, r) => acc + r.saleAmount, 0);
+
+    const globalMts = totalMatchingSale > 0 ? (targetAmt / totalMatchingSale) : 0;
+
     let totalSale = 0, totalComm = 0, totalItemWise = 0, totalGrand = 0, totalPaid = 0, totalBal = 0;
+    let totalDaily = 0, totalMonthly = 0, totalTmTarget = 0;
 
     state.tableData.forEach((row, index) => {
+        // Recalculate based on current targetAmt and branch matching
+        if (standardizeBranchName(row.saleBranch) === commBranchStd) {
+            row.mts = globalMts;
+            row.tmTarget = globalMts * row.saleAmount;
+        } else {
+            row.mts = 0;
+            row.tmTarget = 0;
+        }
+
+        row.totalCommission = row.commission + row.itemWiseCommission + row.dailyTarget + row.monthlyTarget + row.tmTarget;
+        row.balanceCommission = row.totalCommission - row.paidCommission;
+
         totalSale += row.saleAmount;
         totalComm += row.commission;
         totalItemWise += row.itemWiseCommission;
+        totalDaily += row.dailyTarget;
+        totalMonthly += row.monthlyTarget;
+        totalTmTarget += row.tmTarget;
         totalGrand += row.totalCommission;
         totalPaid += row.paidCommission;
         totalBal += row.balanceCommission;
@@ -431,8 +477,8 @@ function renderTable() {
                 <td>${row.itemWiseCommission.toFixed(2)}</td>
                 <td>${row.dailyTarget.toFixed(2)}</td>
                 <td>${row.monthlyTarget.toFixed(2)}</td>
-                <td>${row.mts || 0}</td>
-                <td>${row.tmTarget || 0}</td>
+                <td>${row.mts.toFixed(4)}</td>
+                <td>${row.tmTarget.toFixed(2)}</td>
                 <td>${row.totalCommission.toFixed(2)}</td>
                 <td>${row.paidCommission.toFixed(2)}</td>
                 <td>${row.balanceCommission.toFixed(2)}</td>
@@ -443,19 +489,24 @@ function renderTable() {
     document.getElementById('footerSale').innerText = totalSale.toFixed(2);
     document.getElementById('footerComm').innerText = totalComm.toFixed(2);
     document.getElementById('footerItemWise').innerText = totalItemWise.toFixed(2);
+    document.getElementById('footerDailyTarget').innerText = totalDaily.toFixed(2);
+    document.getElementById('footerMonthlyTarget').innerText = totalMonthly.toFixed(2);
+    document.getElementById('footerTmTarget').innerText = totalTmTarget.toFixed(2);
     document.getElementById('footerTotalComm').innerText = totalGrand.toFixed(2);
     document.getElementById('footerPaidComm').innerText = totalPaid.toFixed(2);
     document.getElementById('footerBalComm').innerText = totalBal.toFixed(2);
 
     // Top headers update
     document.getElementById('totalSale').value = totalSale.toFixed(0);
-    loadTargetDetails();
 
     renderSummary();
 }
 
 function renderSummary() {
     const summary = {}; // { name: { count, total } }
+    let totalCount = 0;
+    let grandSum = 0;
+
     state.tableData.forEach(row => {
         const name = row.name || row.employeeName || 'N/A';
         if (!summary[name]) {
@@ -463,6 +514,9 @@ function renderSummary() {
         }
         summary[name].count++;
         summary[name].total += row.totalCommission;
+
+        totalCount++;
+        grandSum += row.totalCommission;
     });
 
     const tbody = document.getElementById('summaryTableBody');
@@ -473,6 +527,9 @@ function renderSummary() {
             <td>${summary[name].total.toFixed(2)}</td>
         </tr>
     `).join('');
+
+    document.getElementById('summaryTotalCount').innerText = totalCount;
+    document.getElementById('summaryGrandTotal').innerText = grandSum.toFixed(2);
 }
 
 // --- Save/Load Logic ---
@@ -711,13 +768,15 @@ async function printCommission() {
     const cb = state.commissionBranches.find(b => b._id === cbId);
     const cbName = data.commissionBranch.options[data.commissionBranch.selectedIndex]?.text || 'N/A';
 
+    const targetAchieved = parseFloat(document.getElementById('targetAchieved').value) || 0;
+
     generatePremiumReport({
         branch: data.branch,
         monthYear: data.monthYear,
         commissionBranchName: cbName,
         data: data.data,
         branchTarget: cb ? cb.branchTarget : 0,
-        targetCommission: cb ? cb.targetCommission : 0
+        targetCommission: targetAchieved
     });
 }
 
@@ -830,7 +889,11 @@ function generatePremiumReport(reportData) {
             const s = row.saleAmount || 0;
             const c = row.commission || 0;
             const iw = row.itemWiseCommission || 0;
-            const net = row.totalData || row.totalCommission || (c + iw + (row.dailyTarget || 0) + (row.monthlyTarget || 0));
+            const dt = row.dailyTarget || 0;
+            const mt = row.monthlyTarget || 0;
+            const tm = row.tmTarget || 0;
+            const mts = row.mts || 0;
+            const net = row.totalData || row.totalCommission || (c + iw + dt + mt + tm);
 
             empSale += s;
             empComm += c;
@@ -842,9 +905,9 @@ function generatePremiumReport(reportData) {
                     ${idx === 0 ? `<td rowspan="${rows.length + 1}">${srNo++}</td>` : ''}
                     <td class="text-start ps-2">${row.saleBranch || ''}</td>
                     <td>${iw > 0 ? iw.toFixed(0) : '0'}</td>
-                    <td>${(row.dailyTarget || 0).toFixed(0)}</td>
-                    <td>${(row.monthlyTarget || 0).toFixed(0)}</td>
-                    <td>0</td> 
+                    <td>${dt.toFixed(0)}</td>
+                    <td>${mt.toFixed(0)}</td>
+                    <td>${tm.toFixed(0)}</td> 
                     <td>${s.toFixed(0)}</td>
                     <td>${(row.percentage || 0).toFixed(1)}</td>
                     <td>${c.toFixed(0)}</td>
@@ -866,9 +929,9 @@ function generatePremiumReport(reportData) {
             <tr class="emp-total-row" style="background: #fdfdfd;">
                 <td class="font-bold">Total</td>
                 <td class="font-bold">${empItemWise.toFixed(0)}</td>
-                <td>0</td>
-                <td>0</td>
-                <td>0</td>
+                <td>${rows.reduce((acc, r) => acc + (r.dailyTarget || 0), 0).toFixed(0)}</td>
+                <td>${rows.reduce((acc, r) => acc + (r.monthlyTarget || 0), 0).toFixed(0)}</td>
+                <td>${rows.reduce((acc, r) => acc + (r.tmTarget || 0), 0).toFixed(0)}</td>
                 <td class="font-bold highlight-cell">${empSale.toFixed(0)}</td>
                 <td>-</td>
                 <td class="font-bold">${empComm.toFixed(0)}</td>
@@ -955,9 +1018,9 @@ function generatePremiumReport(reportData) {
                         <tr class="grand-total-row">
                             <td colspan="2">GRAND TOTAL</td>
                             <td>${grandTotalItemWise.toFixed(0)}</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>0</td>
+                            <td>${data.reduce((acc, r) => acc + (r.dailyTarget || 0), 0).toFixed(0)}</td>
+                            <td>${data.reduce((acc, r) => acc + (r.monthlyTarget || 0), 0).toFixed(0)}</td>
+                            <td>${data.reduce((acc, r) => acc + (r.tmTarget || 0), 0).toFixed(0)}</td>
                             <td style="background:#555 !important;">${grandTotalSale.toFixed(0)}</td>
                             <td>-</td>
                             <td>${grandTotalComm.toFixed(0)}</td>
