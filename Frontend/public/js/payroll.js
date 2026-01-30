@@ -35,6 +35,7 @@ const FIELD_MAPPING = {
 
 let currentPayrollId = null;
 let currentListPayrolls = [];
+let pendingDeleteId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeHeaderUser();
@@ -148,6 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.altKey && e.key.toLowerCase() === 'l') {
             e.preventDefault();
             showList();
+        }
+    });
+
+    // Enter key for Auth Modal
+    document.getElementById('authPassword')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            confirmDelete();
         }
     });
 });
@@ -906,6 +914,12 @@ function renderPayrollTable(payrolls) {
     const selectAllCheck = document.getElementById('selectAllPayrolls');
     if (selectAllCheck) selectAllCheck.checked = false;
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const rights = user.rights || {};
+    const permissions = user.permissions || [];
+    // Strictly link deletion to "Allow PayRoll Delete" (mod_11)
+    const canDelete = rights['mod_11'] || permissions.includes('mod_11');
+
     filtered.forEach((p, index) => {
         const row = document.createElement('tr');
         let rowClass = '';
@@ -923,7 +937,7 @@ function renderPayrollTable(payrolls) {
             <td><input type="checkbox" class="payroll-checkbox" value="${p._id}"></td>
             <td class="text-center">
                 <button class="btn btn-sm btn-primary py-0 px-1" onclick="printPayroll('${p._id}')">Print</button>
-                <button class="btn btn-sm btn-danger py-0 px-1" onclick="deletePayroll('${p._id}')">Delete</button>
+                ${canDelete ? `<button class="btn btn-sm btn-danger py-0 px-1" onclick="deletePayroll('${p._id}')">Delete</button>` : ''}
             </td>
             <td>${p._id.substring(p._id.length - 5)}</td>
             <td>${p.code || ''}</td>
@@ -965,15 +979,71 @@ function printAll() {
 }
 
 async function deletePayroll(id) {
-    if (!confirm('Are you sure you want to delete this payroll?')) return;
+    pendingDeleteId = id;
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('authUser').value = user.name || 'User';
+    document.getElementById('authPassword').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('authModal'));
+    modal.show();
+
+    // Focus password field
+    document.getElementById('authModal').addEventListener('shown.bs.modal', () => {
+        document.getElementById('authPassword').focus();
+    }, { once: true });
+}
+
+async function confirmDelete() {
+    const password = document.getElementById('authPassword').value;
+    if (!password) {
+        alert('Please enter your password');
+        return;
+    }
+
     try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/v1/payrolls/${id}`, {
+
+        // Verify Password via Login API
+        const verifyRes = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, password: password })
+        });
+
+        const verifyData = await verifyRes.json();
+
+        // Check for token or ok status since the login API doesn't return a 'success' flag
+        if (!verifyRes.ok || !verifyData.token) {
+            alert('Invalid Password');
+            return;
+        }
+
+        // Final permission check after verify password
+        const currentUser = verifyData.user || user;
+        const currentRights = currentUser.rights || {};
+        const currentPerms = currentUser.permissions || [];
+        // Strictly use "Allow PayRoll Delete" (mod_11)
+        const hasRight = currentRights['mod_11'] || currentPerms.includes('mod_11');
+
+        if (!hasRight) {
+            alert('Access Denied: You do not have PayRoll Delete rights.');
+            return;
+        }
+
+        // Proceed with deletion
+        const response = await fetch(`/api/v1/payrolls/${pendingDeleteId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
+
         if (result.success) {
+            // Hide modal
+            const modalEl = document.getElementById('authModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
             alert('Payroll deleted successfully');
             loadPayrollList();
         } else {
@@ -981,6 +1051,7 @@ async function deletePayroll(id) {
         }
     } catch (error) {
         console.error('Error deleting payroll:', error);
+        alert('An error occurred during deletion');
     }
 }
 

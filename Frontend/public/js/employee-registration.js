@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadDesignations();
     await fetchNextCode();
     setDefaultDates();
+    checkEmployeeListPermission();
+    checkAccessParaPermission();
 
     // Check for ID in URL if redirected from list
     const urlParams = new URLSearchParams(window.location.search);
@@ -75,6 +77,11 @@ function setDefaultDates() {
     document.getElementById('selectBank').addEventListener('change', syncAccNo);
     ['bank_hbl', 'bank_alf', 'bank_bop', 'bank_bip', 'bank_bahl'].forEach(id => {
         document.getElementById(id).addEventListener('input', syncAccNo);
+    });
+
+    document.getElementById('basicSalary').addEventListener('input', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('incrDate').value = today;
     });
 }
 
@@ -492,5 +499,41 @@ function previewPhoto(input) {
             preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
         }
         reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function checkEmployeeListPermission() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const rights = user.rights || {};
+    const permissions = user.permissions || [];
+
+    // Strictly check for right_23 (Allow Employee List) even for admins
+    const hasPermission = rights['right_23'] || permissions.includes('right_23');
+
+    const listBtn = document.getElementById('btnEmployeeList');
+    if (listBtn) {
+        if (hasPermission) {
+            listBtn.style.display = 'block'; // Or however you want to show it
+        } else {
+            listBtn.style.display = 'none';
+        }
+    }
+}
+
+function checkAccessParaPermission() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const rights = user.rights || {};
+    const permissions = user.permissions || [];
+
+    // Strictly check for right_02 (Allow Access Employee Para) even for admins
+    const hasPermission = rights['right_02'] || permissions.includes('right_02');
+
+    const section = document.getElementById('accessControlsSection');
+    if (section) {
+        // Disable all inputs and checkboxes within this container if no permission
+        const inputs = section.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.disabled = !hasPermission;
+        });
     }
 }

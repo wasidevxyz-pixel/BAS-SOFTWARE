@@ -54,6 +54,14 @@ const employeeAdvanceSchema = new mongoose.Schema({
         default: 'Cash'
     },
     remarks: String,
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     preMonthInstallment: {
         preBal: { type: Number, default: 0 },
         installment: { type: Number, default: 0 },

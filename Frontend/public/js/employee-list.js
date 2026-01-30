@@ -119,6 +119,12 @@ function renderTable() {
     const tbody = document.getElementById('employeeTableBody');
     tbody.innerHTML = '';
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const rights = user.rights || {};
+    const permissions = user.permissions || [];
+    // Strictly check for right_02 (Allow Access Employee Para) even for admins
+    const canEditParas = rights['right_02'] || permissions.includes('right_02');
+
     employees.forEach((emp, index) => {
         const tr = document.createElement('tr');
         tr.dataset.id = emp._id;
@@ -132,58 +138,75 @@ function renderTable() {
                 <button class="btn btn-success btn-xs" onclick="quickSave('${emp._id}', this)">Save</button>
             </td>
             <td>
-                <select class="form-control form-control-xs col-branch">
-                    <option value="">-</option>
+                <select class="form-control form-control-xs col-branch" ${!canEditParas ? 'disabled' : ''}>
+                    <option value="">Select Branch</option>
                     ${stores.map(s => `<option value="${s.name}" ${emp.branch === s.name ? 'selected' : ''}>${s.name}</option>`).join('')}
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-xs col-name" value="${emp.name || ''}" readonly></td>
-            <td><input type="text" class="form-control form-control-xs col-cnic" value="${emp.cnic || ''}" readonly></td>
+            <td><input type="text" class="form-control form-control-xs col-name" value="${emp.name || ''}" readonly style="background-color: #f1f1f1;"></td>
+            <td><input type="text" class="form-control form-control-xs col-cnic" value="${emp.cnic || ''}" readonly style="background-color: #f1f1f1;"></td>
             <td>
-                <select class="form-control form-control-xs col-marital" disabled>
+                <select class="form-control form-control-xs col-marital" ${!canEditParas ? 'disabled' : ''}>
                     <option value="Married" ${emp.maritalStatus === 'Married' ? 'selected' : ''}>Married</option>
                     <option value="Single" ${emp.maritalStatus === 'Single' ? 'selected' : ''}>Single</option>
                 </select>
             </td>
             <td>
-                <select class="form-control form-control-xs col-desig" disabled>
-                    <option value="">-</option>
+                <select class="form-control form-control-xs col-desig" ${!canEditParas ? 'disabled' : ''}>
+                    <option value="">Select Designation</option>
                     ${designations.map(d => `<option value="${d._id}" ${emp.designation?._id === d._id ? 'selected' : ''}>${d.name}</option>`).join('')}
                 </select>
             </td>
             <td>
-                <select class="form-control form-control-xs col-dept" disabled>
-                    <option value="">-</option>
+                <select class="form-control form-control-xs col-dept" ${!canEditParas ? 'disabled' : ''}>
+                    <option value="">Select Department</option>
                     ${departments.map(d => `<option value="${d._id}" ${emp.department?._id === d._id ? 'selected' : ''}>${d.name}</option>`).join('')}
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-xs col-acNo" value="${emp.acNo || ''}" readonly></td>
+            <td><input type="text" class="form-control form-control-xs col-acNo" value="${emp.acNo || ''}" ${!canEditParas ? 'readonly' : ''}></td>
             <td>
-                <select class="form-control form-control-xs col-bank" disabled>
-                    <option value="" ${!emp.selectBank ? 'selected' : ''}>-</option>
+                <select class="form-control form-control-xs col-bank" ${!canEditParas ? 'disabled' : ''}>
+                    <option value="" ${!emp.selectBank ? 'selected' : ''}>Select Bank</option>
                     <option value="HBL" ${emp.selectBank === 'HBL' ? 'selected' : ''}>HBL</option>
                     <option value="ALF" ${emp.selectBank === 'ALF' ? 'selected' : ''}>ALF</option>
                     <option value="BOP" ${emp.selectBank === 'BOP' ? 'selected' : ''}>BOP</option>
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-xs col-duty" value="${emp.totalHrs || ''}" readonly></td>
-            <td><input type="date" class="form-control form-control-xs col-incrDate" value="${emp.incrDate ? emp.incrDate.split('T')[0] : ''}" readonly></td>
-            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-salary" style="font-size: 0.72rem;" value="${emp.basicSalary || 0}"></td>
+            <td><input type="text" class="form-control form-control-xs col-duty" value="${emp.totalHrs || ''}" readonly style="background-color: #f1f1f1;"></td>
+            <td><input type="date" class="form-control form-control-xs col-incrDate" value="${emp.incrDate ? emp.incrDate.split('T')[0] : ''}" ${!canEditParas ? 'readonly' : ''}></td>
+            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-salary" style="font-size: 0.72rem;" value="${emp.basicSalary || 0}" ${!canEditParas ? 'readonly' : ''} oninput="updateRowIncrDate(this)"></td>
             <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-comm" style="font-size: 0.72rem; background: #f8fbff;" value="${emp.commission || 0}" readonly title="Direct edit locked"></td>
-            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-fixAllow" style="font-size: 0.72rem;" value="${emp.fixAllowance || 0}"></td>
-            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-st" style="font-size: 0.72rem;" value="${emp.stLoss || 0}"></td>
-            <td class="text-center"><input type="checkbox" class="col-active" disabled ${emp.isActive !== false ? 'checked' : ''}></td>
-            <td class="text-center"><input type="checkbox" class="col-pfstb" disabled ${emp.payFullSalaryThroughBank ? 'checked' : ''}></td>
-            <td class="text-center"><input type="checkbox" class="col-eobi" disabled ${emp.eobi ? 'checked' : ''}></td>
+            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-fixAllow" style="font-size: 0.72rem;" value="${emp.fixAllowance || 0}" ${!canEditParas ? 'readonly' : ''}></td>
+            <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-st" style="font-size: 0.72rem;" value="${emp.stLoss || 0}" ${!canEditParas ? 'readonly' : ''}></td>
+            <td class="text-center"><input type="checkbox" class="col-active" ${!canEditParas ? 'disabled' : ''} ${emp.isActive !== false ? 'checked' : ''}></td>
+            <td class="text-center"><input type="checkbox" class="col-pfstb" ${!canEditParas ? 'disabled' : ''} ${emp.payFullSalaryThroughBank ? 'checked' : ''}></td>
+            <td class="text-center"><input type="checkbox" class="col-eobi" ${!canEditParas ? 'disabled' : ''} ${emp.eobi ? 'checked' : ''}></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
+function updateRowIncrDate(salaryInput) {
+    const tr = salaryInput.closest('tr');
+    const dateInput = tr.querySelector('.col-incrDate');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+}
+
 async function quickSave(id, btn) {
     const tr = btn.closest('tr');
+    const branch = tr.querySelector('.col-branch').value;
+
+    if (!branch || branch === "") {
+        alert('Mandatory Field: Please select a Branch before saving.');
+        tr.querySelector('.col-branch').focus();
+        return;
+    }
+
     const updatedData = {
-        branch: tr.querySelector('.col-branch').value,
+        branch: branch,
         name: tr.querySelector('.col-name').value,
         cnic: tr.querySelector('.col-cnic').value,
         maritalStatus: tr.querySelector('.col-marital').value,

@@ -133,6 +133,30 @@
         </div>
     </div>
 
+    <!-- Authentication Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h5 class="modal-title" style="font-size: 0.9rem;"><i class="fas fa-lock me-2"></i>Permission
+                        Required</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3 text-center">
+                    <p class="mb-3 small fw-bold text-muted">Enter password to modify penalty</p>
+                    <input type="password" id="authPassword" class="form-control mb-3 text-center"
+                        placeholder="Password" style="border-radius: 20px; font-size: 0.9rem;"
+                        onkeyup="if(event.key==='Enter') confirmModification()">
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-danger btn-sm" style="border-radius: 20px;"
+                            onclick="confirmModification()">Verify & Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>

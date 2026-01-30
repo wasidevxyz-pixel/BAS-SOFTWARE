@@ -6,9 +6,16 @@ let currentInstallmentData = {
     currentMonthInstallment: { preBal: 0, installment: 0, balance: 0 }
 };
 let currentEmployeeSearchIndex = -1;
+let pendingAction = null; // 'edit' or 'delete'
+let pendingId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDate();
+
+    // Auth Modal Enter Key Listener
+    document.getElementById('authPassword')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') confirmModification();
+    });
     await loadDepartments(); // Load departments
     await loadEmployees(); // Load data first
     await loadBranches();  // Then render branches (might trigger filter)
@@ -165,8 +172,24 @@ async function loadBranches() {
 function calculateTotals() {
     const preMonthBal = parseFloat(document.getElementById('preMonthBal').value) || 0;
     const currentMonthBal = parseFloat(document.getElementById('currentMonthBal').value) || 0;
-    const amount = parseFloat(document.getElementById('paid').value) || 0;
+    let amount = parseFloat(document.getElementById('paid').value) || 0;
+    const salary = parseFloat(document.getElementById('salary').value) || 0;
     const type = document.getElementById('transactionType').value;
+
+    // Permission Check: Allow Adv More Than Salary (right_01)
+    if (type === 'Pay' && amount > salary && salary > 0) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const rights = user.rights || {};
+        const permissions = user.permissions || [];
+        // Strictly follow the checkbox even for admins
+        const canExceed = rights['right_01'] || permissions.includes('right_01');
+
+        if (!canExceed) {
+            alert(`Accedd Denied: Advance amount (${amount.toLocaleString()}) cannot exceed basic salary (${salary.toLocaleString()}).`);
+            amount = salary;
+            document.getElementById('paid').value = salary;
+        }
+    }
 
     // Total = Liability Before This Transaction
     // Pre Month Bal + (Current Month Accumulated Changes)
@@ -237,22 +260,40 @@ function renderTable(data) {
         const dateStr = ds ? ds.split('-').reverse().join('/') : '-';
         const timeStr = adv.createdAt ? new Date(adv.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
 
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const rights = user.rights || {};
+        const permissions = user.permissions || [];
+        // Strictly follow mod_12 even for admins
+        const canModify = rights['mod_12'] || permissions.includes('mod_12');
+
+        const updateDate = adv.updatedAt ? new Date(adv.updatedAt).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '-';
+        const updateTime = adv.updatedAt ? new Date(adv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
+        const modifiedBy = adv.updatedBy?.name || '-';
+
         const tr = document.createElement('tr');
+        if (adv.transactionType === 'Received') {
+            tr.style.backgroundColor = '#d4edda'; // Light Green
+        } else {
+            tr.style.backgroundColor = '#f8d7da'; // Light Red/Pink
+        }
+
         tr.innerHTML = `
-            <td>${dateStr}</td>
-            <td>${timeStr}</td>
-            <td>${adv.employee?.name || '-'}</td>
-            <td>${adv.transactionType === 'Received' ? 'Received' : 'Paid'}</td> <!-- Type -->
-            <td>${amount}</td>
-            <td>${adv.docMode || 'Cash'}</td>
-            <td>${adv.docMode === 'Bank' ? (adv.bankName || '-') : '-'}</td> <!-- Bank Name -->
-            <td>${adv.createdBy?.name || document.getElementById('userName').innerText || 'Admin'}</td> <!-- User Name -->
-            <td>${adv.remarks || '-'}</td>
-            <td>
+            <td style="background-color: inherit !important;">${dateStr}</td>
+            <td style="background-color: inherit !important;">${timeStr}</td>
+            <td style="background-color: inherit !important;">${adv.employee?.name || '-'}</td>
+            <td style="background-color: inherit !important;">${adv.transactionType === 'Received' ? 'Received' : 'Paid'}</td> <!-- Type -->
+            <td style="background-color: inherit !important;">${amount}</td>
+            <td style="background-color: inherit !important;">${adv.docMode || 'Cash'}</td>
+            <td style="background-color: inherit !important;">${adv.docMode === 'Bank' ? (adv.bankName || '-') : '-'}</td> <!-- Bank Name -->
+            <td style="background-color: inherit !important;">${adv.createdBy?.name || '-'}</td> <!-- User Name -->
+            <td style="background-color: inherit !important;">${modifiedBy}</td>
+            <td style="background-color: inherit !important;">${modifiedBy !== '-' ? `${updateDate} ${updateTime}` : '-'}</td>
+            <td style="background-color: inherit !important;">${adv.remarks || '-'}</td>
+            <td style="background-color: inherit !important;">
                 <div class="d-flex">
                     <button class="btn-action-sm btn-action-view" onclick="printSlip('${adv._id}')" title="Print Slip"><i class="fas fa-print"></i></button>
-                    <button class="btn-action-sm btn-action-edit" onclick="editAdvance('${adv._id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="btn-action-sm btn-action-delete" onclick="deleteAdvance('${adv._id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                    ${canModify ? `<button class="btn-action-sm btn-action-edit" onclick="editAdvance('${adv._id}')" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
+                    ${canModify ? `<button class="btn-action-sm btn-action-delete" onclick="deleteAdvance('${adv._id}')" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </td>
         `;
@@ -262,15 +303,14 @@ function renderTable(data) {
     // Add Total Row
     if (data.length > 0) {
         const totalTr = document.createElement('tr');
-        totalTr.className = 'bg-custom-header text-white fw-bold'; // Use header style for total row
-        // Helper to ensure style applies if specificity is an issue, though class should work
-        totalTr.style.backgroundColor = '#1a5c9a';
+        totalTr.style.backgroundColor = '#2c5ba9'; // BAS Blue
         totalTr.style.color = 'white';
+        totalTr.style.fontWeight = 'bold';
 
         totalTr.innerHTML = `
-            <td colspan="4" class="text-end">Total</td>
-            <td>${totalAmount}</td>
-            <td colspan="5"></td>
+            <td colspan="4" class="text-end" style="background-color: #2c5ba9 !important; color: white !important;">Total</td>
+            <td style="background-color: #2c5ba9 !important; color: white !important;">${totalAmount.toLocaleString()}</td>
+            <td colspan="7" style="background-color: #2c5ba9 !important;"></td>
         `;
         tbody.appendChild(totalTr);
     }
@@ -356,6 +396,16 @@ async function printSlip(id) {
                                 <td class="label-col">Remarks</td>
                                 <td class="value-col">${adv.remarks || ''}</td>
                             </tr>
+                            <tr style="font-size: 12px; color: #555;">
+                                <td class="label-col">Prepared By</td>
+                                <td class="value-col">${adv.createdBy?.name || '-'}</td>
+                            </tr>
+                            ${adv.updatedBy ? `
+                            <tr style="font-size: 12px; color: #555;">
+                                <td class="label-col">Modified By</td>
+                                <td class="value-col">${adv.updatedBy.name || '-'} (${new Date(adv.updatedAt).toLocaleString()})</td>
+                            </tr>
+                            ` : ''}
                         </table>
                         
                         <div class="signatures">
@@ -422,6 +472,20 @@ async function saveAdvance(customSuccessMsg = null) {
     if (!advanceData.employee || !advanceData.date) {
         alert('Please select employee and date');
         return;
+    }
+
+    // Extra safety check before saving
+    if (advanceData.transactionType === 'Pay' && advanceData.paid > advanceData.salary && advanceData.salary > 0) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const rights = user.rights || {};
+        const permissions = user.permissions || [];
+        // Strictly follow the checkbox even for admins
+        const canExceed = rights['right_01'] || permissions.includes('right_01');
+
+        if (!canExceed) {
+            alert(`Access Denied: Advance amount cannot exceed basic salary (${advanceData.salary.toLocaleString()}).`);
+            return;
+        }
     }
 
     try {
@@ -517,6 +581,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('employeeInput');
             input.value = `${emp.code} - ${emp.name}`;
             loadEmployeeBalance(); // Trigger load
+
+            // Move cursor to Paid column
+            const paidInput = document.getElementById('paid');
+            if (paidInput) {
+                setTimeout(() => {
+                    paidInput.focus();
+                    paidInput.select();
+                }, 100);
+            }
         } else {
             alert('Employee with Code ' + code + ' not found.');
         }
@@ -616,8 +689,10 @@ function selectEmployee(emp) {
     // Automatically move cursor to Paid column
     const paidInput = document.getElementById('paid');
     if (paidInput) {
-        paidInput.focus();
-        paidInput.select();
+        setTimeout(() => {
+            paidInput.focus();
+            paidInput.select();
+        }, 100);
     }
 }
 
@@ -838,6 +913,18 @@ async function loadEmployeeBalance() {
 }
 
 async function editAdvance(id) {
+    pendingId = id;
+    pendingAction = 'edit';
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('authUsername').value = user.name || 'User';
+    document.getElementById('authPassword').value = '';
+
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+}
+
+async function executeEdit(id) {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(`/api/v1/employee-advances/${id}`, {
@@ -888,8 +975,18 @@ async function editAdvance(id) {
 }
 
 async function deleteAdvance(id) {
-    if (!confirm('Are you sure you want to delete this advance?')) return;
+    pendingId = id;
+    pendingAction = 'delete';
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('authUsername').value = user.name || 'User';
+    document.getElementById('authPassword').value = '';
+
+    const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+    authModal.show();
+}
+
+async function executeDelete(id) {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(`/api/v1/employee-advances/${id}`, {
@@ -908,6 +1005,62 @@ async function deleteAdvance(id) {
     } catch (error) {
         console.error('Error deleting advance:', error);
         alert('Error deleting advance');
+    }
+}
+
+async function confirmModification() {
+    const password = document.getElementById('authPassword').value;
+    if (!password) {
+        alert('Please enter password');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    try {
+        // Verify Password via Login API
+        const verifyRes = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, password: password })
+        });
+
+        const verifyData = await verifyRes.json();
+
+        if (!verifyRes.ok || !verifyData.token) {
+            alert('Invalid Password');
+            return;
+        }
+
+        // Final permission check
+        const currentUser = verifyData.user || user;
+        const currentRights = currentUser.rights || {};
+        const currentPerms = currentUser.permissions || [];
+        // Strictly follow mod_12 even for admins
+        const hasRight = currentRights['mod_12'] || currentPerms.includes('mod_12');
+
+        if (!hasRight) {
+            alert('Access Denied: You do not have Employee Advance Modification rights.');
+            return;
+        }
+
+        // Close Modal
+        const modalEl = document.getElementById('authModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        // Proceed with pending action
+        if (pendingAction === 'edit') {
+            await executeEdit(pendingId);
+        } else if (pendingAction === 'delete') {
+            if (confirm('Are you sure you want to delete this advance?')) {
+                await executeDelete(pendingId);
+            }
+        }
+
+    } catch (e) {
+        console.error('Modification verification error:', e);
+        alert('Error verifying permissions');
     }
 }
 // clearForm and loadBranches are already defined above

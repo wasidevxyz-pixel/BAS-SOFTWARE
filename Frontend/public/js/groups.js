@@ -3,6 +3,14 @@ let allGroups = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchGroups();
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveGroup();
+        }
+    });
 });
 
 async function fetchGroups() {

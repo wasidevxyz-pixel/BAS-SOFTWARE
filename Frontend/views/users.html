@@ -149,6 +149,17 @@
             flex: 1;
         }
 
+        .rights-subcategory {
+            grid-column: 1 / -1;
+            background-color: #3c8dbc;
+            color: white;
+            padding: 2px 10px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            margin: 10px 0 5px 0;
+            border-radius: 2px;
+        }
+
         .rights-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -423,79 +434,52 @@
                             </div>
 
                             <div class="rights-grid" id="rightsGridControls">
-                                <!-- Categorized Rights as per image -->
-                                <div class="check-group"><input type="checkbox" id="right_01"><label
-                                        class="checkbox-label">01: Allow Adv More Than Salary</label></div>
+                                <!-- Employee & Payroll -->
+                                <div class="rights-subcategory">EMPLOYEE & PAYROLL</div>
                                 <div class="check-group"><input type="checkbox" id="right_02"><label
                                         class="checkbox-label">02: Allow Access Employee Para</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_03"><label
-                                        class="checkbox-label">03: Allow Direct Sales</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_01"><label
+                                        class="checkbox-label">01: Allow Adv More Than Salary</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_04"><label
                                         class="checkbox-label">04: Salary Edit Access</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_05"><label
-                                        class="checkbox-label">05: Allow Item Wise Discount</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_06"><label
-                                        class="checkbox-label">06: Allow Inv Wise Discount</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_07"><label
-                                        class="checkbox-label">07: Allow Item Wise Tax</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_08"><label
-                                        class="checkbox-label">08: Allow Inv Wise Tax</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_09"><label
-                                        class="checkbox-label">09: Allow Misc</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_10"><label
-                                        class="checkbox-label">10: Allow Freight</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_23"><label
+                                        class="checkbox-label">23: Allow Employee List</label></div>
+                                <div class="check-group"><input type="checkbox" id="mod_11"><label
+                                        class="checkbox-label">11: Allow PayRoll Delete</label></div>
+                                <div class="check-group"><input type="checkbox" id="mod_12"><label
+                                        class="checkbox-label">12: Allow Employee Advance Modification</label></div>
+                                <div class="check-group"><input type="checkbox" id="mod_13"><label
+                                        class="checkbox-label">13: Allow Employee Penalty Modification</label></div>
+
+                                <!-- Sales & Customer -->
+                                <div class="rights-subcategory">SALES & CUSTOMER</div>
+                                <div class="check-group"><input type="checkbox" id="right_03"><label
+                                        class="checkbox-label">03: Allow Direct Sales</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_11"><label
                                         class="checkbox-label">11: Allow Credit Sale</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_12"><label
                                         class="checkbox-label">12: Salesman On SaleScreen</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_13"><label
-                                        class="checkbox-label">13: Allow Cost Price in Item List</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_14"><label
-                                        class="checkbox-label">14: Allow DailyCash Update Delete</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_15"><label
-                                        class="checkbox-label">15: Allow DW Closing Bank Detail</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_16"><label
-                                        class="checkbox-label">16: Allow Finish List Access</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_17"><label
-                                        class="checkbox-label">17: Allow Previous Date Access</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_18"><label
-                                        class="checkbox-label">18: User Wise Sale List</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_19"><label
-                                        class="checkbox-label">19: Allow Negative Stock</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_20"><label
                                         class="checkbox-label">20: Show Total Sale</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_21"><label
                                         class="checkbox-label">21: Show Cost Price on Sale Screen</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_22"><label
                                         class="checkbox-label">22: Show Order List</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_23"><label
-                                        class="checkbox-label">23: Allow Employee List</label></div>
                                 <div class="check-group"><input type="checkbox" id="right_24"><label
                                         class="checkbox-label">24: Allow Customer Ledger</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_25"><label
-                                        class="checkbox-label">25: Allow Supplier Ledger</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_26"><label
-                                        class="checkbox-label">26: Show Cost Price</label></div>
-                                <div class="check-group"><input type="checkbox" id="right_27"><label
-                                        class="checkbox-label">27: Allow Day Opening Closing</label></div>
-                                <div class="check-group"><input type="checkbox" id="wh_customer"><label
-                                        class="checkbox-label">28: Allow WH Customer Access</label></div>
-                                <div class="check-group"><input type="checkbox" id="wh_item"><label
-                                        class="checkbox-label">29: Allow WH Item Access</label></div>
-                            </div>
-                        </div>
-
-                        <div class="rights-header mt-2">User Access Modification</div>
-                        <div class="rights-section-inner">
-                            <div class="rights-grid" id="rightsGridModification">
                                 <div class="check-group"><input type="checkbox" id="mod_01"><label
                                         class="checkbox-label">01: Allow Sale Retail Entry Modification</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_02"><label
-                                        class="checkbox-label">02: Allow Sale Return Modification</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_03"><label
-                                        class="checkbox-label">03: Allow Purchase Entry Modification</label></div>
                                 <div class="check-group"><input type="checkbox" id="mod_04"><label
                                         class="checkbox-label">04: Allow Whole Sale Entry Modification</label></div>
+                                <div class="check-group"><input type="checkbox" id="mod_02"><label
+                                        class="checkbox-label">02: Allow Sale Return Modification</label></div>
+                                <div class="check-group"><input type="checkbox" id="mod_10"><label
+                                        class="checkbox-label">10: Allow PendingSale Modification</label></div>
+
+                                <!-- Purchase & Finance -->
+                                <div class="rights-subcategory">PURCHASE & FINANCE</div>
+                                <div class="check-group"><input type="checkbox" id="mod_03"><label
+                                        class="checkbox-label">03: Allow Purchase Entry Modification</label></div>
                                 <div class="check-group"><input type="checkbox" id="mod_05"><label
                                         class="checkbox-label">05: Allow Purchase Return Modification</label></div>
                                 <div class="check-group"><input type="checkbox" id="mod_07"><label
@@ -504,16 +488,50 @@
                                         class="checkbox-label">08: Allow Customer Payment Modification</label></div>
                                 <div class="check-group"><input type="checkbox" id="mod_09"><label
                                         class="checkbox-label">09: Allow Expense Modification</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_10"><label
-                                        class="checkbox-label">10: Allow PendingSale Modification</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_11"><label
-                                        class="checkbox-label">11: Allow PayRoll Delete</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_12"><label
-                                        class="checkbox-label">12: Allow Employee Advance Modification</label></div>
-                                <div class="check-group"><input type="checkbox" id="mod_13"><label
-                                        class="checkbox-label">13: Allow Employee Penalty Modification</label></div>
                                 <div class="check-group"><input type="checkbox" id="mod_14"><label
                                         class="checkbox-label">14: Allow Voucher Modification</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_14"><label
+                                        class="checkbox-label">14: Allow DailyCash Update Delete</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_15"><label
+                                        class="checkbox-label">15: Allow DW Closing Bank Detail</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_27"><label
+                                        class="checkbox-label">27: Allow Day Opening Closing</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_25"><label
+                                        class="checkbox-label">25: Allow Supplier Ledger</label></div>
+
+                                <!-- Items & Pricing -->
+                                <div class="rights-subcategory">ITEMS & PRICING</div>
+                                <div class="check-group"><input type="checkbox" id="right_05"><label
+                                        class="checkbox-label">05: Allow Item Wise Discount</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_06"><label
+                                        class="checkbox-label">06: Allow Inv Wise Discount</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_07"><label
+                                        class="checkbox-label">07: Allow Item Wise Tax</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_08"><label
+                                        class="checkbox-label">08: Allow Inv Wise Tax</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_13"><label
+                                        class="checkbox-label">13: Allow Cost Price in Item List</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_16"><label
+                                        class="checkbox-label">16: Allow Finish List Access</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_26"><label
+                                        class="checkbox-label">26: Show Cost Price</label></div>
+                                <div class="check-group"><input type="checkbox" id="wh_item"><label
+                                        class="checkbox-label">29: Allow WH Item Access</label></div>
+
+                                <!-- System & Warehouse -->
+                                <div class="rights-subcategory">SYSTEM & WAREHOUSE</div>
+                                <div class="check-group"><input type="checkbox" id="right_09"><label
+                                        class="checkbox-label">09: Allow Misc</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_10"><label
+                                        class="checkbox-label">10: Allow Freight</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_17"><label
+                                        class="checkbox-label">17: Allow Previous Date Access</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_18"><label
+                                        class="checkbox-label">18: User Wise Sale List</label></div>
+                                <div class="check-group"><input type="checkbox" id="right_19"><label
+                                        class="checkbox-label">19: Allow Negative Stock</label></div>
+                                <div class="check-group"><input type="checkbox" id="wh_customer"><label
+                                        class="checkbox-label">28: Allow WH Customer Access</label></div>
                             </div>
                         </div>
                     </div>

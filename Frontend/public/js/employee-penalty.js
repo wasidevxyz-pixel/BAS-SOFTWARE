@@ -1,3 +1,7 @@
+let employees = [];
+let pendingAction = null;
+let pendingId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     loadBranches();
     loadEmployees();
@@ -130,6 +134,13 @@ async function loadPenalties() {
 
         if (data.success) {
             window.allPenalties = data.data; // Cache for editing
+
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const rights = user.rights || {};
+            const permissions = user.permissions || [];
+            // Strictly check right_13 (Allow Employee Penalty Modification) even for admins
+            const canModify = rights['right_13'] || permissions.includes('right_13');
+
             data.data.forEach(p => {
                 const tr = document.createElement('tr');
                 if (p.isPosted) {
@@ -145,12 +156,14 @@ async function loadPenalties() {
                     <td>${p.designation || '-'}</td>
                     <td>${p.penaltyAmount}</td>
                     <td>
-                        <button class="btn btn-warning btn-sm" onclick="editPenalty('${p._id}')" ${p.isPosted ? 'disabled' : ''}>
+                        ${canModify ? `
+                        <button class="btn btn-warning btn-sm" onclick="initiateEdit('${p._id}')" ${p.isPosted ? 'disabled' : ''}>
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="deletePenalty('${p._id}')" ${p.isPosted ? 'disabled' : ''}>
+                        <button class="btn btn-danger btn-sm" onclick="initiateDelete('${p._id}')" ${p.isPosted ? 'disabled' : ''}>
                             <i class="fas fa-trash"></i>
                         </button>
+                        ` : ''}
                     </td>
                 `;
                 list.appendChild(tr);
@@ -210,5 +223,104 @@ function searchPenalties() {
         } else {
             rows[i].style.display = "none";
         }
+    }
+}
+
+// Security & Password Verification
+function initiateEdit(id) {
+    pendingAction = 'edit';
+    pendingId = id;
+    document.getElementById('authPassword').value = '';
+    new bootstrap.Modal(document.getElementById('authModal')).show();
+    setTimeout(() => document.getElementById('authPassword').focus(), 500);
+}
+
+function initiateDelete(id) {
+    pendingAction = 'delete';
+    pendingId = id;
+    document.getElementById('authPassword').value = '';
+    new bootstrap.Modal(document.getElementById('authModal')).show();
+    setTimeout(() => document.getElementById('authPassword').focus(), 500);
+}
+
+async function confirmModification() {
+    const password = document.getElementById('authPassword').value;
+    if (!password) {
+        alert('Please enter password');
+        return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    try {
+        const verifyRes = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, password: password })
+        });
+
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok || !verifyData.token) {
+            alert('Invalid Password');
+            return;
+        }
+
+        const currentUser = verifyData.user || user;
+        const currentRights = currentUser.rights || {};
+        const currentPerms = currentUser.permissions || [];
+        const hasRight = currentRights['right_13'] || currentPerms.includes('right_13');
+
+        if (!hasRight) {
+            alert('Access Denied: You do not have Employee Penalty Modification rights.');
+            return;
+        }
+
+        const modalEl = document.getElementById('authModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        if (pendingAction === 'edit') {
+            executeEdit(pendingId);
+        } else if (pendingAction === 'delete') {
+            if (confirm('Are you sure you want to delete this penalty?')) {
+                executeDelete(pendingId);
+            }
+        }
+    } catch (e) {
+        console.error('Password verification error:', e);
+        alert('Error verifying permissions');
+    }
+}
+
+function executeEdit(id) {
+    const penalty = window.allPenalties.find(p => p._id === id);
+    if (penalty) {
+        document.getElementById('penaltyId').value = penalty._id;
+        document.getElementById('date').value = penalty.date.split('T')[0];
+        document.getElementById('branch').value = penalty.branch;
+        document.getElementById('employee').value = penalty.employee?._id || penalty.employee;
+        autoFillEmployeeDetails();
+        document.getElementById('penaltyAmount').value = penalty.penaltyAmount;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+async function executeDelete(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/v1/employee-penalties/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            alert('Penalty deleted successfully');
+            loadPenalties();
+        } else {
+            const data = await response.json();
+            alert('Error: ' + data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to delete penalty');
     }
 }

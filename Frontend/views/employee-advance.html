@@ -357,6 +357,8 @@
                                 <th>Payment Mode</th>
                                 <th>Bank Name</th>
                                 <th>User Name</th>
+                                <th>Modified By</th>
+                                <th>Modified At</th>
                                 <th>Remarks</th>
                                 <th>Action</th> <!-- Added Action for Edit/Delete -->
                             </tr>
@@ -459,6 +461,41 @@
         </div>
     </div>
     </div>
+    </div>
+
+    <!-- Authorization Modal (Password verification for Edit/Delete) -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="authModalLabel"><i class="fas fa-lock me-2"></i>Security
+                        Verification</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4 text-center">Please enter your password to authorize this modification.
+                    </p>
+                    <div class="mb-3">
+                        <label for="authUsername" class="form-label fw-bold">Username</label>
+                        <input type="text" class="form-control form-control-lg bg-light" id="authUsername" readonly>
+                    </div>
+                    <div class="mb-4">
+                        <label for="authPassword" class="form-label fw-bold">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i
+                                    class="fas fa-key text-muted"></i></span>
+                            <input type="password" class="form-control form-control-lg border-start-0" id="authPassword"
+                                placeholder="Enter password" autofocus>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-lg w-100 fw-bold shadow-sm"
+                        onclick="confirmModification()">
+                        <i class="fas fa-check-circle me-2"></i>Confirm Modification
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

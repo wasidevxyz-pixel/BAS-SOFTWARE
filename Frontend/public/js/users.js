@@ -25,6 +25,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveUser();
+        }
+    });
+
     // Close dropdowns on outside click
     window.addEventListener('click', (e) => {
         if (!e.target.closest('.multi-select-dropdown')) {
@@ -341,6 +349,23 @@ async function saveUser() {
 
         if (result.success) {
             alert('User saved successfully');
+
+            // PROFESSIONAL FIX: Update local session if editing self
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (id === currentUser.id || id === currentUser._id) {
+                console.log('Updating local session for current user...');
+                // We keep the token, but update the user data
+                // The next page load or background sync will use this
+                const updatedUser = { ...currentUser, ...data };
+                // Rights need to be formatted as the authController does (flat object)
+                const newRights = { ...(currentUser.rights || {}) };
+                if (data.permissions) {
+                    data.permissions.forEach(p => newRights[p] = true);
+                }
+                updatedUser.rights = newRights;
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+
             resetForm();
             fetchUsers();
         } else {

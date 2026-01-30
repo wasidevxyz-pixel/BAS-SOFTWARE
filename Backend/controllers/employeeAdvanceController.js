@@ -15,6 +15,8 @@ exports.getEmployeeAdvances = async (req, res) => {
         const advances = await EmployeeAdvance.find(query)
             .populate('employee')
             .populate('department')
+            .populate('createdBy', 'name')
+            .populate('updatedBy', 'name')
             .sort({ date: -1, createdAt: -1 });
         res.status(200).json({ success: true, data: advances });
     } catch (error) {
@@ -34,7 +36,9 @@ exports.getEmployeeAdvance = async (req, res) => {
                     { path: 'department', select: 'name' }
                 ]
             })
-            .populate('department');
+            .populate('department')
+            .populate('createdBy', 'name')
+            .populate('updatedBy', 'name');
         if (!advance) {
             return res.status(404).json({ success: false, message: 'Advance not found' });
         }
@@ -48,6 +52,7 @@ exports.getEmployeeAdvance = async (req, res) => {
 // @route   POST /api/v1/employee-advances
 exports.createEmployeeAdvance = async (req, res) => {
     try {
+        req.body.createdBy = req.user.id;
         const advance = await EmployeeAdvance.create(req.body);
         res.status(201).json({ success: true, data: advance });
     } catch (error) {
@@ -59,6 +64,7 @@ exports.createEmployeeAdvance = async (req, res) => {
 // @route   PUT /api/v1/employee-advances/:id
 exports.updateEmployeeAdvance = async (req, res) => {
     try {
+        req.body.updatedBy = req.user.id;
         const advance = await EmployeeAdvance.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
