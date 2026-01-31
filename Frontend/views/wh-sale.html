@@ -1082,30 +1082,61 @@
         let currentMobileView = 'entry'; // entry, table, summary
 
         function toggleMobileView() {
-            const entryCols = document.querySelectorAll('.col-md-9 > .card');
+            const entryCards = document.querySelectorAll('.col-md-9 > .card');
             const tableRes = document.querySelector('.table-responsive');
             const summaryCol = document.querySelector('.summary-column-bg');
             const toggleText = document.getElementById('toggleText');
             const toggleIcon = document.querySelector('#mobileToggleBtn i');
 
+            // entryCards[0] = Invoice Info
+            // entryCards[1] = Input Row
+            // entryCards[2] = Table Container
+
             if (currentMobileView === 'entry') {
-                entryCols.forEach(c => c.style.setProperty('display', 'none', 'important'));
+                // Swith to Table View
+                if (entryCards[0]) entryCards[0].style.setProperty('display', 'none', 'important');
+                if (entryCards[1]) entryCards[1].style.setProperty('display', 'none', 'important');
+                if (entryCards[2]) entryCards[2].style.setProperty('display', 'block', 'important');
+
                 tableRes.style.setProperty('display', 'block', 'important');
                 summaryCol.style.setProperty('display', 'none', 'important');
+
                 toggleText.innerText = 'View Summary';
                 toggleIcon.className = 'fas fa-chart-pie';
                 currentMobileView = 'table';
             } else if (currentMobileView === 'table') {
-                entryCols.forEach(c => c.style.setProperty('display', 'none', 'important'));
-                tableRes.style.setProperty('display', 'none', 'important');
+                // Switch to Summary View
+                entryCards.forEach(c => c.style.setProperty('display', 'none', 'important'));
+
                 summaryCol.style.setProperty('display', 'block', 'important');
+
                 toggleText.innerText = 'View Entry';
                 toggleIcon.className = 'fas fa-edit';
                 currentMobileView = 'summary';
             } else {
-                entryCols.forEach(c => c.style.setProperty('display', 'block', 'important'));
+                // Switch to Entry View
+                if (entryCards[0]) entryCards[0].style.setProperty('display', 'block', 'important');
+                if (entryCards[1]) entryCards[1].style.setProperty('display', 'block', 'important');
+                // Hide table card or just content?
+                // Originally table-responsive is hidden by CSS media query. 
+                // We should probably hide the table card wrapper to save space? 
+                // Or just hide tableRes?
+                // Let's hide tableRes AND keep parent visible or hidden?
+                // If we hide parent, it's cleaner.
+                // But typically "Entry View" implies just inputs. 
+                // Let's restore default mobile state: Inputs visible, Table Card visible but Table Area hidden?
+                // If I hide the table card, I save space.
+                if (entryCards[2]) entryCards[2].style.setProperty('display', 'none', 'important');
+
+                // Wait, if I hide [2], then table is hidden. That's fine for "Entry View" if we want to focus on inputs.
+                // But original CSS says .card { display: block !important } in mobile.
+                // However, .table-responsive is { display: none }.
+                // So originally Card 3 is visible but effectively empty (height?).
+                // I will hide Card 3 explicitly to be safe.
+
                 tableRes.style.setProperty('display', 'none', 'important');
                 summaryCol.style.setProperty('display', 'none', 'important');
+
                 toggleText.innerText = 'View Table';
                 toggleIcon.className = 'fas fa-table';
                 currentMobileView = 'entry';

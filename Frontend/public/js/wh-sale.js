@@ -575,7 +575,8 @@ function renderTable() {
             <td class="text-end fw-bold">${(it.netTotal || 0).toFixed(2)}</td>
             <td class="text-center">${it.store || ''}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-danger p-0 px-1" onclick="removeItem(${index})"><i class="fas fa-times"></i></button>
+                <button class="btn btn-sm btn-primary p-0 px-1 me-1" onclick="editItem(${index})"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger p-0 px-1" style="background-color: red !important; border-color: red !important;" onclick="removeItem(${index})"><i class="fas fa-times"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -605,6 +606,38 @@ function removeItem(index) {
     saleItems.splice(index, 1);
     renderTable();
     updateGrandTotals();
+}
+
+async function editItem(index) {
+    const item = saleItems[index];
+
+    // Remove from array and update table
+    saleItems.splice(index, 1);
+    renderTable();
+    updateGrandTotals();
+
+    // Set item selection
+    document.getElementById('itemSelect').value = item.item;
+    document.getElementById('itemSearch').value = item.name;
+
+    // Trigger Item Select Logic
+    await handleItemSelect();
+
+    // Restore User Values
+    document.getElementById('itemPack').value = item.quantity;
+    document.getElementById('itemPrice').value = item.pcsPrice;
+    document.getElementById('itemRetailPrice').value = item.retailPrice;
+    document.getElementById('itemTaxPercent').value = item.taxPercent;
+    document.getElementById('itemIncentive').value = item.incentive;
+    document.getElementById('itemDiscPercent').value = item.discountPercent;
+    if (item.store) document.getElementById('itemStore').value = item.store;
+
+    // Recalculate totals based on restored values
+    calculateRowInput();
+
+    // Focus for editing
+    document.getElementById('itemPack').focus();
+    document.getElementById('itemPack').select();
 }
 
 function resetRowInput() {

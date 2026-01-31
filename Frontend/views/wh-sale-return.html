@@ -1060,30 +1060,62 @@
         let currentMobileView = 'entry'; // entry, table, summary
 
         function toggleMobileView() {
-            const entryCols = document.querySelectorAll('.col-md-9 > .card');
+            const entryCards = document.querySelectorAll('.col-md-9 > .card');
             const tableRes = document.querySelector('.table-responsive');
             const summaryCol = document.querySelector('.summary-column-bg');
             const toggleText = document.getElementById('toggleText');
             const toggleIcon = document.querySelector('#mobileToggleBtn i');
 
+            // entryCards[0] = Heading Info
+            // entryCards[1] = Input Row
+            // entryCards[2] = Table Container
+            // entryCards[3] = Current Stock (footer of input section) -- Wait, let's check structure.
+
+            /* 
+            Structure check from lines 553+:
+            Col-9
+             Card 1: Header (ReturnNo, Customer...)
+             Card 2: Input Row
+             Card 3: Table Card
+             Card 4: Current Stock Footer
+             Button Row (Div, not card)
+            */
+
             if (currentMobileView === 'entry') {
-                entryCols.forEach(c => c.style.setProperty('display', 'none', 'important'));
+                // To Table View
+                if (entryCards[0]) entryCards[0].style.setProperty('display', 'none', 'important');
+                if (entryCards[1]) entryCards[1].style.setProperty('display', 'none', 'important');
+                if (entryCards[3]) entryCards[3].style.setProperty('display', 'none', 'important'); // Hide Stock footer
+
+                if (entryCards[2]) entryCards[2].style.setProperty('display', 'block', 'important');
                 tableRes.style.setProperty('display', 'block', 'important');
+
                 summaryCol.style.setProperty('display', 'none', 'important');
                 toggleText.innerText = 'View Summary';
                 toggleIcon.className = 'fas fa-chart-pie';
                 currentMobileView = 'table';
             } else if (currentMobileView === 'table') {
-                entryCols.forEach(c => c.style.setProperty('display', 'none', 'important'));
-                tableRes.style.setProperty('display', 'none', 'important');
+                // To Summary View
+                entryCards.forEach(c => c.style.setProperty('display', 'none', 'important'));
+
                 summaryCol.style.setProperty('display', 'block', 'important');
+
                 toggleText.innerText = 'View Entry';
                 toggleIcon.className = 'fas fa-edit';
                 currentMobileView = 'summary';
             } else {
-                entryCols.forEach(c => c.style.setProperty('display', 'block', 'important'));
+                // To Entry View
+                if (entryCards[0]) entryCards[0].style.setProperty('display', 'block', 'important');
+                if (entryCards[1]) entryCards[1].style.setProperty('display', 'block', 'important');
+                if (entryCards[3]) entryCards[3].style.setProperty('display', 'block', 'important');
+
+                // Hide table card to save space? Default CSS says cards are block.
+                // We want input focused. Let's hide table card.
+                if (entryCards[2]) entryCards[2].style.setProperty('display', 'none', 'important');
+
                 tableRes.style.setProperty('display', 'none', 'important');
                 summaryCol.style.setProperty('display', 'none', 'important');
+
                 toggleText.innerText = 'View Table';
                 toggleIcon.className = 'fas fa-table';
                 currentMobileView = 'entry';
