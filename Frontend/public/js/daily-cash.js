@@ -16,6 +16,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('department').addEventListener('change', loadBankList);
     document.getElementById('bankSelect').addEventListener('change', onBankSelect);
 
+    // New Listener: Toggle Deduction Rate based on Checkbox
+    document.getElementById('deductionCheck').addEventListener('change', (e) => {
+        const input = document.getElementById('deductedAmount');
+        if (!e.target.checked) {
+            input.value = 0;
+        } else {
+            // Restore from selected bank
+            const sel = document.getElementById('bankSelect');
+            if (sel.selectedIndex >= 0) {
+                const opt = sel.options[sel.selectedIndex];
+                if (opt && opt.dataset.deduction) {
+                    input.value = opt.dataset.deduction;
+                }
+            }
+        }
+    });
 });
 
 function toggleMode() {
@@ -90,8 +106,13 @@ function getDeptName(id) {
 function onBankSelect() {
     const sel = document.getElementById('bankSelect');
     const opt = sel.options[sel.selectedIndex];
-    if (opt && opt.dataset.deduction) {
+    const isChecked = document.getElementById('deductionCheck').checked;
+
+    if (opt && opt.dataset.deduction && isChecked) {
         document.getElementById('deductedAmount').value = opt.dataset.deduction;
+    } else if (!isChecked) {
+        // Ensure it stays 0 if unchecked
+        document.getElementById('deductedAmount').value = 0;
     }
 }
 

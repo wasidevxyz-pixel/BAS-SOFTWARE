@@ -614,7 +614,9 @@ async function searchBankDetails() {
 
                     mapped.ratePercent = ratePerc;
                     mapped.amount = grossBase;
-                    mapped.deduction = (grossBase * ratePerc) / 100;
+                    // Round deduction to whole number (Round)
+                    const rawDeduction = (grossBase * ratePerc) / 100;
+                    mapped.deduction = Math.round(rawDeduction);
                     mapped.total = Math.round(grossBase - mapped.deduction);
 
                     mapped.department = item.department ? (item.department.name || item.department) : '-';
@@ -766,21 +768,21 @@ function applyRowColor(row, isVerified) {
     if (isVerified) {
         // Verified: Green Background, White Text, Normal Weight
         row.style.setProperty('background-color', '#28a745', 'important');
-        row.style.setProperty('color', '#fff', 'important');
+        row.style.setProperty('color', '#fff'); // removed !important to allow print override
         row.style.setProperty('font-weight', 'normal', 'important');
         cells.forEach(cell => {
             cell.style.setProperty('background-color', '#28a745', 'important');
-            cell.style.setProperty('color', '#fff', 'important');
+            cell.style.setProperty('color', '#fff'); // removed !important
             cell.style.setProperty('font-weight', 'normal', 'important');
         });
     } else {
         // Unverified: Red Background, White Text, Normal Weight
         row.style.setProperty('background-color', '#dc3545', 'important');
-        row.style.setProperty('color', '#fff', 'important');
+        row.style.setProperty('color', '#fff'); // removed !important
         row.style.setProperty('font-weight', 'normal', 'important');
         cells.forEach(cell => {
             cell.style.setProperty('background-color', '#dc3545', 'important');
-            cell.style.setProperty('color', '#fff', 'important');
+            cell.style.setProperty('color', '#fff'); // removed !important
             cell.style.setProperty('font-weight', 'normal', 'important');
         });
     }
@@ -789,7 +791,7 @@ function applyRowColor(row, isVerified) {
     const inputs = row.querySelectorAll('input');
     inputs.forEach(input => {
         if (input.type !== 'checkbox') {
-            input.style.setProperty('color', '#fff', 'important');
+            input.style.setProperty('color', '#fff'); // removed !important
             input.style.setProperty('font-weight', 'normal', 'important');
             input.style.setProperty('font-size', '0.9rem', 'important');
         }
@@ -1686,7 +1688,49 @@ window.clearBTBForm = clearBTBForm;
 window.filterBTBGrid = filterBTBGrid;
 
 // Print Bank Ledger Function
+// Print Bank Ledger Function
 function printBankLedger() {
+    // Populate Print Header
+    const branch = document.getElementById('bd-branch').value || 'All Branches';
+    const from = document.getElementById('bd-from-date').value;
+    const to = document.getElementById('bd-to-date').value;
+
+    const pBranch = document.getElementById('print-branch');
+    const pFrom = document.getElementById('print-from');
+    const pTo = document.getElementById('print-to');
+
+    if (pBranch) pBranch.textContent = branch;
+    if (pFrom) pFrom.textContent = from;
+    if (pTo) pTo.textContent = to;
+
+    // Populate Print Totals (Grand Totals Breakdown)
+    let totalAmount = 0;
+    let totalDeduction = 0;
+    let totalNet = 0;
+
+    const rows = document.querySelectorAll('#bankDetailsBody tr');
+    rows.forEach(row => {
+        if (row.style.display !== 'none') {
+            const cells = row.querySelectorAll('td');
+            // Indices: 5=Amount, 7=Deduction, 8=Total(Net)
+            // Adjust indices based on hidden columns in print CSS?
+            // Better to access by content logic or specific classes if changed, but standard index works here.
+            // Screen indices: 0=Date, 1=Checkbox, 2=BatchDate, 3=Bank, 4=Dept, 5=Amount, 6=Rate, 7=Ded, 8=Total
+
+            if (cells[5]) totalAmount += parseFloat(cells[5].textContent.replace(/,/g, '')) || 0;
+            if (cells[7]) totalDeduction += parseFloat(cells[7].textContent.replace(/,/g, '')) || 0;
+            if (cells[8]) totalNet += parseFloat(cells[8].textContent.replace(/,/g, '')) || 0;
+        }
+    });
+
+    const pAmount = document.getElementById('print-total-amount');
+    const pDeduction = document.getElementById('print-total-deduction');
+    const pNet = document.getElementById('print-total-net');
+
+    if (pAmount) pAmount.textContent = Math.round(totalAmount).toLocaleString();
+    if (pDeduction) pDeduction.textContent = Math.round(totalDeduction).toLocaleString();
+    if (pNet) pNet.textContent = Math.round(totalNet).toLocaleString();
+
     window.print();
 }
 

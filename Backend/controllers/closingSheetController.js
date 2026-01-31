@@ -184,6 +184,12 @@ exports.getDepartmentWiseReport = async (req, res) => {
                 for (const [deptId, deptData] of Object.entries(closing02Data)) {
                     if (!deptData) continue; // Skip invalid entries
 
+                    // SKIP NON-DEPARTMENT KEYS
+                    // These are auxiliary fields stored in closing02 but are NOT departments.
+                    if (['warehouseSale', 'prevRecovery', 'commission'].includes(deptId)) {
+                        continue;
+                    }
+
                     const parentName = deptIdToName.get(deptId) || 'UNKNOWN';
 
                     // Get Real Total Cost for this Department from Warehouse Sale map OR Popup Data
@@ -201,16 +207,22 @@ exports.getDepartmentWiseReport = async (req, res) => {
                         const totalDisc = parseFloat(deptData.discountValue) || 0;
                         const baseDiscountPer = parseFloat(deptData.discountPer) || 0;
 
+                        let totalBreakdownSale = 0;
+                        let totalBreakdownDisc = 0;
+                        let totalBreakdownCost = 0;
+
                         Object.entries(deptData.salesBreakdown).forEach(([subId, subData]) => {
                             if (!subData) return; // Skip invalid sub-data
 
                             const subSale = parseFloat(subData.sale) || 0;
+                            totalBreakdownSale += subSale;
 
                             // Prorate Discount Value based on sales contribution
                             let subDiscVal = 0;
                             if (totalSale !== 0) {
                                 subDiscVal = (subSale / totalSale) * totalDisc;
                             }
+                            totalBreakdownDisc += subDiscVal;
 
                             // Calculate inferred Gross for the sub-item (Net + Disc)
                             const subGross = subSale + subDiscVal;
@@ -233,6 +245,7 @@ exports.getDepartmentWiseReport = async (req, res) => {
                                 // Priority 4: Fallback
                                 subCost = subSale * 0.7;
                             }
+                            totalBreakdownCost += subCost;
 
                             itemsToProcess.push({
                                 id: subId,
@@ -246,6 +259,39 @@ exports.getDepartmentWiseReport = async (req, res) => {
                                 counterClosing: 0, bankTotal: 0, receivedCash: 0, difference: 0, tSaleManual: 0
                             });
                         });
+
+                        // CAPTURE REMAINDER SALES (Undefined Remainder)
+                        // If the breakdown doesn't sum up to the parent total, attribute the rest to the Parent Dept itself.
+                        if (totalSale > totalBreakdownSale + 1) { // +1 for float tolerance
+                            const remainderSale = totalSale - totalBreakdownSale;
+
+                            // Remainder Discount (Balance)
+                            let remainderDisc = totalDisc - totalBreakdownDisc;
+                            if (remainderDisc < 0) remainderDisc = 0; // Safety
+
+                            const remainderGross = remainderSale + remainderDisc;
+
+                            // Remainder Cost (Balance)
+                            let remainderCost = 0;
+                            if (realTotalCost !== undefined) {
+                                remainderCost = realTotalCost - totalBreakdownCost;
+                                if (remainderCost < 0) remainderCost = 0; // Safety: Cost shouldn't be negative usually
+                            } else {
+                                // Fallback: If we don't know the real total cost, estimate it
+                                remainderCost = remainderSale * 0.7;
+                            }
+
+                            itemsToProcess.push({
+                                id: deptId, // Use Parent ID
+                                parentDept: parentName,
+                                sale: remainderSale,
+                                discVal: remainderDisc,
+                                discPer: baseDiscountPer,
+                                gross: remainderGross,
+                                cost: remainderCost,
+                                counterClosing: 0, bankTotal: 0, receivedCash: 0, difference: 0, tSaleManual: 0
+                            });
+                        }
                     } else {
                         // Standard Mode (or No Breakdown available)
 
@@ -278,7 +324,7 @@ exports.getDepartmentWiseReport = async (req, res) => {
 
                     // Process items
                     for (const item of itemsToProcess) {
-                        const dName = deptIdToName.get(item.id) || 'UNKNOWN';
+                        const dName = deptIdToName.get(item.id) || item.id || 'UNKNOWN';
                         const key = `${branchName}-${dName}`;
 
                         if (!departmentMap.has(key)) {

@@ -211,15 +211,23 @@ async function generateReport() {
         let rawData = result.data || [];
 
         // STRICT FILTERING:
-        // Only include items that are valid Sub-Departments (based on our loaded whitelist)
+        // We previously filtered by validKeys, but this hides historical data if a department was deleted or renamed.
+        // To match the Sales Details report (Source of Truth), we must show ALL data returned by the backend.
+        const filteredData = rawData;
+
+        /* 
         const filteredData = rawData.filter(item => {
             return validKeys.has(`${item.branch}-${item.dept}`);
-        });
+        }); 
+        */
 
         // Apply Department Name Filter (Dropdown Selection) if set
         let reportItems = filteredData;
         if (deptName) {
-            reportItems = filteredData.filter(item => item.dept === deptName);
+            const search = deptName.trim().toUpperCase();
+            reportItems = filteredData.filter(item =>
+                (item.dept || '').trim().toUpperCase() === search
+            );
         }
 
         // Transform data to match report format

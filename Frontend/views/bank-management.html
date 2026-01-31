@@ -482,6 +482,10 @@
 
         /* Print Styles */
         @media print {
+            @page {
+                size: portrait;
+                margin: 0.5cm;
+            }
 
             .page-header,
             .filter-row,
@@ -490,15 +494,45 @@
             .kpi-card,
             .sidebar-container,
             .nav-tabs,
-            #bankTabs {
+            #bankTabs,
+            #selectAllBatches,
+            .d-print-none {
                 display: none !important;
             }
 
+            body * {
+                visibility: hidden;
+            }
+
+            /* Make only the active tab visible */
+            .tab-pane.active,
+            .tab-pane.active * {
+                visibility: visible;
+            }
+
+            /* Isolate the active pane to the top of the page */
+            .tab-pane.active {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white;
+            }
+
+            /* Ensure body/html allow scrolling if valid */
             body,
-            body.sidebar-full,
-            body.sidebar-mini {
+            html {
                 background: white !important;
-                padding-left: 0 !important;
+                height: 100%;
+                overflow: visible !important;
+            }
+
+            .container-fluid {
+                visibility: hidden;
+                /* Hide container wrapper but keep flow for child positioning if needed, though abs pos should fix it */
+                padding: 0 !important;
                 margin: 0 !important;
             }
 
@@ -509,29 +543,99 @@
                 height: auto !important;
             }
 
-            .data-table th {
-                background: #0288d1 !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
             .table-responsive {
                 overflow: visible !important;
                 height: auto !important;
                 max-height: none !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            /* Hide Columns: Checkbox(2), BatchTransferDate(3) */
+            #bankDetailsTable th:nth-child(2),
+            #bankDetailsTable td:nth-child(2),
+            #bankDetailsTable th:nth-child(3),
+            #bankDetailsTable td:nth-child(3) {
+                display: none !important;
+            }
+
+            .custom-grid {
+                font-size: 8pt !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
             }
 
             .custom-grid th {
-                position: static !important;
-                background-color: #007bff !important;
-                color: white !important;
+                background-color: #f0f0f0 !important;
+                color: black !important;
+                border: 1px solid #000 !important;
+                padding: 4px !important;
+                font-size: 8pt !important;
+                text-align: center !important;
+                /* Centered Headers */
+                vertical-align: middle !important;
             }
 
-            .custom-grid tfoot td {
-                position: static !important;
-                background-color: #f8f9fa !important;
-                color: black !important;
+            .custom-grid td {
+                border: 1px solid #000 !important;
+                padding: 4px !important;
+                vertical-align: middle !important;
+                text-align: center !important;
+                /* Centered Cells */
+            }
+
+            /* Compact Rows */
+            .custom-grid tr {
+                height: auto !important;
+            }
+
+            /* Overrides to force Black Text on Print */
+            .row-red,
+            .bg-danger,
+            .bg-success,
+            tr[style*="background-color"],
+            td[style*="background-color"] {
+                color: #000 !important;
+                -webkit-text-fill-color: #000 !important;
+                /* Optional: If we want to remove the Red/Green background for saving ink, uncomment below: */
+                /* background-color: transparent !important; */
+            }
+
+            input {
+                border: none !important;
+                background: transparent !important;
+                color: #000 !important;
+                width: 100% !important;
+                /* Take full width to center text properly */
+                padding: 0 !important;
+                font-size: inherit !important;
+                text-align: center !important;
+                /* Centered Data */
+            }
+
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .print-only-footer {
+                display: table-footer-group !important;
+            }
+
+            .print-totals {
+                display: block !important;
+                margin-top: 15px;
+                page-break-inside: avoid;
+            }
+
+            /* Force table header to repeat */
+            thead {
+                display: table-header-group;
+            }
+
+            tfoot {
+                display: table-footer-group;
             }
         }
 
@@ -616,6 +720,16 @@
 
             <!-- TAB 1: BANK DETAIL -->
             <div class="tab-pane fade show active h-100" id="bank-detail">
+                <!-- PRINT HEADER -->
+                <div class="print-header d-none">
+                    <h3 class="fw-bold m-0 text-uppercase">D Watson Pharmacy & Super Store</h3>
+                    <h5 class="m-0 mb-2">BANK DETAIL REPORT</h5>
+                    <div class="d-flex justify-content-center gap-4 small border-bottom border-dark pb-2 mb-2">
+                        <span><strong>Branch:</strong> <span id="print-branch">-</span></span>
+                        <span><strong>From:</strong> <span id="print-from">-</span></span>
+                        <span><strong>To:</strong> <span id="print-to">-</span></span>
+                    </div>
+                </div>
                 <!-- Filters -->
                 <div class="filter-row mb-2">
                     <div class="filter-group">
@@ -696,8 +810,41 @@
                         <tbody id="bankDetailsBody">
                             <!-- populated by JS -->
                         </tbody>
+                        <tfoot class="print-only-footer" style="display: none;">
+                            <tr class="fw-bold" style="background-color: #f0f0f0; --bs-table-bg: #f0f0f0;">
+                                <!-- 1: Date -->
+                                <td style="border-top: 2px solid #000 !important;"></td>
+                                <!-- 2: Checkbox (Hidden by CSS) -->
+                                <td></td>
+                                <!-- 3: BatchDate (Hidden by CSS) -->
+                                <td></td>
+                                <!-- 4: Bank -->
+                                <td style="border-top: 2px solid #000 !important;"></td>
+                                <!-- 5: Dept - Label Here -->
+                                <td class="text-end text-uppercase"
+                                    style="border-top: 2px solid #000 !important; font-weight: bold;">Grand Totals:</td>
+                                <!-- 6: Amount -->
+                                <td class="text-end" id="print-total-amount"
+                                    style="border-top: 2px solid #000 !important; font-weight: bold;">0</td>
+                                <!-- 7: Rate -->
+                                <td class="text-center" style="border-top: 2px solid #000 !important;">-</td>
+                                <!-- 8: Deduction -->
+                                <td class="text-end" id="print-total-deduction"
+                                    style="border-top: 2px solid #000 !important; font-weight: bold;">0</td>
+                                <!-- 9: Net Total -->
+                                <td class="text-end" id="print-total-net"
+                                    style="border-top: 2px solid #000 !important; font-weight: bold;">0</td>
+                                <!-- 10: Remarks -->
+                                <td style="border-top: 2px solid #000 !important;"></td>
+                                <!-- 11: BatchNo -->
+                                <td style="border-top: 2px solid #000 !important;"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
+
+                <!-- PRINT TOTALS REMOVED - NOW INTEGRATED IN TABLE -->
+
             </div>
 
             <!-- TAB 2: PENDING CHQ -->

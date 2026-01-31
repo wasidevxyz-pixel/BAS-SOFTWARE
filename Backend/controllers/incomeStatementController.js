@@ -209,19 +209,26 @@ exports.getIncomeStatement = async (req, res) => {
                 // Check if this department has breakdown
                 if (deptData.salesBreakdown && Object.keys(deptData.salesBreakdown).length > 0) {
                     // Process breakdown (sub-departments)
+                    // Process breakdown (sub-departments)
                     const totalDisc = parseFloat(deptData.discountValue) || 0;
+
+                    let totalBreakdownSale = 0;
+                    let totalBreakdownDisc = 0;
+                    let totalBreakdownCost = 0;
 
                     Object.entries(deptData.salesBreakdown).forEach(([subId, subData]) => {
                         if (!subData) return;
 
                         const subDeptName = deptIdToName.get(subId) || 'UNKNOWN';
                         const subSale = parseFloat(subData.sale) || 0;
+                        totalBreakdownSale += subSale;
 
                         // Prorate discount
                         let subDiscVal = 0;
                         if (totalSale !== 0) {
                             subDiscVal = (subSale / totalSale) * totalDisc;
                         }
+                        totalBreakdownDisc += subDiscVal;
 
                         // Calculate cost
                         let subCost = 0;
@@ -241,6 +248,7 @@ exports.getIncomeStatement = async (req, res) => {
                             // Priority 4: Fallback
                             subCost = subSale * 0.7;
                         }
+                        totalBreakdownCost += subCost;
 
                         // Calculate gross profit
                         const subGross = subSale - subCost;
@@ -271,6 +279,50 @@ exports.getIncomeStatement = async (req, res) => {
                         subDept.grossProfit += subGross;
                         subDept.gpProfit += subGpProfit;
                     });
+
+                    // CAPTURE REMAINDER SALES (Undefined Remainder)
+                    if (totalSale > totalBreakdownSale + 1) { // +1 for float tolerance
+                        const remainderSale = totalSale - totalBreakdownSale;
+
+                        // Remainder Discount
+                        let remainderDisc = totalDisc - totalBreakdownDisc;
+                        if (remainderDisc < 0) remainderDisc = 0;
+
+                        // Remainder Cost
+                        let remainderCost = 0;
+                        if (realTotalCost !== undefined) {
+                            remainderCost = realTotalCost - totalBreakdownCost;
+                            if (remainderCost < 0) remainderCost = 0;
+                        } else {
+                            // Fallback
+                            remainderCost = remainderSale * 0.7;
+                        }
+
+                        const remainderGross = remainderSale - remainderCost;
+                        const remainderGpProfit = remainderGross - remainderDisc;
+
+                        // Use Parent ID for the remainder entry so it shows under the parent
+                        if (!group.subDepartments.has(deptId)) {
+                            group.subDepartments.set(deptId, {
+                                department: dept.name, // Parent Name
+                                departmentId: deptId,
+                                deptDed: dept.deduction || 0,
+                                sales: 0,
+                                cost: 0,
+                                bankDeduction: 0,
+                                grossProfit: 0,
+                                discount: 0,
+                                gpProfit: 0
+                            });
+                        }
+
+                        const remDept = group.subDepartments.get(deptId);
+                        remDept.sales += remainderSale;
+                        remDept.cost += remainderCost;
+                        remDept.discount += remainderDisc;
+                        remDept.grossProfit += remainderGross;
+                        remDept.gpProfit += remainderGpProfit;
+                    }
                 } else {
                     // No breakdown - treat as single department
                     const sale = parseFloat(deptData.totalSaleComputer) || 0;
