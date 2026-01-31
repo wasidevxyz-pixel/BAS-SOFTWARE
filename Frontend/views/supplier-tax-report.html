@@ -106,6 +106,17 @@
 
         /* Print Styles */
         @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            body,
+            html {
+                height: auto !important;
+                width: 100% !important;
+                overflow: visible !important;
+            }
 
             .filter-panel,
             .page-header,
@@ -115,14 +126,21 @@
             }
 
             .report-container {
-                height: auto;
+                position: relative;
+                width: 100%;
+                height: auto !important;
                 padding: 0;
-                overflow: visible;
+                margin: 0;
+                overflow: visible !important;
+                display: block !important;
             }
 
             .table-container {
-                overflow: visible;
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
                 padding: 0;
+                display: block !important;
             }
 
             .print-header {
@@ -742,7 +760,8 @@
                             aiTaxAmount: ent.aiTaxAmount || 0,
                             categoryName: catName,
                             supplierName: ent.supplierName || s.name || 'Unknown',
-                            subCat: ent.subCategory || ''
+                            subCat: ent.subCategory || '',
+                            ntn: ent.ntn || s.ntn || ''
                         });
                     });
                 }
@@ -766,6 +785,7 @@
                     grouped[e.categoryName][key] = {
                         supplierName: e.supplierName,
                         subCat: e.subCat,
+                        ntn: e.ntn,
                         amt: 0, tax: 0, ai: 0
                     };
                 }
@@ -796,6 +816,7 @@
                                      <th style="width: 50px;">Sr. No.</th>
                                      <th>Supplier Name</th>
                                      <th>Sub Category</th>
+                                     <th class="text-center">NTN</th>
                                      <th class="text-end">Total Amount</th>
                                      <th class="text-end">Total Tax Ded.</th>
                                      <th class="text-end">Total Adv Tax</th>
@@ -815,6 +836,7 @@
                             <td class="text-center">${srNo++}</td>
                             <td>${item.supplierName}</td>
                             <td class="text-center">${item.subCat || '-'}</td>
+                            <td class="text-center">${item.ntn || '-'}</td>
                             <td class="text-end fw-bold">${formatCurrency(item.amt)}</td>
                             <td class="text-end fw-bold">${formatCurrency(item.tax)}</td>
                             <td class="text-end fw-bold">${formatCurrency(item.ai)}</td>
@@ -827,7 +849,7 @@
                              </tbody>
                              <tfoot>
                                 <tr style="font-weight: bold;">
-                                    <td colspan="3" class="text-center" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">Total for ${catName}</td>
+                                    <td colspan="4" class="text-center" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">Total for ${catName}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catAmt)}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catTax)}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important;">${formatCurrency(catAi)}</td>
