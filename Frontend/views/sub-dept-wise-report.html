@@ -155,15 +155,15 @@
             font-size: 0.75rem;
             letter-spacing: 0.5px;
             padding: 12px 15px;
-            border: 1px solid #333 !important;
+            border: 1px solid #ffffff !important;
         }
 
         .custom-table th:first-child {
-            border-radius: 12px 0 0 0;
+            border-radius: 0 !important;
         }
 
         .custom-table th:last-child {
-            border-radius: 0 12px 0 0;
+            border-radius: 0 !important;
         }
 
         /* Alternating Row Colors */
@@ -230,11 +230,11 @@
         }
 
         .total-row>td:first-child {
-            border-radius: 0 0 0 12px;
+            border-radius: 0;
         }
 
         .total-row>td:last-child {
-            border-radius: 0 0 12px 0;
+            border-radius: 0;
         }
 
         .total-row>td.text-end {
@@ -472,7 +472,6 @@
             /* Label for total */
         }
 
-        /* Forced Header Styles */
         tr.group-header,
         tr.group-header td,
         tr.dept-header,
@@ -485,6 +484,212 @@
             color: white !important;
             font-weight: 700 !important;
             border: 1px solid #333 !important;
+        }
+
+        /* Print Styles */
+        /* Print Styles - Professional & Full Width */
+        @media print {
+            @page {
+                size: A4;
+                margin: 5mm 5mm;
+            }
+
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Visibility Control */
+            body * {
+                visibility: hidden;
+            }
+
+            .main-container,
+            .main-container * {
+                visibility: visible;
+            }
+
+            .d-print-none {
+                display: none !important;
+            }
+
+            .main-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            .print-header {
+                visibility: visible;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+
+            /* SUMMARY CARDS - COMPACT FOR PRINT */
+            .summary-cards-row {
+                padding: 0 0 15px 0 !important;
+            }
+
+            .summary-card {
+                padding: 10px !important;
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                min-height: auto !important;
+            }
+
+            .summary-card .value {
+                font-size: 1.4rem !important;
+            }
+
+            .summary-card.yellow {
+                background-color: #ffc107 !important;
+                color: black !important;
+            }
+
+            .summary-card.dark {
+                background-color: #343a40 !important;
+                color: white !important;
+            }
+
+            /* TABLE LAYOUT - FORCE DESKTOP VIEW */
+            .data-table-section {
+                padding: 0 !important;
+            }
+
+            .table-responsive {
+                overflow: visible !important;
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .custom-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                display: table !important;
+                border: 1px solid #000;
+            }
+
+            /* Reset Mobile Overrides */
+            .custom-table tbody,
+            .custom-table thead,
+            .custom-table tfoot {
+                display: table-row-group !important;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .custom-table thead {
+                display: table-header-group !important;
+            }
+
+            .custom-table tr {
+                display: table-row !important;
+                break-inside: avoid;
+            }
+
+            .custom-table th,
+            .custom-table td {
+                display: table-cell !important;
+                width: auto !important;
+                padding: 4px 6px !important;
+                font-size: 0.75rem !important;
+                border: 1px solid #444 !important;
+                text-align: left;
+            }
+
+            /* Numeric Classes */
+            .text-end {
+                text-align: right !important;
+            }
+
+            .text-center {
+                text-align: center !important;
+            }
+
+            /* Hide Mobile Generated Labels */
+            .custom-table td::before {
+                display: none !important;
+                content: none !important;
+            }
+
+            /* --- COLORFUL HEADERS --- */
+
+            /* 1. Group Header (Branch | Dept) */
+            .custom-table tbody tr.group-header td {
+                background-color: #014d35 !important;
+                /* Original Dark Green */
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 0.9rem !important;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                padding: 8px !important;
+                text-align: center !important;
+                border: 1px solid #000 !important;
+            }
+
+            /* 2. Column Headers (The row below group header) */
+            .custom-table tr.table-dark th {
+                background-color: #000000 !important;
+                /* Standard Black */
+                color: white !important;
+                font-weight: bold;
+                text-transform: uppercase;
+                font-size: 0.7rem !important;
+                text-align: center !important;
+                border: 1px solid #ffffff !important;
+            }
+
+            /* 3. Subtotal Row */
+            tr.subtotal-row td {
+                background-color: #ffebee !important;
+                /* Light Red/Pink */
+                color: #b71c1c !important;
+                /* Dark Red Text */
+                font-weight: bold !important;
+                border-top: 2px solid #000 !important;
+            }
+
+            /* 4. Grand Total Footer */
+            tfoot tr.total-row td {
+                background-color: #ffc107 !important;
+                /* Solid Yellow */
+                color: black !important;
+                /* Black Text */
+                font-weight: 800 !important;
+                font-size: 1rem !important;
+                border-top: 2px solid #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Row Striping */
+            tr.dept-row:nth-child(even) td {
+                background-color: #f8f9fa !important;
+            }
+
+            /* Clean up badge styling for print */
+            .badge {
+                border: none !important;
+                background: transparent !important;
+                color: black !important;
+                padding: 0 !important;
+                font-weight: normal;
+            }
+
+            /* Specific column adjustments */
+            td[data-label="Cost"] {
+                color: black !important;
+            }
         }
     </style>
 </head>
@@ -511,27 +716,42 @@
         </div>
     </div>
 
+    <!-- Print Header (Visible only on print) -->
+    <div class="print-header d-none d-print-block mb-4">
+        <div class="text-center">
+            <h2 class="fw-bold mb-0 text-uppercase">D.Watson</h2>
+            <h4 class="mb-2">Sub-Department Wise Sales Report</h4>
+            <p class="mb-0">
+                <strong>From:</strong> <span id="pFromDate"></span>
+                <span class="mx-3">|</span>
+                <strong>To:</strong> <span id="pToDate"></span>
+            </p>
+            <p class="small text-muted mt-1">Printed on: <span id="pPrintTime"></span></p>
+        </div>
+        <hr class="my-3" style="border-top: 2px solid #000;">
+    </div>
+
     <!-- Main Content -->
     <div class="main-container">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
             <div>
                 <h5 class="mb-1 text-muted">Generate and view sub-department sales reports</h5>
             </div>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-3 d-print-none">
             <button class="btn btn-secondary" style="background-color: #2c5ba9; border: none; font-weight: 600;">
                 <i class="fas fa-sitemap me-2"></i>Sub-Department-Wise Report
             </button>
         </div>
 
         <div class="report-card">
-            <div class="card-header-custom">
+            <div class="card-header-custom d-print-none">
                 <i class="fas fa-filter"></i> Sub-Department-Wise Report Filters
             </div>
 
-            <div class="filters-section">
+            <div class="filters-section d-print-none">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label>Branch</label>
@@ -553,9 +773,12 @@
                         <label>To Date</label>
                         <input type="date" id="toDate" class="form-control">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-generate w-100" onclick="generateReport()">
-                            <i class="fas fa-file-alt me-2"></i> Generate Report
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button class="btn btn-generate flex-grow-1" onclick="generateReport()">
+                            <i class="fas fa-file-alt"></i> View
+                        </button>
+                        <button class="btn btn-dark flex-grow-1" onclick="prepareAndPrint()">
+                            <i class="fas fa-print"></i> Print
                         </button>
                     </div>
                 </div>
@@ -586,7 +809,7 @@
 
                         <tbody id="reportTableBody">
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">No data available. Please generate
+                                <td colspan="7" class="text-center py-4 text-muted">No data available. Please generate
                                     the report.</td>
                             </tr>
                         </tbody>
@@ -611,6 +834,14 @@
     <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>
     <script src="/js/sub-dept-wise-report.js"></script>
+    <script>
+        function prepareAndPrint() {
+            document.getElementById('pFromDate').textContent = document.getElementById('fromDate').value;
+            document.getElementById('pToDate').textContent = document.getElementById('toDate').value;
+            document.getElementById('pPrintTime').textContent = new Date().toLocaleString();
+            window.print();
+        }
+    </script>
 </body>
 
 </html>
