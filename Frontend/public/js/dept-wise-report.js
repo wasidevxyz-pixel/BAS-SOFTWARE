@@ -324,7 +324,7 @@ function renderReport(data) {
         const headerRow = document.createElement('tr');
         headerRow.className = 'branch-header-row';
         headerRow.innerHTML = `
-            <td colspan="6" class="fw-bold py-2 px-3 text-center" style="background-color: #1565c0 !important; color: white !important;">
+            <td colspan="6" class="fw-bold py-2 px-3 text-center" style="background-color: #014d35 !important; color: white !important;">
                 ${branchName}
             </td>
         `;

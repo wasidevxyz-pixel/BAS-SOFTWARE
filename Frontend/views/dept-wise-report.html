@@ -175,16 +175,17 @@
             text-transform: uppercase;
             font-size: 0.75rem;
             letter-spacing: 0.5px;
-            padding: 12px 15px;
-            border: 1px solid #333 !important;
+            padding: 8px 10px;
+            /* Reduced padding */
+            border: 1px solid #ffffff !important;
         }
 
         .custom-table th:first-child {
-            border-radius: 12px 0 0 0;
+            border-radius: 0;
         }
 
         .custom-table th:last-child {
-            border-radius: 0 12px 0 0;
+            border-radius: 0;
         }
 
         /* Alternating Row Colors */
@@ -207,7 +208,8 @@
 
         .custom-table td {
             font-size: 0.9rem;
-            padding: 14px 15px;
+            padding: 8px 10px;
+            /* Reduced padding */
             vertical-align: middle;
             border: none;
             border-bottom: 1px solid #e9ecef;
@@ -260,6 +262,16 @@
         .custom-table tfoot td.text-end {
             font-size: 1.1rem;
             font-weight: 800;
+        }
+
+        /* Grand Total Row Styling */
+        .custom-table tfoot,
+        .custom-table tfoot td {
+            background-color: #cff4fc !important;
+            /* Light Info Blue */
+            color: #055160 !important;
+            /* Dark Blue Text */
+            border-top: 2px solid #000 !important;
         }
 
         /* Empty State Enhancement */
@@ -615,8 +627,8 @@
 
             <!-- Report Table -->
             <div class="data-table-section">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped custom-table mb-0">
+                <div> <!-- Removed table-responsive to avoid premature scrolling -->
+                    <table class="table table-bordered table-striped custom-table mb-0" style="width: 100%;">
                         <thead>
                             <tr>
                                 <th>Branch</th>
