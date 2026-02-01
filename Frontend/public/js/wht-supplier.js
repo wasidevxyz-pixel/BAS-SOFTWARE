@@ -19,6 +19,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Search functionality
     document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+
+    // Check for editParam
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('editId');
+    if (editId) {
+        // Wait a tick to ensure UI is ready? No, logic is synchronous after await.
+        // We need to make sure allSuppliers handles searching.
+        // The editSupplier function is attached to window, so we can call it.
+        // But we need to make sure the row might be filtered out? 
+        // editSupplier uses allSuppliers, so it's fine.
+
+        // If on mobile, switch to form view?
+        if (window.innerWidth <= 768) {
+            const formPanel = document.getElementById('formPanelWrapper');
+            const listPanel = document.getElementById('listPanelWrapper');
+            // Default is form visible usually, but let's be safe
+            if (formPanel && formPanel.style.display === 'none') {
+                formPanel.style.display = 'block';
+                listPanel.style.display = 'none';
+            }
+        }
+
+        // Call edit
+        if (typeof window.editSupplier === 'function') {
+            window.editSupplier(editId);
+        }
+    }
 });
 
 let allSuppliers = [];

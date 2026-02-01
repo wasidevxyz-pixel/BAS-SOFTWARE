@@ -12,6 +12,10 @@ exports.getSupplierTaxes = asyncHandler(async (req, res, next) => {
         query.branch = req.query.branch;
     }
 
+    if (req.query.supplier) {
+        query['entries.supplier'] = req.query.supplier;
+    }
+
     if (req.query.startDate && req.query.endDate) {
         const start = new Date(req.query.startDate);
         const end = new Date(req.query.endDate);

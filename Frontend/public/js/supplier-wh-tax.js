@@ -12,18 +12,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSuppliers();
     await loadCategories();
 
-    // Default selection
+    // Check for URL parameters (from Reports)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBranch = urlParams.get('branch');
+    const paramDate = urlParams.get('date');
+    const paramSheetId = urlParams.get('sheetId');
+    const paramEntryId = urlParams.get('entryId');
+
     const branchSelect = document.getElementById('branchSelect');
-    // Only auto-select if user has exactly one branch (options include placeholder)
-    if (branchSelect.options.length === 2) {
-        branchSelect.selectedIndex = 1;
-        filterCategoriesByBranch(); // Ensure categories are filtered for the auto-selected branch
+
+    if (paramBranch && paramDate) {
+        branchSelect.value = paramBranch;
+        document.getElementById('filterDate').value = paramDate;
+
+        filterCategoriesByBranch();
         await loadSavedData();
+
+        // Auto-edit logic
+        if (paramSheetId) {
+            const record = loadedRecords.find(r => String(r._id) === String(paramSheetId));
+            if (record) {
+                editRecord(paramSheetId);
+
+                if (paramEntryId) {
+                    const row = addedRows.find(r => String(r.id) === String(paramEntryId));
+                    if (row) {
+                        editTopRow(paramEntryId);
+                    }
+                }
+            }
+        } else {
+            // Auto-scroll to saved list if not editing specific entry
+            const listCard = document.querySelector('.card-header.bg-white.py-3');
+            if (listCard) listCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
     } else {
-        // If multiple branches (e.g. Admin), default to "Select Branch" (Index 0)
-        branchSelect.selectedIndex = 0;
-        filterCategoriesByBranch(); // Initialize with global categories if any
-        // Do NOT load data automatically for admins/multi-branch users
+        // Default selection logic
+        // Only auto-select if user has exactly one branch (options include placeholder)
+        if (branchSelect.options.length === 2) {
+            branchSelect.selectedIndex = 1;
+            filterCategoriesByBranch();
+            await loadSavedData();
+        } else {
+            // If multiple branches (e.g. Admin), default to "Select Branch" (Index 0)
+            branchSelect.selectedIndex = 0;
+            filterCategoriesByBranch();
+        }
     }
 
     setupCalculations();

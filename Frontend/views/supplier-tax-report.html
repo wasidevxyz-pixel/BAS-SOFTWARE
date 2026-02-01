@@ -246,9 +246,18 @@
                 </div>
                 <div class="col" style="min-width: 200px; flex-grow: 2;">
                     <label class="d-block text-truncate">Supplier</label>
-                    <select id="filterSupplier" class="form-select form-select-sm">
-                        <option value="">All Suppliers</option>
-                    </select>
+                    <div class="position-relative">
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="supplierSearchInput" class="form-control"
+                                placeholder="Type to search..." autocomplete="off">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSupplierSearch()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" id="filterSupplier">
+                        <div id="supplierSuggestions" class="list-group position-absolute w-100 shadow"
+                            style="z-index: 1000; max-height: 300px; overflow-y: auto; display: none;"></div>
+                    </div>
                 </div>
                 <div class="col">
                     <label class="d-block text-truncate">Type</label>
@@ -332,28 +341,122 @@
                 const data = await res.json();
                 if (data.success) {
                     const sel = document.getElementById('filterBranch');
-                    data.data.forEach(s => sel.innerHTML += `<option value="${s._id}">${s.name}</option>`);
+                    let options = '<option value="">All Branches</option>';
+                    data.data.forEach(s => options += `<option value="${s._id}">${s.name}</option>`);
+                    sel.innerHTML = options;
                 }
             } catch (e) { console.error(e); }
         }
 
+        let allSuppliers = [];
+
         async function loadSuppliers() {
             try {
                 const token = localStorage.getItem('token');
+                // Fetch all categories to ensure map is full (addressing Uncategorized issue)
+                await loadCategories();
+
                 const res = await fetch('/api/v1/suppliers?limit=5000', { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
                 if (data.success) {
-                    const sel = document.getElementById('filterSupplier');
-                    if (data.data && Array.isArray(data.data)) {
-                        data.data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                        data.data.forEach(s => {
-                            let label = s.name;
-                            if (s.subCategory) label += ` (${s.subCategory})`;
-                            sel.innerHTML += `<option value="${s._id}">${label}</option>`;
-                        });
-                    }
+                    allSuppliers = data.data || [];
+                    allSuppliers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 }
             } catch (e) { console.error(e); }
+        }
+
+        // Supplier Search Logic
+        const supplierInput = document.getElementById('supplierSearchInput');
+        const supplierSuggestions = document.getElementById('supplierSuggestions');
+
+        if (supplierInput) {
+            supplierInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                if (query.length < 1) {
+                    supplierSuggestions.style.display = 'none';
+                    return;
+                }
+
+                const matches = allSuppliers.filter(s => {
+                    const name = (s.name || '').toLowerCase();
+                    const sub = (s.subCategory || '').toLowerCase();
+                    return name.includes(query) || sub.includes(query);
+                }).slice(0, 20); // Limit to 20 suggestions
+
+                if (matches.length > 0) {
+                    supplierSuggestions.innerHTML = matches.map((s, index) => {
+                        let label = s.name;
+                        if (s.subCategory) label += ` <small class='text-muted'>(${s.subCategory})</small>`;
+                        // Escape quotes for the onclick handler
+                        const safeName = (s.name || '').replace(/'/g, "\\'");
+                        return `<a href="#" class="list-group-item list-group-item-action p-2 suggestion-item" data-index="${index}" onclick="selectSupplier('${s._id}', '${safeName}')">${label}</a>`;
+                    }).join('');
+                    supplierSuggestions.style.display = 'block';
+                } else {
+                    supplierSuggestions.innerHTML = `<div class="p-2 text-muted">No match found</div>`;
+                    supplierSuggestions.style.display = 'block';
+                }
+            });
+
+            // Keyboard Navigation
+            let currentFocus = -1;
+            supplierInput.addEventListener('keydown', function (e) {
+                const items = supplierSuggestions.getElementsByTagName('a');
+                if (e.key === 'ArrowDown') {
+                    currentFocus++;
+                    addActive(items);
+                    if (currentFocus >= 0 && items[currentFocus]) {
+                        items[currentFocus].scrollIntoView({ block: "nearest" });
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    currentFocus--;
+                    addActive(items);
+                    if (currentFocus >= 0 && items[currentFocus]) {
+                        items[currentFocus].scrollIntoView({ block: "nearest" });
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentFocus > -1) {
+                        if (items[currentFocus]) items[currentFocus].click();
+                    } else if (items && items.length > 0) {
+                        // Select first if none selected but available
+                        items[0].click();
+                    }
+                }
+            });
+
+            function addActive(items) {
+                if (!items) return false;
+                removeActive(items);
+                if (currentFocus >= items.length) currentFocus = 0;
+                if (currentFocus < 0) currentFocus = (items.length - 1);
+                items[currentFocus].classList.add('active');
+            }
+
+            function removeActive(items) {
+                for (let i = 0; i < items.length; i++) {
+                    items[i].classList.remove('active');
+                }
+            }
+        }
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+            if (supplierInput && supplierSuggestions && !supplierInput.contains(e.target) && !supplierSuggestions.contains(e.target)) {
+                supplierSuggestions.style.display = 'none';
+            }
+        });
+
+        function selectSupplier(id, name) {
+            document.getElementById('filterSupplier').value = id;
+            document.getElementById('supplierSearchInput').value = name;
+            document.getElementById('supplierSuggestions').style.display = 'none';
+        }
+
+        function clearSupplierSearch() {
+            document.getElementById('filterSupplier').value = '';
+            document.getElementById('supplierSearchInput').value = '';
+            document.getElementById('supplierSuggestions').style.display = 'none';
         }
 
         async function loadReport() {
@@ -395,6 +498,7 @@
             try {
                 let url = `/api/v1/supplier-taxes?startDate=${startDate}&endDate=${endDate}&limit=5000`;
                 if (branch) url += `&branch=${branch}`;
+                if (supplier) url += `&supplier=${supplier}`;
 
                 const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
                 const result = await response.json();
@@ -458,7 +562,11 @@
 
                         allEntries.push({
                             ...ent,
+                            branchId: rec.branch?._id || rec.branch,
+                            sheetId: rec._id, // Add Sheet ID
+                            entryId: ent._id, // Add Entry ID
                             sheetDate: rec.date,
+                            entryDate: rec.createdAt,
                             categoryName: catName,
                             whtType: whtType,
                             supplierName: ent.supplierName || s.name || 'Unknown',
@@ -512,14 +620,16 @@
                                  <tr>
                                      <th style="width: 50px;">Sr. No.</th>
                                      <th>Supplier Name</th>
-                                     <th>Sub Category</th>
-                                     <th>NTN</th>
-                                     <th>Date</th>
-                                     <th>Inv No.</th>
+                                     <th class="text-center">Sub Category</th>
+                                     <th class="text-center">NTN</th>
+                                     <th class="text-center">Entry Date</th>
+                                     <th class="text-center">Date</th>
+                                     <th class="text-center">Inv No.</th>
                                      <th class="text-end">Inv Amount</th>
                                      <th class="text-end" style="width: 50px;">Tax%</th>
                                      <th class="text-end">Tax Ded.</th>
                                      <th class="text-end">Adv Tax</th>
+                                     <th class="text-center" style="width: 50px;">Action</th>
                                  </tr>
                              </thead>
                              <tbody>
@@ -540,11 +650,12 @@
                         if (currentWhtType !== null) {
                             html += `
                                 <tr class="total-row" style="background-color: ${TOTAL_BG}; color: white; font-weight: bold;">
-                                    <td colspan="6" class="text-center">Total</td>
+                                    <td colspan="7" class="text-center">Total</td>
                                     <td class="text-end">${formatCurrency(grpAmt)}</td>
                                     <td></td>
                                     <td class="text-end">${formatCurrency(grpTax)}</td>
                                     <td class="text-end">${formatCurrency(grpAi)}</td>
+                                    <td></td>
                                 </tr>
                              `;
                             grpAmt = 0; grpTax = 0; grpAi = 0;
@@ -556,7 +667,7 @@
 
                         html += `
                             <tr class="bg-light fw-bold">
-                                <td colspan="10" class="text-center text-uppercase" style="background-color: #f0f0f0;">${currentWhtType} W.H Tax</td>
+                                <td colspan="12" class="text-center text-uppercase" style="background-color: #f0f0f0;">${currentWhtType} W.H Tax</td>
                             </tr>
                          `;
                     }
@@ -567,11 +678,12 @@
                         if (currentSupplier !== null) {
                             html += `
                                 <tr class="total-row" style="background-color: ${TOTAL_BG}; color: white; font-weight: bold;">
-                                    <td colspan="6" class="text-center">Total</td>
+                                    <td colspan="7" class="text-center">Total</td>
                                     <td class="text-end">${formatCurrency(grpAmt)}</td>
                                     <td></td>
                                     <td class="text-end">${formatCurrency(grpTax)}</td>
                                     <td class="text-end">${formatCurrency(grpAi)}</td>
+                                    <td></td>
                                 </tr>
                              `;
                             grpAmt = 0; grpTax = 0; grpAi = 0;
@@ -596,12 +708,16 @@
                             <td>${item.supplierName}</td>
                             <td class="text-center">${item.subCat || '-'}</td>
                             <td class="text-center">${item.ntn || '-'}</td>
+                            <td class="text-center">${formatDate(item.entryDate)}</td>
                             <td class="text-center">${formatDate(item.invoiceDate)}</td>
                             <td class="text-center">${item.invoiceNumber || '-'}</td>
                             <td class="text-end">${formatCurrency(item.invoiceAmount)}</td>
                             <td class="text-end">${item.taxPct}%</td>
                             <td class="text-end">${formatCurrency(item.taxDeducted)}</td>
                             <td class="text-end">${formatCurrency(item.aiTaxAmount)}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-primary" onclick="editSupplier('${item.sId}', '${item.branchId}', '${item.sheetDate}', '${item.sheetId}', '${item.entryId}')" title="Edit Entry"><i class="fas fa-edit"></i></button>
+                            </td>
                         </tr>
                      `;
                 });
@@ -610,11 +726,12 @@
                 if (currentSupplier !== null) {
                     html += `
                         <tr class="total-row" style="background-color: ${TOTAL_BG}; color: white; font-weight: bold;">
-                            <td colspan="6" class="text-center">Total</td>
+                            <td colspan="7" class="text-center">Total</td>
                             <td class="text-end">${formatCurrency(grpAmt)}</td>
                             <td></td>
                             <td class="text-end">${formatCurrency(grpTax)}</td>
                             <td class="text-end">${formatCurrency(grpAi)}</td>
+                            <td></td>
                         </tr>
                      `;
                 }
@@ -624,11 +741,12 @@
                              </tbody>
                              <tfoot>
                                 <tr style="font-weight: bold;">
-                                    <td colspan="6" class="text-center" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">Total for ${catName}</td>
+                                    <td colspan="7" class="text-center" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">Total for ${catName}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catAmt)}</td>
                                     <td style="background-color: black !important; color: white !important; border-right: 1px solid white !important;"></td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catTax)}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important;">${formatCurrency(catAi)}</td>
+                                    <td style="background-color: black !important; color: white !important;"></td>
                                 </tr>
                              </tfoot>
                          </table>
@@ -641,11 +759,28 @@
             renderCategorySummary(container, allEntries);
         }
 
+        function editSupplier(supplierId, branchId, date, sheetId, entryId) {
+            // Navigate to Supplier WH Tax Entry (supplier-wh-tax.html) with branch and date and IDs
+            if (branchId && date) {
+                let d = date;
+                if (date.includes('T')) d = date.split('T')[0];
+
+                let url = `supplier-wh-tax.html?branch=${branchId}&date=${d}`;
+                if (sheetId) url += `&sheetId=${sheetId}`;
+                if (entryId) url += `&entryId=${entryId}`;
+
+                window.location.href = url;
+            } else {
+                window.location.href = `supplier-wh-tax.html`;
+            }
+        }
+
         let categoriesMap = {};
         async function loadCategories() {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('/api/v1/supplier-categories?type=wht_supplier', { headers: { 'Authorization': `Bearer ${token}` } });
+                // Remove type filter to get ALL categories to minimize "Uncategorized" defaults
+                const res = await fetch('/api/v1/supplier-categories', { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
                 if (data.success) {
                     data.data.forEach(c => categoriesMap[c._id] = c.name);
