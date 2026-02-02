@@ -88,7 +88,7 @@ async function loadCustomers() {
                 const option = document.createElement('option');
                 option.value = cust._id;
                 option.textContent = `${cust.customerName} (${cust.code})`;
-                option.dataset.balance = cust.openingBalance || 0;
+                option.dataset.balance = cust.currentBalance || 0;
                 select.appendChild(option);
             });
             if (currentValue) {
