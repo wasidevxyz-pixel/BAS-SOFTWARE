@@ -10,11 +10,12 @@ const {
 } = require('../controllers/employeeController');
 
 const { protect, authorize } = require('../middleware/auth');
+const { verifyApiKey } = require('../middleware/apiAuth');
 
 router.get('/next-code', protect, getNextCode);
 
 router.route('/')
-    .get(protect, getEmployees)
+    .get(verifyApiKey, protect, getEmployees)
     .post(protect, authorize('admin', 'manager'), createEmployee);
 
 router.route('/:id')

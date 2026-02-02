@@ -9,9 +9,10 @@ const {
 } = require('../controllers/storeController');
 
 const { protect, authorize } = require('../middleware/auth');
+const { verifyApiKey } = require('../middleware/apiAuth');
 
 router.route('/')
-    .get(protect, getStores)
+    .get(verifyApiKey, protect, getStores)
     .post(protect, authorize('admin', 'manager'), createStore);
 
 router.route('/:id')

@@ -10,13 +10,14 @@ const {
 } = require('../controllers/attendanceController');
 
 const { protect, authorize } = require('../middleware/auth');
+const { verifyApiKey } = require('../middleware/apiAuth');
 
 router.route('/')
-    .get(protect, getAttendance)
-    .post(protect, authorize('admin', 'manager'), createAttendance);
+    .get(verifyApiKey, protect, getAttendance)
+    .post(verifyApiKey, protect, authorize('admin', 'manager'), createAttendance);
 
 router.route('/bulk')
-    .post(protect, authorize('admin', 'manager'), bulkCreateAttendance);
+    .post(verifyApiKey, protect, authorize('admin', 'manager'), bulkCreateAttendance);
 
 router.route('/:id')
     .get(protect, getSingleAttendance)

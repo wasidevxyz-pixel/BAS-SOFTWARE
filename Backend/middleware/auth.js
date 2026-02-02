@@ -3,6 +3,11 @@ const User = require('../models/User');
 
 // Protect routes
 exports.protect = async (req, res, next) => {
+  // If req.user is already set (e.g. by verifyApiKey), skip standard check
+  if (req.user) {
+    return next();
+  }
+
   let token;
 
   if (
