@@ -56,6 +56,18 @@ async function initializePage() {
             document.getElementById('paymentForm').requestSubmit();
         }
     });
+
+    // Cycle Tab from Remarks to Customer Search
+    const remarksInput = document.getElementById('remarks');
+    if (remarksInput) {
+        remarksInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                const searchInput = document.getElementById('customerSearch');
+                if (searchInput) searchInput.focus();
+            }
+        });
+    }
 }
 
 async function loadCustomers() {
@@ -345,6 +357,9 @@ function resetForm() {
     document.getElementById('bankInfo').classList.add('d-none');
     document.getElementById('previousBalance').value = 0;
     document.getElementById('balance').value = 0;
+
+    // Focus back on customer search
+    if (si) si.focus();
 }
 
 function printVoucher(id) {

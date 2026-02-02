@@ -154,6 +154,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         const selectedBranch = e.target.value === "" ? "" : branchName;
         await loadSuppliers(selectedBranch);
     });
+
+    // Shortcut Key: Alt + S for Save
+    document.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            // Determine active tab
+            const supplierTab = document.getElementById('supplier-content');
+            const categoryTab = document.getElementById('category-content');
+
+            if (supplierTab && supplierTab.classList.contains('active')) {
+                const form = document.getElementById('supplierVoucherForm');
+                if (form) form.requestSubmit();
+            } else if (categoryTab && categoryTab.classList.contains('active')) {
+                const form = document.getElementById('categoryVoucherForm');
+                if (form) form.requestSubmit();
+            }
+        }
+    });
 });
 
 async function loadCategories(branchId = '') {
