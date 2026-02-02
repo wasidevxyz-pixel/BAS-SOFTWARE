@@ -913,20 +913,36 @@ window.editRecord = function (id) {
     const recDate = record.date ? new Date(record.date).toISOString().split('T')[0] : '';
     document.getElementById('filterDate').value = recDate;
     // document.getElementById('filterDateFrom').value = recDate;
-    addedRows = record.entries.map(e => ({
-        id: e._id || Date.now() + Math.random(),
-        supplierId: e.supplier?._id || e.supplier,
-        supplierName: e.supplierName,
-        subCat: e.subCategory,
-        ntn: e.ntn,
-        date: e.invoiceDate ? new Date(e.invoiceDate).toISOString().split('T')[0] : '',
-        invNum: e.invoiceNumber,
-        invAmt: e.invoiceAmount,
-        taxPct: e.taxPct,
-        taxDed: e.taxDeducted,
-        aiPct: e.aiTaxPct,
-        aiAmt: e.aiTaxAmount
-    }));
+    addedRows = record.entries.map(e => {
+        const supId = e.supplier?._id || e.supplier;
+        const supObj = suppliersMap[supId];
+
+        let catName = '';
+        let subCatName = e.subCategory || '';
+
+        if (supObj) {
+            catName = supObj.categoryName;
+            if (!subCatName) subCatName = supObj.subCategory;
+        } else if (e.supplier && e.supplier.category) { // Fallback if not in map
+            catName = e.supplier.category.name || categoriesMap[e.supplier.category] || '';
+        }
+
+        return {
+            id: e._id || Date.now() + Math.random(),
+            supplierId: supId,
+            supplierName: e.supplierName,
+            subCat: subCatName || '',
+            category: catName,
+            ntn: e.ntn,
+            date: e.invoiceDate ? new Date(e.invoiceDate).toISOString().split('T')[0] : '',
+            invNum: e.invoiceNumber,
+            invAmt: e.invoiceAmount,
+            taxPct: e.taxPct,
+            taxDed: e.taxDeducted,
+            aiPct: e.aiTaxPct,
+            aiAmt: e.aiTaxAmount
+        };
+    });
 
     renderTableRows();
     if (addedRows.length > 0) {
