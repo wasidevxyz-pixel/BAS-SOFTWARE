@@ -244,6 +244,12 @@
                         <option value="">All Branches</option>
                     </select>
                 </div>
+                <div class="col">
+                    <label class="d-block text-truncate">Category</label>
+                    <select id="filterCategory" class="form-select form-select-sm">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
                 <div class="col" style="min-width: 200px; flex-grow: 2;">
                     <label class="d-block text-truncate">Supplier</label>
                     <div class="position-relative">
@@ -465,6 +471,7 @@
             const startDate = document.getElementById('filterFromDate').value;
             const endDate = document.getElementById('filterToDate').value;
             const branch = document.getElementById('filterBranch').value;
+            const category = document.getElementById('filterCategory').value;
             const supplier = document.getElementById('filterSupplier').value;
             const type = document.getElementById('reportType').value;
 
@@ -509,9 +516,9 @@
                 }
 
                 if (type === 'summary') {
-                    renderSummaryReport(result.data, supplier, invStartDate, invEndDate);
+                    renderSummaryReport(result.data, supplier, invStartDate, invEndDate, category);
                 } else {
-                    renderReport(result.data, supplier, invStartDate, invEndDate);
+                    renderReport(result.data, supplier, invStartDate, invEndDate, category);
                 }
 
             } catch (e) {
@@ -520,7 +527,7 @@
             }
         }
 
-        function renderReport(records, selectedSupplierId, invStart, invEnd) {
+        function renderReport(records, selectedSupplierId, invStart, invEnd, selectedCategoryId) {
             const container = document.getElementById('reportContainer');
             container.innerHTML = '';
 
@@ -539,6 +546,13 @@
                         let sId = s._id || s;
                         // Check Supplier ID match if selected
                         if (selectedSupplierId && sId !== selectedSupplierId) return;
+
+                        // Category Filter
+                        if (selectedCategoryId) {
+                            const cObj = s.category;
+                            const cId = (cObj && cObj._id) ? cObj._id : ((typeof cObj === 'string') ? cObj : null);
+                            if (cId !== selectedCategoryId) return;
+                        }
 
                         // Inv Date Filter
                         if (invStart && ent.invoiceDate) {
@@ -779,11 +793,29 @@
         async function loadCategories() {
             try {
                 const token = localStorage.getItem('token');
-                // Remove type filter to get ALL categories to minimize "Uncategorized" defaults
-                const res = await fetch('/api/v1/supplier-categories', { headers: { 'Authorization': `Bearer ${token}` } });
+                // Fetch categories specifically for wht_supplier to match registration screen
+                const res = await fetch('/api/v1/supplier-categories?type=wht_supplier', { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await res.json();
                 if (data.success) {
-                    data.data.forEach(c => categoriesMap[c._id] = c.name);
+                    const sel = document.getElementById('filterCategory');
+                    let opts = '<option value="">All Categories</option>';
+
+                    // Populate Map and Dropdown
+                    // Sort by name
+                    const sorted = (data.data || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                    const seenNames = new Set();
+
+                    sorted.forEach(c => {
+                        // Skip if duplicate name (logic from wht-supplier.js)
+                        if (seenNames.has((c.name || '').trim())) return;
+                        seenNames.add((c.name || '').trim());
+
+                        categoriesMap[c._id] = c.name;
+                        opts += `<option value="${c._id}">${c.name}</option>`;
+                    });
+
+                    if (sel) sel.innerHTML = opts;
                 }
             } catch (e) { console.error(e); }
         }
@@ -860,7 +892,7 @@
             container.appendChild(sumDiv);
         }
 
-        function renderSummaryReport(records, selectedSupplierId, invStart, invEnd) {
+        function renderSummaryReport(records, selectedSupplierId, invStart, invEnd, selectedCategoryId) {
             const container = document.getElementById('reportContainer');
             container.innerHTML = '';
 
@@ -876,6 +908,13 @@
                         let s = ent.supplier || {};
                         let sId = s._id || s;
                         if (selectedSupplierId && sId !== selectedSupplierId) return;
+
+                        // Category Filter
+                        if (selectedCategoryId) {
+                            const cObj = s.category;
+                            const cId = (cObj && cObj._id) ? cObj._id : ((typeof cObj === 'string') ? cObj : null);
+                            if (cId !== selectedCategoryId) return;
+                        }
 
                         if (invStart && ent.invoiceDate) {
                             if (new Date(ent.invoiceDate).toISOString().split('T')[0] < invStart) return;
@@ -896,7 +935,8 @@
                             categoryName: catName,
                             supplierName: ent.supplierName || s.name || 'Unknown',
                             subCat: ent.subCategory || '',
-                            ntn: ent.ntn || s.ntn || ''
+                            ntn: ent.ntn || s.ntn || '',
+                            taxPct: ent.taxPct || 0
                         });
                     });
                 }
@@ -921,6 +961,7 @@
                         supplierName: e.supplierName,
                         subCat: e.subCat,
                         ntn: e.ntn,
+                        taxPct: e.taxPct,
                         amt: 0, tax: 0, ai: 0
                     };
                 }
@@ -953,6 +994,7 @@
                                      <th>Sub Category</th>
                                      <th class="text-center">NTN</th>
                                      <th class="text-end">Total Amount</th>
+                                     <th class="text-end" style="width: 60px;">Tax%</th>
                                      <th class="text-end">Total Tax Ded.</th>
                                      <th class="text-end">Total Adv Tax</th>
                                  </tr>
@@ -973,6 +1015,7 @@
                             <td class="text-center">${item.subCat || '-'}</td>
                             <td class="text-center">${item.ntn || '-'}</td>
                             <td class="text-end fw-bold">${formatCurrency(item.amt)}</td>
+                            <td class="text-end fw-bold">${item.taxPct}%</td>
                             <td class="text-end fw-bold">${formatCurrency(item.tax)}</td>
                             <td class="text-end fw-bold">${formatCurrency(item.ai)}</td>
                         </tr>
@@ -986,6 +1029,7 @@
                                 <tr style="font-weight: bold;">
                                     <td colspan="4" class="text-center" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">Total for ${catName}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catAmt)}</td>
+                                    <td style="background-color: black !important; color: white !important; border-right: 1px solid white !important;"></td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catTax)}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important;">${formatCurrency(catAi)}</td>
                                 </tr>
