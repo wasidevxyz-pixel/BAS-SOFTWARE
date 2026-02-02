@@ -108,7 +108,8 @@
         @media print {
             @page {
                 size: A4;
-                margin: 10mm;
+                margin: 8mm;
+                /* Increased from 5mm */
             }
 
             body,
@@ -116,12 +117,15 @@
                 height: auto !important;
                 width: 100% !important;
                 overflow: visible !important;
+                font-size: 11.5px !important;
+                /* Increased from 10px */
             }
 
             .filter-panel,
             .page-header,
             .sidebar,
-            .data-header {
+            .data-header,
+            .no-print {
                 display: none !important;
             }
 
@@ -147,12 +151,55 @@
                 display: block !important;
             }
 
+            h2,
+            h4,
+            h5,
+            p {
+                margin: 4px 0 !important;
+            }
+
             /* Enforce background colors */
             .category-header {
                 background-color: #2980b9 !important;
                 color: white !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                padding: 5px !important;
+                font-size: 1.2rem !important;
+            }
+
+            table.table-bordered {
+                border: 1px solid black !important;
+                width: 100% !important;
+                margin-bottom: 0 !important;
+            }
+
+            table.table-bordered th,
+            table.table-bordered td {
+                border: 1px solid black !important;
+                font-size: 11.5px !important;
+                /* Increased */
+                padding: 3px 4px !important;
+                /* Increased padding */
+                line-height: 1.2;
+                vertical-align: middle;
+            }
+
+            /* Balanced columns - Let browser auto-layout but allow wrapping for text fields */
+            table.table-bordered th,
+            table.table-bordered td {
+                white-space: normal !important;
+            }
+
+            /* Specific shrink for small columns */
+            table.table-bordered th:nth-child(1),
+            /* Sr */
+            table.table-bordered th:nth-child(9)
+
+            /* Tax% */
+                {
+                width: 1% !important;
+                white-space: nowrap !important;
             }
 
             thead th {
@@ -643,7 +690,7 @@
                                      <th class="text-end" style="width: 50px;">Tax%</th>
                                      <th class="text-end">Tax Ded.</th>
                                      <th class="text-end">Adv Tax</th>
-                                     <th class="text-center" style="width: 50px;">Action</th>
+                                     <th class="text-center no-print" style="width: 50px;">Action</th>
                                  </tr>
                              </thead>
                              <tbody>
@@ -669,7 +716,7 @@
                                     <td></td>
                                     <td class="text-end">${formatCurrency(grpTax)}</td>
                                     <td class="text-end">${formatCurrency(grpAi)}</td>
-                                    <td></td>
+                                    <td class="no-print"></td>
                                 </tr>
                              `;
                             grpAmt = 0; grpTax = 0; grpAi = 0;
@@ -697,7 +744,7 @@
                                     <td></td>
                                     <td class="text-end">${formatCurrency(grpTax)}</td>
                                     <td class="text-end">${formatCurrency(grpAi)}</td>
-                                    <td></td>
+                                    <td class="no-print"></td>
                                 </tr>
                              `;
                             grpAmt = 0; grpTax = 0; grpAi = 0;
@@ -729,7 +776,7 @@
                             <td class="text-end">${item.taxPct}%</td>
                             <td class="text-end">${formatCurrency(item.taxDeducted)}</td>
                             <td class="text-end">${formatCurrency(item.aiTaxAmount)}</td>
-                            <td class="text-center">
+                            <td class="text-center no-print">
                                 <button class="btn btn-sm btn-primary" onclick="editSupplier('${item.sId}', '${item.branchId}', '${item.sheetDate}', '${item.sheetId}', '${item.entryId}')" title="Edit Entry"><i class="fas fa-edit"></i></button>
                             </td>
                         </tr>
@@ -745,7 +792,7 @@
                             <td></td>
                             <td class="text-end">${formatCurrency(grpTax)}</td>
                             <td class="text-end">${formatCurrency(grpAi)}</td>
-                            <td></td>
+                            <td class="no-print"></td>
                         </tr>
                      `;
                 }
@@ -760,7 +807,7 @@
                                     <td style="background-color: black !important; color: white !important; border-right: 1px solid white !important;"></td>
                                     <td class="text-end" style="background-color: black !important; color: white !important; border-right: 1px solid white !important;">${formatCurrency(catTax)}</td>
                                     <td class="text-end" style="background-color: black !important; color: white !important;">${formatCurrency(catAi)}</td>
-                                    <td style="background-color: black !important; color: white !important;"></td>
+                                    <td class="no-print" style="background-color: black !important; color: white !important;"></td>
                                 </tr>
                              </tfoot>
                          </table>
@@ -987,16 +1034,16 @@
                              ${catName}
                          </div>
                          <table class="table table-bordered mb-0" style="width:100%;">
-                             <thead class="text-white" style="background-color: ${TABLE_HEAD_BG};">
+                             <thead class="text-white" style="background-color: #3498db;">
                                  <tr>
-                                     <th style="width: 50px;">Sr. No.</th>
-                                     <th>Supplier Name</th>
-                                     <th>Sub Category</th>
-                                     <th class="text-center">NTN</th>
-                                     <th class="text-end">Total Amount</th>
-                                     <th class="text-end" style="width: 60px;">Tax%</th>
-                                     <th class="text-end">Total Tax Ded.</th>
-                                     <th class="text-end">Total Adv Tax</th>
+                                     <th style="width: 50px; background-color: #3498db !important; color: white !important;">Sr. No.</th>
+                                     <th style="background-color: #3498db !important; color: white !important;">Supplier Name</th>
+                                     <th class="text-center" style="background-color: #3498db !important; color: white !important;">Sub Category</th>
+                                     <th class="text-center" style="background-color: #3498db !important; color: white !important;">NTN</th>
+                                     <th class="text-end" style="background-color: #3498db !important; color: white !important;">Total Amount</th>
+                                     <th class="text-end" style="width: 60px; background-color: #3498db !important; color: white !important;">Tax%</th>
+                                     <th class="text-end" style="background-color: #3498db !important; color: white !important;">Total Tax Ded.</th>
+                                     <th class="text-end" style="background-color: #3498db !important; color: white !important;">Total Adv Tax</th>
                                  </tr>
                              </thead>
                              <tbody>
