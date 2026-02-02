@@ -139,7 +139,8 @@ function handleTabParameter() {
         'company': { tabId: 'company-tab', contentId: 'company' },
         'invoice': { tabId: 'invoice-tab', contentId: 'invoice' },
         'tax': { tabId: 'tax-tab', contentId: 'tax' },
-        'backup': { tabId: 'backup-tab', contentId: 'backup' }
+        'backup': { tabId: 'backup-tab', contentId: 'backup' },
+        'apiKey': { tabId: 'apiKey-tab', contentId: 'apiKey' }
     };
 
     const tabInfo = tabMap[tabParam];
@@ -251,6 +252,7 @@ async function loadAllSettings() {
             populateCompanySettings(data);
             populateInvoiceSettings(data);
             populateTaxSettings(data);
+            populateApiKeySettings(data);
         }
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -1048,4 +1050,82 @@ function showBackupAlert(type, message) {
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
+// ============================================
+// API Key Functions
+// ============================================
+
+// Populate API Key settings
+function populateApiKeySettings(data) {
+    const settings = data.data || data;
+    const apiKeyInput = document.getElementById('displayApiKey');
+    const apiSecretInput = document.getElementById('displayApiSecret');
+
+    if (apiKeyInput) apiKeyInput.value = settings.apiKey || '';
+    if (apiSecretInput) apiSecretInput.value = settings.apiSecret || '';
+}
+
+// Generate/Regenerate API Key
+async function generateApiKey() {
+    if (!confirm('WARNING: Regenerating the API Key will INVALIDATE the existing key. Any external applications using the old key will stop working immediately. Are you sure you want to proceed?')) {
+        return;
+    }
+
+    try {
+        showLoading();
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/settings/api-key', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            const data = result.data;
+            document.getElementById('displayApiKey').value = data.apiKey;
+            document.getElementById('displayApiSecret').value = data.apiSecret;
+            showSuccess('API Key generated successfully');
+        } else {
+            const err = await response.json();
+            throw new Error(err.message || 'Failed to generate API Key');
+        }
+    } catch (error) {
+        console.error('Error generating API Key:', error);
+        showError('Failed to generate API Key: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+function toggleSecretVisibility() {
+    const input = document.getElementById('displayApiSecret');
+    const icon = document.getElementById('toggleSecretIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    if (!copyText || !copyText.value) return;
+
+    // Select the text field
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+
+    // Copy the text inside the text field
+    navigator.clipboard.writeText(copyText.value).then(() => {
+        showSuccess('Copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
 }

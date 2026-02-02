@@ -245,6 +245,13 @@
                                         <span class="d-none d-md-inline">Backup</span>
                                     </button>
                                 </li>
+                                <li class="nav-item" role="presentation" data-permission="settings_apiKey">
+                                    <button class="nav-link" id="apiKey-tab" data-bs-toggle="tab"
+                                        data-bs-target="#apiKey" type="button" role="tab">
+                                        <i class="fas fa-key me-2"></i>
+                                        <span class="d-none d-md-inline">API Key</span>
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -638,6 +645,57 @@
                             <!-- Alert Container -->
                             <div id="backupAlertContainer" class="mt-3"></div>
 
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Key Settings -->
+                <div class="tab-pane fade" id="apiKey" role="tabpanel">
+                    <div class="card shadow mt-3">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-key me-2 text-primary"></i>API Key Configuration
+                            </h5>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                This API Key provides <strong>full access</strong> to the application. Keep it secure!
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">API Key</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" id="displayApiKey" readonly>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="copyToClipboard('displayApiKey')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">API Secret</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control font-monospace" id="displayApiSecret"
+                                        readonly>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="toggleSecretVisibility()">
+                                        <i class="fas fa-eye" id="toggleSecretIcon"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                        onclick="copyToClipboard('displayApiSecret')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border-top pt-3">
+                                <button class="btn btn-danger" onclick="generateApiKey()">
+                                    <i class="fas fa-sync-alt me-2"></i>Generate / Regenerate Keys
+                                </button>
+                                <small class="text-muted d-block mt-2">
+                                    Regenerating keys will invalidate existing ones immediately.
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>

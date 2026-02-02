@@ -1,5 +1,6 @@
 const asyncHandler = require('../middleware/async');
 const Settings = require('../models/Settings');
+const crypto = require('crypto');
 
 // @desc    Get settings
 // @route   GET /api/v1/settings
@@ -168,6 +169,32 @@ exports.restoreSettings = asyncHandler(async (req, res) => {
     success: true,
     data: settings,
     message: 'Settings restored successfully'
+  });
+});
+
+// @desc    Generate API Key
+// @route   POST /api/v1/settings/api-key
+// @access  Private (admin only)
+exports.generateApiKey = asyncHandler(async (req, res) => {
+  const settings = await Settings.getSettings();
+
+  // Generate random key and secret
+  const apiKey = crypto.randomBytes(20).toString('hex');
+  const apiSecret = crypto.randomBytes(40).toString('hex');
+
+  settings.apiKey = apiKey;
+  settings.apiSecret = apiSecret;
+  settings.updatedBy = req.user.id;
+
+  await settings.save();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      apiKey,
+      apiSecret
+    },
+    message: 'API Key generated successfully'
   });
 });
 

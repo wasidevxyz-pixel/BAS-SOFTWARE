@@ -277,6 +277,15 @@ const settingsSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  apiKey: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  apiSecret: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true,

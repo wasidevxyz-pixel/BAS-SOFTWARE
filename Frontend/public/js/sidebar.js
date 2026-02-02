@@ -255,7 +255,8 @@ class SidebarNavigation {
                     { label: 'Company Settings', link: '/settings.html?tab=company', permission: 'settings_company' },
                     { label: 'Invoice Settings', link: '/settings.html?tab=invoice', permission: 'settings_invoice' },
                     { label: 'Tax Settings', link: '/settings.html?tab=tax', permission: 'settings_tax' },
-                    { label: 'Backup Settings', link: '/settings.html?tab=backup', permission: 'settings_backup' }
+                    { label: 'Backup Settings', link: '/settings.html?tab=backup', permission: 'settings_backup' },
+                    { label: 'API Key Settings', link: '/settings.html?tab=apiKey', permission: 'settings_apiKey' }
                 ]
             }
         ];

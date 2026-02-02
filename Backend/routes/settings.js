@@ -9,7 +9,8 @@ const {
   getCompanyInfo,
   backupSettings,
   restoreSettings,
-  getSystemStats
+  getSystemStats,
+  generateApiKey
 } = require('../controllers/settingsController');
 const { protect, adminAccess } = require('../middleware/auth');
 
@@ -41,6 +42,11 @@ router
 router
   .route('/restore')
   .post(protect, adminAccess, restoreSettings);
+
+
+router
+  .route('/api-key')
+  .post(protect, adminAccess, generateApiKey);
 
 router
   .route('/stats')
