@@ -487,6 +487,7 @@
                 margin: 0.5cm;
             }
 
+            /* Hide Non-Print Elements */
             .page-header,
             .filter-row,
             .btn,
@@ -500,17 +501,16 @@
                 display: none !important;
             }
 
+            /* Basic Body Visibility */
             body * {
                 visibility: hidden;
             }
 
-            /* Make only the active tab visible */
             .tab-pane.active,
             .tab-pane.active * {
                 visibility: visible;
             }
 
-            /* Isolate the active pane to the top of the page */
             .tab-pane.active {
                 position: absolute;
                 left: 0;
@@ -521,7 +521,6 @@
                 background: white;
             }
 
-            /* Ensure body/html allow scrolling if valid */
             body,
             html {
                 background: white !important;
@@ -531,7 +530,6 @@
 
             .container-fluid {
                 visibility: hidden;
-                /* Hide container wrapper but keep flow for child positioning if needed, though abs pos should fix it */
                 padding: 0 !important;
                 margin: 0 !important;
             }
@@ -551,7 +549,7 @@
                 box-shadow: none !important;
             }
 
-            /* Hide Columns: Checkbox(2), BatchTransferDate(3) */
+            /* Hide specific columns */
             #bankDetailsTable th:nth-child(2),
             #bankDetailsTable td:nth-child(2),
             #bankDetailsTable th:nth-child(3),
@@ -559,58 +557,82 @@
                 display: none !important;
             }
 
+            /* Main Table Formatting */
             .custom-grid {
                 font-size: 8pt !important;
                 width: 100% !important;
                 border-collapse: collapse !important;
             }
 
+            /* Header Override - Pure White */
             .custom-grid th {
-                background-color: #f0f0f0 !important;
+                background-color: #ffffff !important;
                 color: black !important;
                 border: 1px solid #000 !important;
                 padding: 4px !important;
                 font-size: 8pt !important;
                 text-align: center !important;
-                /* Centered Headers */
                 vertical-align: middle !important;
             }
 
+            /* Cell Override - Pure White */
             .custom-grid td {
+                background-color: #ffffff !important;
+                color: black !important;
                 border: 1px solid #000 !important;
                 padding: 4px !important;
                 vertical-align: middle !important;
                 text-align: center !important;
-                /* Centered Cells */
             }
 
-            /* Compact Rows */
+            /* Input Override - Transparent/Black */
+            .custom-grid td input {
+                background-color: transparent !important;
+                color: black !important;
+                border: none !important;
+                text-align: center !important;
+                width: 100% !important;
+            }
+
             .custom-grid tr {
                 height: auto !important;
             }
 
-            /* Overrides to force Black Text on Print */
-            .row-red,
-            .bg-danger,
-            .bg-success,
-            tr[style*="background-color"],
-            td[style*="background-color"] {
-                color: #000 !important;
-                -webkit-text-fill-color: #000 !important;
-                /* Optional: If we want to remove the Red/Green background for saving ink, uncomment below: */
-                /* background-color: transparent !important; */
+            /* NUCLEAR ROW OVERRIDE: Force ALL known colored rows to be White */
+            /* Using ID + Class for max specificity */
+            #bankDetailsTable tr.row-red,
+            #bankDetailsTable td.row-red,
+            #bankDetailsTable tr.bg-danger,
+            #bankDetailsTable td.bg-danger,
+            #bankDetailsTable tr.bg-success,
+            #bankDetailsTable td.bg-success,
+            #bankDetailsTable tr.kpi-red,
+            #bankDetailsTable td.kpi-red,
+            #bankDetailsTable tr.kpi-green,
+            #bankDetailsTable td.kpi-green,
+            #bankDetailsTable tr[style],
+            #bankDetailsTable td[style] {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: economy !important;
+                print-color-adjust: economy !important;
+                --bs-table-bg: transparent !important;
+                --bs-table-accent-bg: transparent !important;
             }
 
-            input {
-                border: none !important;
-                background: transparent !important;
-                color: #000 !important;
-                width: 100% !important;
-                /* Take full width to center text properly */
-                padding: 0 !important;
-                font-size: inherit !important;
-                text-align: center !important;
-                /* Centered Data */
+            /* Universal Fallback */
+            #bankDetailsTable tbody tr td {
+                background-color: #ffffff !important;
+            }
+
+            /* Footer/Totals */
+            tfoot td,
+            .custom-grid tfoot td {
+                background-color: white !important;
+                color: black !important;
+                font-weight: bold !important;
+                border: 1px solid #000 !important;
             }
 
             .print-header {
@@ -629,7 +651,6 @@
                 page-break-inside: avoid;
             }
 
-            /* Force table header to repeat */
             thead {
                 display: table-header-group;
             }
@@ -760,7 +781,7 @@
                 </div>
 
                 <!-- KPI & Controls -->
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 d-print-none">
                     <div class="d-flex align-items-center">
                         <div class="form-check form-check-inline me-4">
                             <input class="form-check-input" type="radio" name="bankActionType" id="deductionOption"

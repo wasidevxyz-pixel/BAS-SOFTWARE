@@ -763,37 +763,41 @@ function renderBankDetailGrid(data, isDeduction) {
 }
 
 // Helper to apply Green/Red styling based on verification status
+// Helper to apply Green/Red styling based on verification status
 function applyRowColor(row, isVerified) {
     const cells = row.querySelectorAll('td');
     if (isVerified) {
-        // Verified: Green Background, White Text, Normal Weight
-        row.style.setProperty('background-color', '#28a745', 'important');
-        row.style.setProperty('color', '#fff'); // removed !important to allow print override
-        row.style.setProperty('font-weight', 'normal', 'important');
+        // Verified: Green Background, White Text
+        // REMOVED 'important' to allow Print CSS to override it
+        row.style.background = '#28a745';
+        row.style.color = '#fff';
+        row.style.fontWeight = 'normal';
+
         cells.forEach(cell => {
-            cell.style.setProperty('background-color', '#28a745', 'important');
-            cell.style.setProperty('color', '#fff'); // removed !important
-            cell.style.setProperty('font-weight', 'normal', 'important');
+            cell.style.background = '#28a745';
+            cell.style.color = '#fff';
+            cell.style.fontWeight = 'normal';
         });
     } else {
-        // Unverified: Red Background, White Text, Normal Weight
-        row.style.setProperty('background-color', '#dc3545', 'important');
-        row.style.setProperty('color', '#fff'); // removed !important
-        row.style.setProperty('font-weight', 'normal', 'important');
+        // Unverified: Red Background, White Text
+        row.style.background = '#dc3545';
+        row.style.color = '#fff';
+        row.style.fontWeight = 'normal';
+
         cells.forEach(cell => {
-            cell.style.setProperty('background-color', '#dc3545', 'important');
-            cell.style.setProperty('color', '#fff'); // removed !important
-            cell.style.setProperty('font-weight', 'normal', 'important');
+            cell.style.background = '#dc3545';
+            cell.style.color = '#fff';
+            cell.style.fontWeight = 'normal';
         });
     }
 
-    // Force white color and normal font on inputs (date, etc.)
+    // Force white color and normal font on inputs
     const inputs = row.querySelectorAll('input');
     inputs.forEach(input => {
         if (input.type !== 'checkbox') {
-            input.style.setProperty('color', '#fff'); // removed !important
-            input.style.setProperty('font-weight', 'normal', 'important');
-            input.style.setProperty('font-size', '0.9rem', 'important');
+            input.style.color = '#fff';
+            input.style.fontWeight = 'normal';
+            input.style.fontSize = '0.9rem';
         }
     });
 }
