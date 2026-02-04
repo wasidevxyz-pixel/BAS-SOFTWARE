@@ -267,23 +267,19 @@ function updateRowCalc(element) {
         let wMin = (cout[0] * 60 + cout[1]) - (cin[0] * 60 + cin[1]);
         if (wMin < 0) wMin += 1440;
 
+        // Display Gross Worked in Column 6
+        tr.cells[6].textContent = formatTime(wMin);
+
         let netMin = wMin - bMin;
         if (netMin < 0) netMin = 0;
-        tr.cells[6].textContent = `${Math.floor(netMin / 60)}:${(netMin % 60).toString().padStart(2, '0')}`;
 
         let finalMin = netMin;
         if (mode === '+') finalMin += totalDiffMin;
         else finalMin -= totalDiffMin;
         if (finalMin < 0) finalMin = 0;
 
-        const fStr = `${Math.floor(finalMin / 60)}:${(finalMin % 60).toString().padStart(2, '0')}`;
-        tr.cells[14].textContent = fStr;
-
-        // Helper to clear if incomplete
-        if (!checkIn || !checkOut) {
-            tr.cells[6].textContent = '';
-            tr.cells[14].textContent = '';
-        }
+        // Display Final Net (after breaks and diffs) in Column 14
+        tr.cells[14].textContent = formatTime(finalMin);
     } else {
         tr.cells[6].textContent = '';
         tr.cells[14].textContent = '';
@@ -342,12 +338,6 @@ function calculateTotals() {
     if (document.getElementById('tBreakHrs')) document.getElementById('tBreakHrs').textContent = formatTime(tBreak);
     if (document.getElementById('tDiffHrs')) document.getElementById('tDiffHrs').textContent = formatTime(tDiff);
     if (document.getElementById('tFinalHrs')) document.getElementById('tFinalHrs').textContent = formatTime(tFinal);
-
-    // Also update existing main summary if present
-    if (document.getElementById('totalWorked')) document.getElementById('totalWorked').textContent = formatTime(tWorked);
-    if (document.getElementById('totalBreak')) document.getElementById('totalBreak').textContent = formatTime(tBreak);
-    if (document.getElementById('totalDiff')) document.getElementById('totalDiff').textContent = formatTime(tDiff);
-    if (document.getElementById('totalFinal')) document.getElementById('totalFinal').textContent = formatTime(tFinal);
 }
 
 async function saveAllVisible() {
