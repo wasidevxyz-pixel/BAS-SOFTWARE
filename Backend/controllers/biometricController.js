@@ -49,22 +49,27 @@ exports.syncBiometricLog = async (req, res) => {
             });
         }
 
-        // 4. Update In/Out based on type or simple toggle
-        if (type === 'IN' || (!attendance.checkIn)) {
-            attendance.checkIn = attendance.checkIn || timeStr;
-        } else if (type === 'OUT' || (attendance.checkIn && !attendance.checkOut)) {
+        // 4. Smart Toggle Logic
+        let actionStatus = 'IN';
+        if (!attendance.checkIn) {
+            attendance.checkIn = timeStr;
+            actionStatus = 'IN';
+        } else {
+            // Already has checkIn, so this is a Check OUT (or update to check out)
             attendance.checkOut = timeStr;
+            actionStatus = 'OUT';
         }
 
         await attendance.save();
 
         res.status(200).json({
             success: true,
-            message: 'Attendance synced successfully',
+            message: `Attendance ${actionStatus} successful`,
             data: {
                 employee: employee.name,
                 checkIn: attendance.checkIn,
-                checkOut: attendance.checkOut
+                checkOut: attendance.checkOut,
+                action: actionStatus // Return whether it was IN or OUT
             }
         });
 
