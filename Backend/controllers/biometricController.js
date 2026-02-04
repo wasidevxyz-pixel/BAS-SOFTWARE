@@ -105,9 +105,30 @@ exports.syncBiometricLog = async (req, res) => {
         }
 
         if (attendance.checkIn && attendance.checkOut) {
-            // Check if ALREADY Checked Out (ignoring invalid or empty strings)
-            if (attendance.checkIn && attendance.checkOut && attendance.checkOut.trim() !== '' && attendance.checkOut !== '--:--') {
-                return res.status(400).json({ success: false, message: `Already checked out at ${attendance.checkOut}` });
+            // Allow UPDATING Check-Out if the new time is LATER than the stored time
+            // This handles cases where an employee scans, then works more, then scans again.
+            if (attendance.checkOut.trim() !== '' && attendance.checkOut !== '--:--') {
+                // Compare times
+                const [storedH, storedM] = attendance.checkOut.split(':').map(Number);
+                const storedMinutes = storedH * 60 + storedM;
+
+                // Handle midnight crossing for comparison
+                let adjustedStoredMinutes = storedMinutes;
+                let adjustedCurrentMinutes = currentTimeInMinutes;
+
+                // If stored time is small (e.g. 02:00) and checkIn was large (e.g. 20:00), it's next day
+                const [inH, inM] = attendance.checkIn.split(':').map(Number);
+                const inMinutes = inH * 60 + inM;
+
+                if (storedMinutes < inMinutes) adjustedStoredMinutes += 1440;
+                if (currentTimeInMinutes < inMinutes) adjustedCurrentMinutes += 1440;
+
+                // If trying to check out earlier than already recorded? Block.
+                // If trying to check out later? Allow update.
+                if (adjustedCurrentMinutes <= adjustedStoredMinutes) {
+                    return res.status(400).json({ success: false, message: `Already checked out at ${attendance.checkOut}` });
+                }
+                // If we get here, we proceed to update the checkout time below!
             }
         }
 
