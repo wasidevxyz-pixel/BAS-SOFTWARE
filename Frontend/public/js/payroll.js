@@ -562,15 +562,14 @@ function calculateTotals() {
         }
     }
 
-    let hourlyRate = getValue('totalPerDay') / (dutyHrs || 8);
+    // Formula: Salary Per Day = Basic / Total Working Days
+    const wdsPerMonth = getValue('totalWdsPerMonth') || 30;
+    const perDayAmt = basicInfo / wdsPerMonth;
+    setValue('totalPerDay', perDayAmt.toFixed(2));
 
-    // If OTST_ThirtyWorkingDays is active, always use (Basic / 30 / DutyHrs)
-    if (window.isOTST_ThirtyWorkingDays) {
-        hourlyRate = (basicInfo / 30) / (dutyHrs || 8);
-    } else if (wkDays30) {
-        // Fallback to Thirty Working Days flag if OTST is not specifically set
-        hourlyRate = (basicInfo / 30) / (dutyHrs || 8);
-    }
+    // Formula: Salary Per Hour = Salary Per Day / Duty Hours
+    const hourlyRate = perDayAmt / (dutyHrs || 8);
+    setValue('totalPerHr', hourlyRate.toFixed(2));
 
     let workedHrs = getValue('workedHrs');
     const totalHrsReq = getValue('totalHrsPerMonth');

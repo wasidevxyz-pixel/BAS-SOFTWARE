@@ -216,25 +216,11 @@ exports.calculatePayroll = async (req, res) => {
         }
         const totalHrsPerMonth = totalWdsPerMonth * dutyHours;
 
-        let perDaySalary = 0;
-        let perHourSalary = 0;
+        // Salary Per Day = Basic Salary / TotalWDsPer(Mon)
+        perDaySalary = employee.basicSalary / (totalWdsPerMonth || 30);
 
-        if (isThirtyWorkingDays) {
-            // Basic Salary calculation uses 30 days
-            perDaySalary = employee.basicSalary / 30;
-        } else {
-            // Basic Salary calculation uses actual working days of the month
-            perDaySalary = employee.basicSalary / (totalWdsPerMonth || daysInMonth);
-        }
-
-        // Determine Hourly Rate for OT and Short-Time
-        if (isOTST30Days) {
-            // Hourly rate is fixed based on 30 days
-            perHourSalary = (employee.basicSalary / 30) / (dutyHours || 8);
-        } else {
-            // Hourly rate is derived from the perDaySalary (which might be based on actual working days)
-            perHourSalary = perDaySalary / (dutyHours || 8);
-        }
+        // Salary Per Hour = Salary Per Day / Duty Hours
+        perHourSalary = perDaySalary / (dutyHours || 8);
 
         // Calculate OT and ShortTime based on Hours
         const diffHours = totalWorkedHours - totalHrsPerMonth;
