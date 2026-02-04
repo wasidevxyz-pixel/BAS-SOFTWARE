@@ -374,6 +374,12 @@ async function saveAllVisible() {
             timeDiffIn: tr.cells[11].querySelector('input').value,
             timeDiffOut: tr.cells[12].querySelector('input').value,
             totalDiffHrs: tr.cells[13].textContent,
+            totalHrs: (() => {
+                const str = tr.cells[14].textContent;
+                if (!str || !str.includes(':')) return 0;
+                const [h, m] = str.split(':').map(Number);
+                return (h || 0) + ((m || 0) / 60);
+            })(),
             displayStatus: tr.cells[15].querySelector('select').value,
             remarks: tr.cells[16].querySelector('input').value,
             isPresent: tr.cells[15].querySelector('select').value === 'Present'

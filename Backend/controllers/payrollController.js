@@ -81,30 +81,44 @@ exports.calculatePayroll = async (req, res) => {
         // Calculate worked days and hours
         const workedDays = attendances.filter(a => a.isPresent).length;
         const totalWorkedHours = attendances.reduce((sum, a) => {
-            // Priority 1: Use totalHrs (Number) if it exists and is non-zero
-            if (a.totalHrs && a.totalHrs > 0) {
-                return sum + a.totalHrs;
-            }
+            let dailyNetHrs = 0;
 
-            // Priority 2: Parse workedHrs string
-            if (a.workedHrs) {
-                const hrsStr = String(a.workedHrs);
-                let hours = 0;
-
-                if (hrsStr.includes('h') || hrsStr.includes('m')) {
-                    const hMatch = hrsStr.match(/(\d+)h/);
-                    const mMatch = hrsStr.match(/(\d+)m/);
-                    if (hMatch) hours += parseInt(hMatch[1]);
-                    if (mMatch) hours += parseInt(mMatch[1]) / 60;
-                } else if (hrsStr.includes(':')) {
-                    const [h, m] = hrsStr.split(':').map(Number);
-                    hours = (h || 0) + ((m || 0) / 60);
-                } else {
-                    hours = parseFloat(hrsStr) || 0;
+            // Helper to parse HH:MM or Xh Ym or Float
+            const parseToHrs = (val) => {
+                if (!val) return 0;
+                const str = String(val).trim();
+                if (str.includes('h') || str.includes('m')) {
+                    let hrs = 0;
+                    const hMatch = str.match(/(\d+)h/);
+                    const mMatch = str.match(/(\d+)m/);
+                    if (hMatch) hrs += parseInt(hMatch[1]);
+                    if (mMatch) hrs += parseInt(mMatch[1]) / 60;
+                    return hrs;
+                } else if (str.includes(':')) {
+                    const [h, m] = str.split(':').map(Number);
+                    return (h || 0) + ((m || 0) / 60);
                 }
-                return sum + hours;
+                return parseFloat(str) || 0;
+            };
+
+            // Calculate Net for this day: Worked - Break (+/-) Diff
+            const gross = parseToHrs(a.workedHrs);
+            const brk = parseToHrs(a.breakHrs);
+            const diff = parseToHrs(a.totalDiffHrs);
+
+            if (a.totalHrs && a.totalHrs > 0) {
+                // If we have a pre-calculated total, use it
+                dailyNetHrs = a.totalHrs;
+            } else if (gross > 0) {
+                // Fallback: calculate from parts
+                dailyNetHrs = gross - brk;
+                if (a.diffMode === '-') dailyNetHrs -= diff;
+                else dailyNetHrs += diff;
+            } else {
+                dailyNetHrs = 0;
             }
-            return sum;
+
+            return sum + Math.max(0, dailyNetHrs);
         }, 0);
 
         // Get advances
