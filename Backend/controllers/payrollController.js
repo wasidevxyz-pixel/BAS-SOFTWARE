@@ -417,8 +417,10 @@ exports.calculatePayroll = async (req, res) => {
         // NetTotal = gross total - other deductions - advances recovered
         calculatedData.netTotal = calculatedData.grossTotal - otherDeductions - (calculatedData.totalAdvRec || 0);
 
-        // Add workedAmount for display
-        calculatedData.workedAmount = Math.round(totalWorkedHours * perHourSalary);
+        // Cap workedHrs and workedAmount for display
+        const displayWorkedHrs = totalWorkedHours > totalHrsPerMonth ? totalHrsPerMonth : totalWorkedHours;
+        calculatedData.workedHrs = displayWorkedHrs;
+        calculatedData.workedAmount = Math.round(displayWorkedHrs * perHourSalary);
 
         res.status(200).json({
             success: true,

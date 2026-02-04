@@ -572,13 +572,25 @@ function calculateTotals() {
         hourlyRate = (basicInfo / 30) / (dutyHrs || 8);
     }
 
-    const otHrs = getValue('overTimeHrs');
+    let workedHrs = getValue('workedHrs');
+    const totalHrsReq = getValue('totalHrsPerMonth');
+    let otHrs = getValue('overTimeHrs');
+
+    // Rule: Excess Worked(Hrs) beyond TotalHrsPerMonth goes to OverTime
+    if (workedHrs > totalHrsReq) {
+        const excess = workedHrs - totalHrsReq;
+        otHrs += excess;
+        workedHrs = totalHrsReq;
+
+        // Update UI fields if the user isn't currently typing in them
+        if (activeEl !== 'workedHrs') setValue('workedHrs', decimalToTime(workedHrs));
+        if (activeEl !== 'overTimeHrs') setValue('overTimeHrs', decimalToTime(otHrs));
+    }
+
     const otAmt = Math.round(otHrs * hourlyRate); // Rounded
     setValue('overTimeAmount', otAmt);
 
     // Dynamic ST.LessAllow calculation
-    const workedHrs = getValue('workedHrs');
-    const totalHrsReq = getValue('totalHrsPerMonth');
     const fullSTAllow = window.fullStLessAllow || 0;
     let stAllow = fullSTAllow;
 
@@ -600,10 +612,8 @@ function calculateTotals() {
     );
     document.getElementById('earningsTotal').value = updatedEarnings;
 
-    // Get worked hours for short week calculation
-    // workedHrs already declared above
-
     // Short Week Calculation: TSW = 4 - (TotalWorkedHrs / TotalHrsPerDay / 7)
+    // IMPORTANT: use the original (possibly capped) workedHrs for consistency
     const weeksWorked = workedHrs / (dutyHrs || 8) / 7;
     const calculatedShortWeeks = Math.max(0, 4 - weeksWorked);
 
