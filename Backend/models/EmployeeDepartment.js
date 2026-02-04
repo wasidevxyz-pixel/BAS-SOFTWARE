@@ -15,6 +15,10 @@ const EmployeeDepartmentSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    maxCheckoutTime: {
+        type: String,
+        default: '03:00' // Default cutoff at 3:00 AM
+    },
     createdAt: {
         type: Date,
         default: Date.now

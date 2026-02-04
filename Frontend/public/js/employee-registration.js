@@ -172,9 +172,12 @@ function renderDeptList() {
     if (!container) return;
     container.innerHTML = departments.map(d => `
         <div class="list-group-item d-flex justify-content-between align-items-center py-2">
-            <span class="fw-bold" style="font-size:0.85rem;">${d.name}</span>
             <div>
-                <button type="button" class="btn btn-sm btn-outline-primary p-1 py-0 me-1" onclick="editDept('${d._id}', '${d.name}')"><i class="fas fa-edit"></i></button>
+                <span class="fw-bold d-block" style="font-size:0.85rem;">${d.name}</span>
+                <span class="text-muted small">Max Checkout: ${d.maxCheckoutTime || '03:00'}</span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-primary p-1 py-0 me-1" onclick="editDept('${d._id}', '${d.name}', '${d.maxCheckoutTime || '03:00'}')"><i class="fas fa-edit"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-danger p-1 py-0" onclick="deleteDept('${d._id}')"><i class="fas fa-trash"></i></button>
             </div>
         </div>
@@ -183,7 +186,9 @@ function renderDeptList() {
 
 async function saveNewDepartment() {
     const nameInput = document.getElementById('newDeptName');
+    const maxCheckoutInput = document.getElementById('deptMaxCheckout');
     const name = nameInput.value;
+    const maxCheckoutTime = maxCheckoutInput.value;
     const id = nameInput.dataset.id;
     if (!name) return;
     try {
@@ -193,7 +198,7 @@ async function saveNewDepartment() {
         const res = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, maxCheckoutTime })
         });
         if (res.ok) {
             nameInput.value = '';
@@ -204,9 +209,11 @@ async function saveNewDepartment() {
     } catch (err) { console.error(err); }
 }
 
-function editDept(id, name) {
+function editDept(id, name, maxTime) {
     const nameInput = document.getElementById('newDeptName');
+    const maxInput = document.getElementById('deptMaxCheckout');
     nameInput.value = name;
+    maxInput.value = maxTime || '03:00';
     nameInput.dataset.id = id;
     document.getElementById('saveDeptBtn').textContent = 'Update';
 }
@@ -336,6 +343,7 @@ async function saveEmployee() {
         maritalStatus: document.getElementById('maritalStatus').value,
         isActive: document.getElementById('isActive').checked,
         commEmp: document.getElementById('isSalesman').checked,
+        photo: document.getElementById('photoPreview').querySelector('img')?.src || '',
 
         opening: parseFloat(document.getElementById('opening').value) || 0,
         basicSalary: parseFloat(document.getElementById('basicSalary').value) || 0,
@@ -343,7 +351,7 @@ async function saveEmployee() {
         stLoss: parseFloat(document.getElementById('stLoss').value) || 0,
         fixAllowance: parseFloat(document.getElementById('fixAllowance').value) || 0,
         otherAllowance: parseFloat(document.getElementById('otherAllowance').value) || 0,
-        allowFood: document.getElementById('allowFood').value,
+        allowFood: document.getElementById('allowFood').value || 'No Food',
         foodAllowanceRs: parseFloat(document.getElementById('foodAllowanceRs').value) || 0,
         bankCash: document.getElementById('bankCash').value,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
@@ -431,8 +439,15 @@ async function editEmployee(id) {
             document.getElementById('fixAllowance').value = emp.fixAllowance || 0;
             document.getElementById('otherAllowance').value = emp.otherAllowance || 0;
             document.getElementById('allowFood').value = emp.allowFood || 'No Food';
-            document.getElementById('foodAllowanceRs').value = emp.foodAllowanceRs || 0;
             document.getElementById('bankCash').value = emp.bankCash || 'Cash';
+
+            // Set Photo Preview
+            const photoPreview = document.getElementById('photoPreview');
+            if (emp.photo) {
+                photoPreview.innerHTML = `<img src="${emp.photo.startsWith('http') ? emp.photo : _config?.ServerUrl ? _config.ServerUrl + emp.photo : emp.photo}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+            } else {
+                photoPreview.innerHTML = '<div class="photo-placeholder"><i class="fas fa-camera"></i></div>';
+            }
             document.getElementById('deduction').value = emp.deduction || 0;
             document.getElementById('securityDeposit').value = emp.securityDeposit || 0;
             document.getElementById('fDutyTime').value = emp.fDutyTime || '09:00';
@@ -472,8 +487,8 @@ function clearForm() {
     window.history.pushState({}, document.title, window.location.pathname);
 
     // Reset Photo
-    document.getElementById('photoInput').value = '';
     document.getElementById('photoPreview').innerHTML = '<div class="photo-placeholder"><i class="fas fa-camera"></i></div>';
+    document.getElementById('photoInput').value = '';
 
     setDefaultDates();
     fetchNextCode();

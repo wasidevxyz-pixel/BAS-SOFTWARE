@@ -22,54 +22,100 @@ exports.syncBiometricLog = async (req, res) => {
 
         const { employeeCode, type, timestamp, branch } = req.body;
 
-        // 2. Find Employee
-        const employee = await Employee.findOne({ code: employeeCode });
+        // 2. Find Employee and Department
+        const employee = await Employee.findOne({ code: employeeCode }).populate('department');
         if (!employee) {
             return res.status(404).json({ success: false, message: `Employee with code ${employeeCode} not found` });
         }
 
         const logDate = new Date(timestamp || Date.now());
-        const dateStr = logDate.toISOString().split('T')[0];
-
-        // 3. Find or Create Attendance Record for the day
-        let attendance = await Attendance.findOne({
-            employee: employee._id,
-            date: { $gte: new Date(dateStr), $lt: new Date(new Date(dateStr).setDate(new Date(dateStr).getDate() + 1)) }
-        });
-
+        const currentTimeInMinutes = logDate.getHours() * 60 + logDate.getMinutes();
         const timeStr = logDate.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
 
+        // Get max checkout time for the department
+        let maxCheckoutTimeStr = '03:00';
+        if (employee.department && employee.department.maxCheckoutTime) {
+            maxCheckoutTimeStr = employee.department.maxCheckoutTime;
+        }
+        const [maxH, maxM] = maxCheckoutTimeStr.split(':').map(Number);
+        const maxCheckoutTimeInMinutes = maxH * 60 + maxM;
+
+        // Determine Logic Date (Shift Date)
+        let shiftDate = new Date(logDate);
+        if (currentTimeInMinutes < maxCheckoutTimeInMinutes) {
+            shiftDate.setDate(shiftDate.getDate() - 1);
+        }
+        const shiftDateStr = shiftDate.toISOString().split('T')[0];
+
+        // 3. Find Attendance for the Shift Date
+        let attendance = await Attendance.findOne({
+            employee: employee._id,
+            date: { $gte: new Date(shiftDateStr), $lt: new Date(new Date(shiftDateStr).setDate(new Date(shiftDateStr).getDate() + 1)) }
+        });
+
+        // 4. Smart Logic
         if (!attendance) {
-            attendance = new Attendance({
-                employee: employee._id,
-                date: new Date(dateStr),
-                branch: branch || employee.branch || 'Main',
-                displayStatus: 'Present',
-                isPresent: true
-            });
+            // Check if there is an existing record for TODAY specifically (in case logicDate was yesterday but no record there)
+            const todayDateStr = logDate.toISOString().split('T')[0];
+            if (shiftDateStr !== todayDateStr) {
+                attendance = await Attendance.findOne({
+                    employee: employee._id,
+                    date: { $gte: new Date(todayDateStr), $lt: new Date(new Date(todayDateStr).setDate(new Date(todayDateStr).getDate() + 1)) }
+                });
+            }
+
+            if (!attendance) {
+                // NEW CHECK-IN
+                attendance = new Attendance({
+                    employee: employee._id,
+                    date: new Date(logDate.toISOString().split('T')[0]),
+                    branch: branch || employee.branch || 'Main',
+                    displayStatus: 'Present',
+                    isPresent: true,
+                    checkIn: timeStr
+                });
+                await attendance.save();
+                return res.status(200).json({
+                    success: true,
+                    message: "Check-IN successful",
+                    data: { employee: employee.name, checkIn: timeStr, action: 'IN' }
+                });
+            }
         }
 
-        // 4. Smart Toggle Logic
-        let actionStatus = 'IN';
-        if (!attendance.checkIn) {
-            attendance.checkIn = timeStr;
-            actionStatus = 'IN';
+        // If attendance exists, check status
+        if (attendance.checkIn && attendance.checkOut) {
+            return res.status(400).json({ success: false, message: "Employee is already checked out for today" });
+        }
+
+        // 10-minute Rule Check
+        const checkInTimeParts = attendance.checkIn.split(':').map(Number);
+        const checkInMinutes = checkInTimeParts[0] * 60 + checkInTimeParts[1];
+
+        let diffInMinutes;
+        // If attendance was from "Yesterday" (Logic Date), calculate across mid-night
+        if (attendance.date.toISOString().split('T')[0] !== logDate.toISOString().split('T')[0]) {
+            diffInMinutes = (1440 - checkInMinutes) + currentTimeInMinutes;
         } else {
-            // Already has checkIn, so this is a Check OUT (or update to check out)
-            attendance.checkOut = timeStr;
-            actionStatus = 'OUT';
+            diffInMinutes = currentTimeInMinutes - checkInMinutes;
         }
 
+        if (diffInMinutes < 10) {
+            return res.status(400).json({ success: false, message: `Wait ${10 - diffInMinutes} minutes before check-out` });
+        }
+
+        // PERFORM CHECK-OUT
+        attendance.checkOut = timeStr;
         await attendance.save();
 
         res.status(200).json({
             success: true,
-            message: `Attendance ${actionStatus} successful`,
+            message: "Check-OUT successful",
             data: {
                 employee: employee.name,
                 checkIn: attendance.checkIn,
                 checkOut: attendance.checkOut,
-                action: actionStatus // Return whether it was IN or OUT
+                action: 'OUT'
             }
         });
 
