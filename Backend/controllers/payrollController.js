@@ -177,7 +177,20 @@ exports.calculatePayroll = async (req, res) => {
         }
 
         // Calculate totals based on Total Working Days
-        const dutyHours = parseFloat(employee.totalHrs) || 8;
+        let dutyHours = 8;
+        if (employee.totalHrs && !isNaN(parseFloat(employee.totalHrs))) {
+            dutyHours = parseFloat(employee.totalHrs);
+        } else if (employee.fDutyTime && employee.tDutyTime) {
+            try {
+                const [fH, fM] = employee.fDutyTime.split(':').map(Number);
+                const [tH, tM] = employee.tDutyTime.split(':').map(Number);
+                let diff = (tH * 60 + tM) - (fH * 60 + fM);
+                if (diff < 0) diff += 1440;
+                dutyHours = diff / 60;
+            } catch (e) {
+                dutyHours = 8;
+            }
+        }
         const totalHrsPerMonth = totalWdsPerMonth * dutyHours;
 
         let perDaySalary = 0;

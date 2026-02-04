@@ -172,7 +172,7 @@ function renderTable() {
                     <option value="BOP" ${emp.selectBank === 'BOP' ? 'selected' : ''}>BOP</option>
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-xs col-duty" value="${emp.totalHrs || ''}" readonly style="background-color: #f1f1f1;"></td>
+            <td><input type="text" class="form-control form-control-xs col-duty" value="${getDutyHours(emp)}" readonly style="background-color: #f1f1f1;"></td>
             <td><input type="date" class="form-control form-control-xs col-incrDate" value="${emp.incrDate ? emp.incrDate.split('T')[0] : ''}" ${!canEditParas ? 'readonly' : ''}></td>
             <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-salary" style="font-size: 0.72rem;" value="${emp.basicSalary || 0}" ${!canEditParas ? 'readonly' : ''} oninput="updateRowIncrDate(this)"></td>
             <td><input type="number" class="form-control form-control-sm border-0 text-end w-100 col-comm" style="font-size: 0.72rem; background: #f8fbff;" value="${emp.commission || 0}" readonly title="Direct edit locked"></td>
@@ -220,7 +220,8 @@ async function quickSave(id, btn) {
         isActive: tr.querySelector('.col-active').checked,
         payFullSalaryThroughBank: tr.querySelector('.col-pfstb').checked,
         eobi: tr.querySelector('.col-eobi').checked,
-        incrDate: tr.querySelector('.col-incrDate').value || null
+        incrDate: tr.querySelector('.col-incrDate').value || null,
+        totalHrs: tr.querySelector('.col-duty').value || ''
     };
 
     try {
@@ -252,4 +253,23 @@ async function quickSave(id, btn) {
 
 function gotoEdit(id) {
     location.href = `employee-registration.html?id=${id}`;
+}
+
+function getDutyHours(emp) {
+    if (!emp) return '';
+    if (emp.totalHrs && emp.totalHrs !== '0h') return emp.totalHrs;
+    if (emp.fDutyTime && emp.tDutyTime) {
+        try {
+            const [fH, fM] = emp.fDutyTime.split(':').map(Number);
+            const [tH, tM] = emp.tDutyTime.split(':').map(Number);
+            let diff = (tH * 60 + tM) - (fH * 60 + fM);
+            if (diff < 0) diff += 1440;
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            return `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
+        } catch (e) {
+            return '';
+        }
+    }
+    return emp.totalHrs || '';
 }

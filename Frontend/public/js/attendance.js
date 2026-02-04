@@ -235,7 +235,7 @@ function renderAttendanceTable() {
             <td class="ps-2 fw-bold text-uppercase col-name">${att.employee?.name || '-'}</td>
             <td class="text-center col-dept">${att.employee?.department?.name || '-'}</td>
             <td class="text-center col-desig">${att.employee?.designation?.name || '-'}</td>
-            <td class="text-center col-duty" style="font-weight: 600;">${att.employee?.totalHrs || '0h'}</td>
+            <td class="text-center col-duty" style="font-weight: 600;">${getDutyHoursDisplay(att.employee)}</td>
             <td class="px-1 col-checkin">
                 <input type="time" class="form-control form-control-xs text-center fw-bold" value="${convertTo24Hour(att.checkIn)}" oninput="updateWorkedHrs(this)">
                 <span class="print-value">${att.checkIn || ''}</span>
@@ -547,3 +547,24 @@ document.addEventListener('keydown', (e) => {
         loadAttendanceList();
     }
 });
+
+function getDutyHoursDisplay(emp) {
+    if (!emp) return '0h';
+    if (emp.totalHrs && emp.totalHrs !== '0h') return emp.totalHrs;
+
+    // Fallback: calculate from duty times
+    if (emp.fDutyTime && emp.tDutyTime) {
+        try {
+            const [fH, fM] = emp.fDutyTime.split(':').map(Number);
+            const [tH, tM] = emp.tDutyTime.split(':').map(Number);
+            let diff = (tH * 60 + tM) - (fH * 60 + fM);
+            if (diff < 0) diff += 1440;
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            return `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
+        } catch (e) {
+            return '0h';
+        }
+    }
+    return emp.totalHrs || '0h';
+}
