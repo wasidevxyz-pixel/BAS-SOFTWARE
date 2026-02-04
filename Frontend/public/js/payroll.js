@@ -404,6 +404,25 @@ async function loadOrCalculate(employeeId, monthYear, branch) {
     }
 }
 
+// Helper to format Decimal (81.7) to HH:MM (81:42)
+function decimalToTime(decimal) {
+    if (!decimal || isNaN(decimal)) return '0:00';
+    const hrs = Math.floor(decimal);
+    const mins = Math.round((decimal - hrs) * 60);
+    return `${hrs}:${mins.toString().padStart(2, '0')}`;
+}
+
+// Helper to format HH:MM to Decimal
+function timeToDecimal(str) {
+    if (!str) return 0;
+    const s = String(str).trim();
+    if (s.includes(':')) {
+        const [h, m] = s.split(':').map(Number);
+        return (h || 0) + ((m || 0) / 60);
+    }
+    return parseFloat(s) || 0;
+}
+
 async function forceRecalculate(employeeId, monthYear, branch) {
     try {
         const token = localStorage.getItem('token');
@@ -440,7 +459,7 @@ function populateForm(data) {
     setValue('basicSalary', data.perMonth);
     setValue('totalDays', data.totalDays);
     setValue('totalWdsPerMonth', data.totalWdsPerMonth);
-    setValue('totalHrsPerMonth', parseFloat(data.totalHrsPerMonth || 0).toFixed(2));
+    setValue('totalHrsPerMonth', decimalToTime(data.totalHrsPerMonth || 0));
     setValue('workedDays', data.workedDays);
 
     // Header Checkboxes
@@ -450,7 +469,7 @@ function populateForm(data) {
     window.isOTST_ThirtyWorkingDays = data.otst30WorkingDays || false;
     window.fullStLessAllow = data.fullStLessAllow || 0;
 
-    setValue('workedHrs', parseFloat(data.workedHrs || 0).toFixed(2));
+    setValue('workedHrs', decimalToTime(data.workedHrs || 0));
     setValue('workedAmount', Math.round(data.workedAmount || 0));
     setValue('totalPerDay', parseFloat(data.totalPerDay || 0).toFixed(2));
     setValue('totalPerHr', parseFloat(data.totalPerHr || 0).toFixed(2));
@@ -458,9 +477,9 @@ function populateForm(data) {
     setValue('perMonth', data.perMonth);
 
     window.baseShortHrs = parseFloat(data.shortTimeHrs || 0);
-    setValue('overTimeHrs', parseFloat(data.overTimeHrs || 0).toFixed(2));
+    setValue('overTimeHrs', decimalToTime(data.overTimeHrs || 0));
     setValue('overTimeAmount', parseFloat(data.overTime || 0).toFixed(2));
-    setValue('shortTimeHrs', window.baseShortHrs.toFixed(2));
+    setValue('shortTimeHrs', decimalToTime(window.baseShortHrs));
     setValue('shortTimeAmount', parseFloat(data.shortTimeAmount || 0).toFixed(2));
     setValue('tsw', parseFloat(data.shortWeek || 0).toFixed(2));
     if (document.getElementById('shortWeekDays')) {
@@ -508,7 +527,14 @@ function getValue(id) {
     const el = document.getElementById(id);
     if (!el) return 0;
     if (el.type === 'checkbox') return el.checked;
-    return (parseFloat(el.value) || 0);
+
+    const val = el.value || '';
+    // If it's an hour based field, parse HH:MM
+    const hourFields = ['workedHrs', 'overTimeHrs', 'shortTimeHrs', 'totalHrsPerMonth'];
+    if (hourFields.includes(id)) {
+        return timeToDecimal(val);
+    }
+    return (parseFloat(val) || 0);
 }
 
 function calculateTotals() {
@@ -588,7 +614,7 @@ function calculateTotals() {
     if (activeEl === 'shortWeekDays') {
         // User manually entered short week days
         totalShortHrs = baseShortHrs + (shortWeeks * dutyHrs);
-        setValue('shortTimeHrs', totalShortHrs.toFixed(2));
+        setValue('shortTimeHrs', decimalToTime(totalShortHrs));
     } else if (activeEl === 'shortTimeHrs') {
         // User manually entered short time hours
         totalShortHrs = getValue('shortTimeHrs');
@@ -600,10 +626,10 @@ function calculateTotals() {
             shortWeeks = Math.round(calculatedShortWeeks);
             setValue('shortWeekDays', shortWeeks);
             totalShortHrs = baseShortHrs + (shortWeeks * dutyHrs);
-            setValue('shortTimeHrs', totalShortHrs.toFixed(2));
+            setValue('shortTimeHrs', decimalToTime(totalShortHrs));
         } else {
             totalShortHrs = baseShortHrs;
-            setValue('shortTimeHrs', totalShortHrs.toFixed(2));
+            setValue('shortTimeHrs', decimalToTime(totalShortHrs));
             setValue('shortWeekDays', 0);
         }
     }
@@ -709,7 +735,7 @@ async function savePayroll() {
         totalPerDay: getValue('totalPerDay'),
         totalPerHr: getValue('totalPerHr'),
         salaryPer: getValue('salaryPer'),
-        workedHrs: getValue('workedHrs'),
+        workedHrs: timeToDecimal(document.getElementById('workedHrs').value),
         workedDays: getValue('workedDays'),
         overTime: getValue('overTimeAmount'),
         rent: getValue('rotiAmount'),
@@ -722,7 +748,7 @@ async function savePayroll() {
         otherAllow: getValue('otherAllow'),
         rotiDays: getValue('rotiDays'),
         earningsTotal: getValue('earningsTotal'),
-        overTimeHrs: getValue('overTimeHrs'),
+        overTimeHrs: timeToDecimal(document.getElementById('overTimeHrs').value),
         shortWeek: getValue('shortTimeAmount'),
         ttw: getValue('tsw'),
         fund: getValue('tfc'),
@@ -744,6 +770,9 @@ async function savePayroll() {
         rebate: getValue('balance'),
         remarks: document.getElementById('remarks').value,
         branchBank: document.getElementById('branchBank').value,
+
+        // Add back decimal values for hours
+        shortTimeHrs: timeToDecimal(document.getElementById('shortTimeHrs').value),
 
         // Flags
         payAdvSalary: document.getElementById('payAdvSalary').checked,
