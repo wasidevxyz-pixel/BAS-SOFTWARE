@@ -586,7 +586,10 @@ function calculateTotals() {
         if (activeEl !== 'overTimeHrs') setValue('overTimeHrs', decimalToTime(otHrs));
     }
 
-    const otAmt = Math.round(otHrs * hourlyRate); // Rounded
+    // Formula: Salary Per Hour for OT and ST = Basic / 30 / Duty Hours
+    const otstHourlyRate = basicInfo / 30 / (dutyHrs || 8);
+
+    const otAmt = Math.round(otHrs * otstHourlyRate); // Rounded
     setValue('overTimeAmount', otAmt);
 
     // Dynamic ST.LessAllow calculation
@@ -643,7 +646,7 @@ function calculateTotals() {
         }
     }
 
-    const shortAmt = Math.round(totalShortHrs * hourlyRate); // Rounded
+    const shortAmt = Math.round(totalShortHrs * otstHourlyRate); // Rounded using standard 30-day rate
     setValue('shortTimeAmount', shortAmt);
 
     const foodRate = getValue('foodDeduction');

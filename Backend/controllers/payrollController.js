@@ -214,18 +214,21 @@ exports.calculatePayroll = async (req, res) => {
                 dutyHours = 8;
             }
         }
+        // Rate for Basic Salary: Basic Salary / TotalWDsPer(Mon) / Duty Hours
         const totalHrsPerMonth = totalWdsPerMonth * dutyHours;
+        const perDaySalary = employee.basicSalary / (totalWdsPerMonth || 30); // Keep perDaySalary for short week calc
+        const perHourSalary = perDaySalary / (dutyHours || 8);
 
-        // Salary Per Day = Basic Salary / TotalWDsPer(Mon)
-        perDaySalary = employee.basicSalary / (totalWdsPerMonth || 30);
-
-        // Salary Per Hour = Salary Per Day / Duty Hours
-        perHourSalary = perDaySalary / (dutyHours || 8);
+        // Rate for OT and ShortTime: Basic Salary / 30 / Duty Hours
+        const otstPerHourSalary = employee.basicSalary / 30 / (dutyHours || 8);
 
         // Calculate OT and ShortTime based on Hours
         const diffHours = totalWorkedHours - totalHrsPerMonth;
         const overTimeHrs = diffHours > 0 ? diffHours : 0;
         const shortTimeHrs = diffHours < 0 ? Math.abs(diffHours) : 0;
+
+        const overTimeAmount = overTimeHrs * otstPerHourSalary;
+        const shortTimeAmount = shortTimeHrs * otstPerHourSalary;
 
         // Short Week Calculation: TSW = 4 - (TotalWorkedHrs / TotalHrsPerDay / 7)
         // This assumes 4 weeks in a month and calculates how many weeks were short
@@ -343,11 +346,11 @@ exports.calculatePayroll = async (req, res) => {
 
             // OT / ShortTime
             overTimeHrs: overTimeHrs,
-            overTime: (overTimeHrs * perHourSalary),
+            overTime: overTimeAmount,
             shortTimeHrs: shortTimeHrs,
             shortWeekDays: Math.round(shortWeeks), // Rounded to 1, 2, 3 etc.
             shortWeek: shortWeekAmount,
-            shortTimeAmount: (shortTimeHrs * perHourSalary),
+            shortTimeAmount: shortTimeAmount,
 
             // Deductions
             securityDeposit: employee.securityDeposit || 0,
