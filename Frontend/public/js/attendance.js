@@ -263,7 +263,7 @@ function renderAttendanceTable() {
             <td class="px-1 col-diffin"><input type="time" class="input-diff-box" value="${convertTo24Hour(att.timeDiffIn)}" oninput="updateWorkedHrs(this)"></td>
             <td class="px-1 col-diffout"><input type="time" class="input-diff-box" value="${convertTo24Hour(att.timeDiffOut)}" oninput="updateWorkedHrs(this)"></td>
             <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
-            <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
+            <td class="text-center fw-bold col-totalhrs">${att.totalHrs ? (Math.floor(att.totalHrs) + ':' + Math.round((att.totalHrs % 1) * 60).toString().padStart(2, '0')) : (att.workedHrs || '')}</td>
             <td class="px-1 text-center col-status">
                 <select class="form-select form-select-xs fw-bold" onchange="updateRowColor(this)">
                     <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>Present</option>
@@ -446,6 +446,12 @@ async function quickSaveAttendance(id, btn) {
         timeDiffIn: tr.querySelector('.col-diffin input').value,
         timeDiffOut: tr.querySelector('.col-diffout input').value,
         totalDiffHrs: tr.querySelector('.col-totaldiff').textContent,
+        totalHrs: (() => {
+            const str = tr.querySelector('.col-totalhrs').textContent;
+            if (!str || !str.includes(':')) return 0;
+            const [h, m] = str.split(':').map(Number);
+            return (h || 0) + ((m || 0) / 60);
+        })(),
         displayStatus: tr.querySelector('.col-status select').value,
         isPresent: tr.querySelector('.col-status select').value === 'Present'
     };

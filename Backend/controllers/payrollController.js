@@ -81,15 +81,24 @@ exports.calculatePayroll = async (req, res) => {
         // Calculate worked days and hours
         const workedDays = attendances.filter(a => a.isPresent).length;
         const totalWorkedHours = attendances.reduce((sum, a) => {
+            // Priority 1: Use totalHrs (Number) if it exists and is non-zero
+            if (a.totalHrs && a.totalHrs > 0) {
+                return sum + a.totalHrs;
+            }
+
+            // Priority 2: Parse workedHrs string
             if (a.workedHrs) {
-                // Parse "8h 30m" format if exists, or just number
                 const hrsStr = String(a.workedHrs);
                 let hours = 0;
+
                 if (hrsStr.includes('h') || hrsStr.includes('m')) {
                     const hMatch = hrsStr.match(/(\d+)h/);
                     const mMatch = hrsStr.match(/(\d+)m/);
                     if (hMatch) hours += parseInt(hMatch[1]);
                     if (mMatch) hours += parseInt(mMatch[1]) / 60;
+                } else if (hrsStr.includes(':')) {
+                    const [h, m] = hrsStr.split(':').map(Number);
+                    hours = (h || 0) + ((m || 0) / 60);
                 } else {
                     hours = parseFloat(hrsStr) || 0;
                 }
