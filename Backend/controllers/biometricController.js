@@ -137,9 +137,12 @@ exports.syncBiometricLog = async (req, res) => {
         const checkInMinutes = checkInTimeParts[0] * 60 + checkInTimeParts[1];
 
         let diffInMinutes;
-        // If attendance was from "Yesterday" (Logic Date), calculate across mid-night
-        if (attendance.date.toISOString().split('T')[0] !== logDate.toISOString().split('T')[0]) {
-            diffInMinutes = (1440 - checkInMinutes) + currentTimeInMinutes;
+
+        // Calculate difference robustly handling midnight crossing
+        if (currentTimeInMinutes < checkInMinutes) {
+            // If current time is LESS than check-in time (e.g. 02:00 vs 14:00), 
+            // it MUST be the next day (since we matched the logical shift date)
+            diffInMinutes = (currentTimeInMinutes + 1440) - checkInMinutes;
         } else {
             diffInMinutes = currentTimeInMinutes - checkInMinutes;
         }
