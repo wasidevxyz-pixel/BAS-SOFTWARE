@@ -382,22 +382,24 @@ function updateWorkedHrs(input) {
         tr.querySelector('.col-totaldiff').textContent = '';
     }
 
-    // 3. Worked Hrs
+    // 3. Gross Worked (Check-In to Check-Out)
     if (checkIn && checkOut) {
         const cin = checkIn.split(':').map(Number);
         const cout = checkOut.split(':').map(Number);
         let wMin = (cout[0] * 60 + cout[1]) - (cin[0] * 60 + cin[1]);
         if (wMin < 0) wMin += 1440;
 
-        // Net Worked
-        let netMin = wMin - bMin;
-        if (netMin < 0) netMin = 0;
-        tr.querySelector('.col-worked').textContent = `${Math.floor(netMin / 60)}:${(netMin % 60).toString().padStart(2, '0')}`;
+        const grossHrsStr = `${Math.floor(wMin / 60)}:${(wMin % 60).toString().padStart(2, '0')}`;
+        tr.querySelector('.col-worked').textContent = grossHrsStr;
 
-        // Apply Diff Mode to Net Worked
+        // 4. Net Worked (Gross - Break)
+        let netMin = wMin - (bMin || 0);
+        if (netMin < 0) netMin = 0;
+
+        // 5. Final Total (Net +/- Diff)
         let finalMin = netMin;
-        if (mode === '+') finalMin += totalDiffMin;
-        else finalMin -= totalDiffMin;
+        if (mode === '+') finalMin += (totalDiffMin || 0);
+        else finalMin -= (totalDiffMin || 0);
         if (finalMin < 0) finalMin = 0;
 
         const h = Math.floor(finalMin / 60);
