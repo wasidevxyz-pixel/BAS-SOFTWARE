@@ -8,9 +8,15 @@ exports.syncBiometricLog = async (req, res) => {
     try {
         const secretKey = req.headers['bas-secret-key'];
 
-        // 1. Verify Secret Key (In production, move this to env)
+        // 1. Verify Secret Key
+        const Settings = require('../models/Settings');
+        const settings = await Settings.findOne({});
         const MASTER_SECRET = process.env.BIOMETRIC_SECRET || 'BAS_SECURE_TOKEN_XYZ';
-        if (secretKey !== MASTER_SECRET) {
+
+        // Allow match with either ENV secret or the Database-stored API Secret
+        const isAuthorized = (secretKey === MASTER_SECRET) || (settings && settings.apiSecret === secretKey);
+
+        if (!isAuthorized) {
             return res.status(401).json({ success: false, message: 'Unauthorized: Invalid Secret Key' });
         }
 
@@ -74,8 +80,14 @@ exports.syncBiometricLog = async (req, res) => {
 exports.registerFingerprint = async (req, res) => {
     try {
         const secretKey = req.headers['bas-secret-key'];
+
+        const Settings = require('../models/Settings');
+        const settings = await Settings.findOne({});
         const MASTER_SECRET = process.env.BIOMETRIC_SECRET || 'BAS_SECURE_TOKEN_XYZ';
-        if (secretKey !== MASTER_SECRET) {
+
+        const isAuthorized = (secretKey === MASTER_SECRET) || (settings && settings.apiSecret === secretKey);
+
+        if (!isAuthorized) {
             return res.status(401).json({ success: false, message: 'Unauthorized: Invalid Secret Key' });
         }
 
