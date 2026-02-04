@@ -44,6 +44,11 @@ async function loadEmployeeInfo() {
         if (data.success) {
             currentEmployeeData = data.data;
 
+            // Populate Screen Header
+            if (document.getElementById('dispEmpName')) document.getElementById('dispEmpName').textContent = currentEmployeeData.name;
+            if (document.getElementById('dispEmpCode')) document.getElementById('dispEmpCode').textContent = currentEmployeeData.code;
+            if (document.getElementById('dispDutyHrs')) document.getElementById('dispDutyHrs').textContent = getDutyHoursDisplay(currentEmployeeData);
+
             // Populate Print Grid directly (since screen grid is removed)
             if (document.getElementById('pNameGrid')) document.getElementById('pNameGrid').textContent = currentEmployeeData.name;
             if (document.getElementById('pCodeGrid')) document.getElementById('pCodeGrid').textContent = currentEmployeeData.code;
@@ -434,3 +439,24 @@ document.addEventListener('keydown', (e) => {
         saveAllVisible();
     }
 });
+
+function getDutyHoursDisplay(emp) {
+    if (!emp) return '0h';
+    if (emp.totalHrs && emp.totalHrs !== '0h') return emp.totalHrs;
+
+    // Fallback: calculate from duty times
+    if (emp.fDutyTime && emp.tDutyTime) {
+        try {
+            const [fH, fM] = emp.fDutyTime.split(':').map(Number);
+            const [tH, tM] = emp.tDutyTime.split(':').map(Number);
+            let diff = (tH * 60 + tM) - (fH * 60 + fM);
+            if (diff < 0) diff += 1440;
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            return `${h}h${m > 0 ? ' ' + m + 'm' : ''}`;
+        } catch (e) {
+            return '0h';
+        }
+    }
+    return emp.totalHrs || '0h';
+}
