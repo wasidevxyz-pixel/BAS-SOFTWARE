@@ -37,7 +37,15 @@ exports.syncBiometricLog = async (req, res) => {
         if (employee.department && employee.department.maxCheckoutTime) {
             maxCheckoutTimeStr = employee.department.maxCheckoutTime;
         }
-        const [maxH, maxM] = maxCheckoutTimeStr.split(':').map(Number);
+        let maxH = 3, maxM = 0;
+        if (maxCheckoutTimeStr) {
+            const cleanTime = maxCheckoutTimeStr.replace(/[a-zA-Z\s]/g, '');
+            const parts = cleanTime.split(':').map(Number);
+            if (parts.length >= 2 && !isNaN(parts[0])) {
+                maxH = parts[0];
+                maxM = parts[1];
+            }
+        }
         const maxCheckoutTimeInMinutes = maxH * 60 + maxM;
 
         // Determine Logic Date (Shift Date)
@@ -97,16 +105,10 @@ exports.syncBiometricLog = async (req, res) => {
         }
 
         if (attendance.checkIn && attendance.checkOut) {
-            // Special Case: If we are in "Cross Day" mode (Current Time < Max Checkout), 
-            // and the user is trying to scan again, it's likely they want to update their checkout time 
-            // OR they scanned incorrectly before.
-            // For now, let's block only if it's strictly the same day and business hours.
-
-            // If scanning at 3 AM for a shift that started yesterday, we might want to allow updating the checkout 
-            // just in case the previous checkout was accidental? 
-            // BUT per request: "already checked out" message is desired.
-
-            return res.status(400).json({ success: false, message: "Employee is already checked out for today" });
+            // Check if ALREADY Checked Out (ignoring invalid or empty strings)
+            if (attendance.checkIn && attendance.checkOut && attendance.checkOut.trim() !== '' && attendance.checkOut !== '--:--') {
+                return res.status(400).json({ success: false, message: `Already checked out at ${attendance.checkOut}` });
+            }
         }
 
         // 10-minute Rule Check
