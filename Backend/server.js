@@ -96,6 +96,7 @@ const employeeDepartmentRoutes = require('./routes/employeeDepartments');
 const commissionBranchRoutes = require('./routes/commissionBranchRoutes');
 const subBranchRoutes = require('./routes/subBranchRoutes');
 const employeeLedgerRoutes = require('./routes/employeeLedgerRoutes');
+const biometricRoutes = require('./routes/biometric');
 
 
 
@@ -421,6 +422,7 @@ app.use('/api/v1/designations', designationRoutes);
 app.use('/api/v1/employee-departments', employeeDepartmentRoutes);
 app.use('/api/v1/commission-branches', commissionBranchRoutes);
 app.use('/api/v1/sub-branches', subBranchRoutes);
+app.use('/api/v1/attendance/biometric', biometricRoutes);
 
 
 

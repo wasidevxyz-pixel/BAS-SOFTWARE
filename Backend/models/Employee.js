@@ -100,6 +100,7 @@ const employeeSchema = new mongoose.Schema({
     },
 
     photo: String,
+    fingerprintTemplate: String, // Base64 encoded template for matching
 }, {
     timestamps: true
 });
