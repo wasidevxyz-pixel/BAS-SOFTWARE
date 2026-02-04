@@ -29,6 +29,11 @@ const attendanceSchema = new mongoose.Schema({
     // Time Differences
     timeDiffIn: String,
     timeDiffOut: String,
+    diffMode: {
+        type: String,
+        enum: ['+', '-'],
+        default: '+'
+    },
     totalDiffHrs: String,
     totalHrs: {
         type: Number,

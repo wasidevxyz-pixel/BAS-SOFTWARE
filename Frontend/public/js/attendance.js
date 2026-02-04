@@ -444,7 +444,7 @@ async function quickSaveAttendance(id, btn) {
         breakOut: tr.querySelector('.col-breakout input').value,
         breakIn: tr.querySelector('.col-breakin input').value,
         breakHrs: tr.querySelector('.col-breakhrs').textContent,
-        diffMode: tr.querySelector('.diff-btns').dataset.mode,
+        diffMode: tr.querySelector('.diff-btns').dataset.mode || '+',
         timeDiffIn: tr.querySelector('.col-diffin input').value,
         timeDiffOut: tr.querySelector('.col-diffout input').value,
         totalDiffHrs: tr.querySelector('.col-totaldiff').textContent,
