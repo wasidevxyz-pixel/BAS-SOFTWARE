@@ -84,6 +84,18 @@ exports.syncBiometricLog = async (req, res) => {
         }
 
         // If attendance exists, check status
+        if (!attendance.checkIn) {
+            attendance.checkIn = timeStr;
+            attendance.displayStatus = 'Present';
+            attendance.isPresent = true;
+            await attendance.save();
+            return res.status(200).json({
+                success: true,
+                message: "Check-IN successful",
+                data: { employee: employee.name, checkIn: timeStr, action: 'IN' }
+            });
+        }
+
         if (attendance.checkIn && attendance.checkOut) {
             return res.status(400).json({ success: false, message: "Employee is already checked out for today" });
         }
