@@ -32,6 +32,14 @@ exports.syncBiometricLog = async (req, res) => {
         const currentTimeInMinutes = logDate.getHours() * 60 + logDate.getMinutes();
         const timeStr = logDate.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
 
+        // Helper to get local YYYY-MM-DD string
+        const getLocalDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         // Get max checkout time for the department
         let maxCheckoutTimeStr = '03:00';
         if (employee.department && employee.department.maxCheckoutTime) {
@@ -53,7 +61,7 @@ exports.syncBiometricLog = async (req, res) => {
         if (currentTimeInMinutes < maxCheckoutTimeInMinutes) {
             shiftDate.setDate(shiftDate.getDate() - 1);
         }
-        const shiftDateStr = shiftDate.toISOString().split('T')[0];
+        const shiftDateStr = getLocalDateStr(shiftDate);
 
         // 3. Find Attendance for the Shift Date
         let attendance = await Attendance.findOne({
@@ -64,7 +72,7 @@ exports.syncBiometricLog = async (req, res) => {
         // 4. Smart Logic
         if (!attendance) {
             // Check if there is an existing record for TODAY specifically (in case logicDate was yesterday but no record there)
-            const todayDateStr = logDate.toISOString().split('T')[0];
+            const todayDateStr = getLocalDateStr(logDate);
             if (shiftDateStr !== todayDateStr) {
                 attendance = await Attendance.findOne({
                     employee: employee._id,
@@ -76,7 +84,7 @@ exports.syncBiometricLog = async (req, res) => {
                 // NEW CHECK-IN
                 attendance = new Attendance({
                     employee: employee._id,
-                    date: new Date(logDate.toISOString().split('T')[0]),
+                    date: new Date(shiftDateStr),
                     branch: branch || employee.branch || 'Main',
                     displayStatus: 'Present',
                     isPresent: true,
