@@ -111,6 +111,7 @@ exports.syncBiometricLog = async (req, res) => {
             attendance.checkIn = timeStr;
             attendance.displayStatus = 'Present';
             attendance.isPresent = true;
+            attendance.remarks = (attendance.remarks || '') + (attendance.remarks ? ' | ' : '') + `Check-in from ${branch || 'Unknown'}`;
             await attendance.save();
             return res.status(200).json({
                 success: true,
@@ -174,7 +175,7 @@ exports.syncBiometricLog = async (req, res) => {
 
         // PERFORM CHECK-OUT
         attendance.checkOut = timeStr;
-        attendance.remarks = (attendance.remarks || '') + ` | Check-out from ${branch || 'Unknown'}`;
+        attendance.remarks = (attendance.remarks || '') + (attendance.remarks ? ' | ' : '') + `Check-out from ${branch || 'Unknown'}`;
         await attendance.save();
 
         res.status(200).json({
