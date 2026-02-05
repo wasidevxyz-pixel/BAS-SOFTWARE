@@ -617,36 +617,42 @@ class SidebarNavigation {
     }
 
     setupRoleBasedAccess() {
-        console.log('Sidebar: Setting up role-based access...');
+        console.log('Sidebar: [PERMISSION CHECK] Starting...');
         const user = this.getCurrentUser();
-        if (!user) return;
-
-        // Admin has full access
-        const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin);
-        if (isAdmin) {
-            console.log('Sidebar: User is Admin, granting full access.');
+        if (!user) {
+            console.warn('Sidebar: No user found in LocalStorage.');
             return;
         }
 
-        // Rights resolution
-        let rights = user.rights || {};
-        if (Object.keys(rights).length === 0) {
-            if (user.group && user.group.rights) rights = user.group.rights;
-            else if (user.groupId && typeof user.groupId === 'object' && user.groupId.rights) rights = user.groupId.rights;
+        // 1. Resolve Rights - Aggressive merging
+        let rights = {};
+        if (user.role === 'admin') rights.admin = true;
+        if (user.rights) Object.assign(rights, user.rights);
+        if (user.group && user.group.rights) Object.assign(rights, user.group.rights);
+        if (user.groupId && typeof user.groupId === 'object' && user.groupId.rights) Object.assign(rights, user.groupId.rights);
+
+        // Check for Group Admin flag
+        const isGroupAdmin = (user.group && user.group.isAdmin) || (user.groupId && typeof user.groupId === 'object' && user.groupId.isAdmin);
+        if (user.role === 'admin' || isGroupAdmin || rights.admin === true) {
+            console.log('Sidebar: User has Admin status. Full access granted.');
+            return;
         }
 
-        console.log('Sidebar: Active Rights Keys Count:', Object.keys(rights).length);
-        if (Object.keys(rights).length === 0) return;
+        console.log('Sidebar: Loaded Rights Keys:', Object.keys(rights).length);
+        if (Object.keys(rights).length === 0) {
+            console.warn('Sidebar: No rights found. Keeping sidebar visible to avoid blackout.');
+            return;
+        }
 
-        // 1. Hide EXPLICITLY unauthorized items first (Leaf Nodes)
-        const allPermElements = document.querySelectorAll('[data-permission]');
-        allPermElements.forEach(el => {
+        // 2. Hide EXPLICITLY unauthorized items (Rights = False)
+        const allPermissions = document.querySelectorAll('[data-permission]');
+        allPermissions.forEach(el => {
             const perm = el.getAttribute('data-permission');
-            if (perm && rights[perm] === false) { // Explicitly set to false in Group Rights
+            if (perm && rights[perm] === false) {
                 el.classList.add('auth-hidden');
                 el.style.display = 'none';
 
-                // If it's a link in a list item, hide the list item too
+                // Also hide the LI container if it's a submenu item
                 const li = el.closest('li');
                 if (li && !li.classList.contains('nav-item')) {
                     li.classList.add('auth-hidden');
@@ -655,33 +661,51 @@ class SidebarNavigation {
             }
         });
 
-        // 2. Hierarchical Cleanup - Run multiple times to propagate from deepest links up to top categories
-        // We look for containers that have NO visible interactive children.
-        for (let i = 0; i < 4; i++) {
+        // 3. FORCE SHOW explicitly authorized items (Rights = True)
+        // This overrides any accidental hiding from previous logic
+        allPermissions.forEach(el => {
+            const perm = el.getAttribute('data-permission');
+            if (perm && (rights[perm] === true || rights[perm] === 'true')) {
+                el.classList.remove('auth-hidden');
+                el.style.display = '';
+
+                const li = el.closest('li');
+                if (li) {
+                    li.classList.remove('auth-hidden');
+                    li.style.display = '';
+                }
+            }
+        });
+
+        // 4. Hierarchical Cleanup: Hide empty categories
+        // Run 3 times to propagate from nested menus up to top level
+        for (let i = 0; i < 3; i++) {
             const containers = document.querySelectorAll('.nav-item, .submenu-inline, .popover-menu, .popover-submenu-content');
             containers.forEach(container => {
-                // If already hidden, skip
                 if (container.classList.contains('auth-hidden') || container.style.display === 'none') return;
 
-                // What counts as a visible interactive child?
-                // Links (<a>), popover-items, and toggles for deeper sub-menus
+                // A container is empty if it has NO visible interactive children
                 const selector = 'a:not(.auth-hidden), .popover-item:not(.auth-hidden), .popover-submenu-toggle:not(.auth-hidden)';
-                const visibleElements = Array.from(container.querySelectorAll(selector))
-                    .filter(el => el.style.display !== 'none' || el.classList.contains('popover-submenu-toggle'));
+                const visibleInternal = Array.from(container.querySelectorAll(selector))
+                    .filter(el => el.style.display !== 'none');
 
-                if (visibleElements.length === 0) {
-                    // This section is now essentially empty! Hide it.
+                if (visibleInternal.length === 0) {
+                    // One exception: if the container itself has a "True" permission, it stays
+                    const perm = container.getAttribute('data-permission');
+                    if (perm && rights[perm] === true) return;
+
+                    // Otherwise, hide it
                     container.classList.add('auth-hidden');
                     container.style.display = 'none';
 
-                    // If this container had a trigger button/link, we must hide that trigger too
+                    // Also hide the trigger
                     const id = container.id;
                     if (id) {
                         const triggers = document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
-                        triggers.forEach(trigger => {
-                            trigger.classList.add('auth-hidden');
-                            trigger.style.display = 'none';
-                            const li = trigger.closest('li');
+                        triggers.forEach(t => {
+                            t.classList.add('auth-hidden');
+                            t.style.display = 'none';
+                            const li = t.closest('li');
                             if (li) {
                                 li.classList.add('auth-hidden');
                                 li.style.display = 'none';
@@ -692,7 +716,7 @@ class SidebarNavigation {
             });
         }
 
-        console.log('Sidebar: Permission-based hiding completed.');
+        console.log('Sidebar: [PERMISSION CHECK] Finalized.');
     }
 
     collapseAllMenus() {
