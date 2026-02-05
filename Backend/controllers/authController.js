@@ -72,13 +72,15 @@ exports.login = async (req, res) => {
   }
 
   const { password } = req.body;
-  const email = req.body.email ? req.body.email.toLowerCase().trim() : '';
+  const loginId = req.body.email ? req.body.email.trim() : '';
 
   try {
     console.log('Login request body:', req.body);
-    // Check if user exists
-    console.log('Searching for user:', email);
-    const user = await User.findOne({ email }).select('+password');
+    // Case-insensitive search to handle existing Mixed Case users
+    console.log('Searching for user:', loginId);
+    const user = await User.findOne({
+      email: { $regex: new RegExp("^" + loginId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "$", "i") }
+    }).select('+password');
     console.log('User found:', user ? 'Yes' : 'No');
 
     if (!user) {
