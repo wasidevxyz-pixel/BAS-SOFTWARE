@@ -71,7 +71,8 @@ exports.login = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { password } = req.body;
+  const email = req.body.email ? req.body.email.toLowerCase().trim() : '';
 
   try {
     console.log('Login request body:', req.body);
