@@ -117,14 +117,23 @@ exports.login = async (req, res) => {
     const fullUser = await User.findById(user._id).populate('groupId');
 
     // Safe conversion of rights
+    // Safe conversion of rights
     let finalizedRights = {};
     if (fullUser.groupId && fullUser.groupId.rights) {
-      if (typeof fullUser.groupId.rights.forEach === 'function') {
-        fullUser.groupId.rights.forEach((value, key) => {
+      const groupRights = fullUser.groupId.rights;
+
+      // Check if it's a Map (Mongoose Map)
+      if (groupRights instanceof Map || (groupRights.constructor && groupRights.constructor.name === 'Map')) {
+        // Iterate using for...of on entries to ensure we get all keys
+        for (const [key, value] of groupRights.entries()) {
           finalizedRights[key] = value;
+        }
+      }
+      // Fallback for POJO or formatted object
+      else if (typeof groupRights === 'object') {
+        Object.keys(groupRights).forEach(key => {
+          finalizedRights[key] = groupRights[key];
         });
-      } else {
-        finalizedRights = fullUser.groupId.rights;
       }
     }
 
@@ -198,14 +207,21 @@ exports.getMe = async (req, res) => {
     const fullUser = await User.findById(req.user.id).select('-password').populate('groupId');
 
     // Safe conversion of rights
+    // Safe conversion of rights
     let finalizedRights = {};
     if (fullUser.groupId && fullUser.groupId.rights) {
-      if (typeof fullUser.groupId.rights.forEach === 'function') {
-        fullUser.groupId.rights.forEach((value, key) => {
+      const groupRights = fullUser.groupId.rights;
+
+      // Check if it's a Map (Mongoose Map)
+      if (groupRights instanceof Map || (groupRights.constructor && groupRights.constructor.name === 'Map')) {
+        for (const [key, value] of groupRights.entries()) {
           finalizedRights[key] = value;
+        }
+      }
+      else if (typeof groupRights === 'object') {
+        Object.keys(groupRights).forEach(key => {
+          finalizedRights[key] = groupRights[key];
         });
-      } else {
-        finalizedRights = fullUser.groupId.rights;
       }
     }
 

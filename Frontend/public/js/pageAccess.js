@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Set up periodic token validation
     setInterval(checkTokenValidity, 60000); // Check every minute
+
+    // Force immediate validation to ensure rights are up to date
+    validateTokenWithServer();
 });
 
 /**
@@ -188,11 +191,21 @@ async function validateTokenWithServer() {
         }
 
         const userData = await response.json();
-
-        // Update user data in localStorage if changed
         const currentUser = getCurrentUser();
+
+        // Deep comparison of rights to trigger a UI refresh
+        const currentRights = currentUser ? JSON.stringify(currentUser.rights || {}) : '';
+        const newRights = userData ? JSON.stringify(userData.rights || {}) : '';
+
+        // General Update
         if (JSON.stringify(currentUser) !== JSON.stringify(userData)) {
             localStorage.setItem('user', JSON.stringify(userData));
+
+            // Critical: If RIGHTS changed, we MUST reload to update the specific Sidebar elements
+            if (currentRights !== newRights) {
+                console.log('Permissions updated from server. Reloading UI...');
+                window.location.reload();
+            }
         }
     } catch (error) {
         console.error('Token validation error:', error);
