@@ -14,20 +14,24 @@ class SidebarNavigation {
     }
 
     init() {
+        this.injectStyles();
         this.createSidebar();
         this.applyBodyClass();
         this.highlightCurrentPage();
         this.setupEventListeners();
         this.setupRoleBasedAccess();
         this.setupHeader();
+    }
 
-        // Ensure closed by default on mobile
-        if (window.innerWidth <= 768) {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebarBackdrop');
-            if (sidebar) sidebar.classList.remove('show-mobile');
-            if (backdrop) backdrop.classList.remove('show');
-        }
+    injectStyles() {
+        if (document.getElementById('sidebar-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'sidebar-styles';
+        style.innerHTML = `
+            .auth-hidden { display: none !important; }
+            .active-parent { background-color: rgba(255,255,255,0.05) !important; color: white !important; }
+        `;
+        document.head.appendChild(style);
     }
 
     getCurrentPage() {
@@ -617,9 +621,10 @@ class SidebarNavigation {
         if (!user) return;
 
         // Admin has full access
-        if (user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin)) return;
+        const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin);
+        if (isAdmin) return;
 
-        // Rights can be in multiple places depending on how it was loaded
+        // Rights can be in multiple places
         let rights = user.rights || {};
 
         // If rights is empty and we have group rights, use those
@@ -631,98 +636,53 @@ class SidebarNavigation {
             }
         }
 
-        // 1. Hide Unauthorized LEAF nodes (Links)
+        // 1. Hide anything with a data-permission that isn't allowed
         const allPermElements = document.querySelectorAll('[data-permission]');
         allPermElements.forEach(el => {
             const perm = el.getAttribute('data-permission');
             if (perm && !rights[perm]) {
-                const isNavOne = el.classList.contains('nav-item'); // Top container
-                const isSubToggle = el.getAttribute('data-bs-toggle') === 'collapse' || el.classList.contains('popover-submenu-toggle'); // Sub container
+                el.classList.add('auth-hidden');
+                el.style.display = 'none';
 
-                if (!isNavOne && !isSubToggle) {
-                    // It is a leaf link
-                    el.classList.add('auth-hidden');
-                    el.style.display = 'none';
-                    if (el.tagName === 'A' && el.parentElement.tagName === 'LI') {
-                        el.parentElement.style.display = 'none'; // Hide wrapping LI
-                    }
-                    if (el.classList.contains('report-card')) {
-                        const col = el.closest('.col-md-4');
-                        if (col) col.style.display = 'none';
-                    }
+                // If it's a link in a list item, hide the list item too
+                const li = el.closest('li');
+                if (li) {
+                    li.classList.add('auth-hidden');
+                    li.style.display = 'none';
                 }
             }
         });
 
-        // 2. Check Sub-Menus (Nested Groups)
-        // Find all submenus (ULs and Popover Divs)
-        const subContainers = document.querySelectorAll('ul.submenu-inline, div.popover-submenu-content');
-        subContainers.forEach(container => {
-            // count visible children (links or sub-toggles)
-            const visibleChildren = Array.from(container.querySelectorAll('a, .popover-submenu-toggle, .popover-item')).filter(child => {
-                return child.style.display !== 'none' && !child.classList.contains('auth-hidden');
-            });
+        // 2. Hide Containers (Submenus) that have no visible children
+        // Run 3 times to propagate from deepest child to grandparent
+        for (let i = 0; i < 3; i++) {
+            const containers = document.querySelectorAll('.submenu-inline, .popover-submenu-content, .popover-menu, .nav-item');
+            containers.forEach(container => {
+                // Skip if already hidden
+                if (container.classList.contains('auth-hidden') || container.style.display === 'none') return;
 
-            // If no visible children, hide this container AND its trigger
-            if (visibleChildren.length === 0) {
-                container.classList.add('auth-hidden');
-                container.style.display = 'none';
+                // Check for visible interactive children
+                const visibleLinks = Array.from(container.querySelectorAll('a, .popover-submenu-toggle, .popover-item, .popover-header'))
+                    .filter(el => !el.classList.contains('auth-hidden') && el.style.display !== 'none');
 
-                // Hide Trigger
-                const id = container.id;
-                if (id) {
-                    const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
-                    if (trigger) {
-                        trigger.style.display = 'none';
-                        trigger.classList.add('auth-hidden');
-                        // Only hide parent leaf if it's strictly a nav-item link without other visible peers
-                        const li = trigger.closest('li');
-                        if (li && li.classList.contains('nav-item')) {
-                            const otherVisible = Array.from(li.querySelectorAll('a, .popover-submenu-toggle')).some(el => el !== trigger && el.style.display !== 'none' && !el.classList.contains('auth-hidden'));
-                            if (!otherVisible) li.style.display = 'none';
+                if (visibleLinks.length === 0) {
+                    container.classList.add('auth-hidden');
+                    container.style.display = 'none';
+
+                    // If we hide a container, we MUST hide its trigger
+                    const id = container.id;
+                    if (id) {
+                        const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
+                        if (trigger) {
+                            trigger.classList.add('auth-hidden');
+                            trigger.style.display = 'none';
+                            const li = trigger.closest('li');
+                            if (li) li.style.display = 'none';
                         }
                     }
                 }
-            } else {
-                // Ensure Trigger is VISIBLE
-                const id = container.id;
-                if (id) {
-                    const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"]`);
-                    if (trigger) {
-                        trigger.style.display = '';
-                        const li = trigger.closest('li');
-                        if (li) li.style.display = '';
-                    }
-                }
-            }
-        });
-
-        // 3. Check Top-Level Nav Items
-        document.querySelectorAll('.nav-item').forEach(navItem => {
-            // Check if it has a submenu (Full Mode) OR Popover (Mini Mode)
-            const submenu = navItem.querySelector('ul.submenu-inline');
-            const popover = navItem.querySelector('div.popover-menu');
-
-            const hasChildren = submenu || popover;
-
-            if (hasChildren) {
-                // Check if any visible links exist inside
-                const visibleLinks = navItem.querySelectorAll('a:not(.auth-hidden)');
-                const visible = Array.from(visibleLinks).some(link => link.style.display !== 'none');
-
-                if (!visible) {
-                    navItem.style.display = 'none';
-                } else {
-                    navItem.style.display = ''; // Ensure visible
-                }
-            } else {
-                // Direct Link (e.g. Dashboard)
-                const perm = navItem.getAttribute('data-permission');
-                if (perm && !rights[perm]) {
-                    navItem.style.display = 'none';
-                }
-            }
-        });
+            });
+        }
     }
 
     collapseAllMenus() {
