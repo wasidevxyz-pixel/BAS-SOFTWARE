@@ -5,10 +5,13 @@ const {
     getEmployeeAdvance,
     createEmployeeAdvance,
     updateEmployeeAdvance,
-    deleteEmployeeAdvance
+    deleteEmployeeAdvance,
+    getAdvancePayRecReport
 } = require('../controllers/employeeAdvanceController');
 
 const { protect, authorize } = require('../middleware/auth');
+
+router.get('/report', protect, getAdvancePayRecReport);
 
 router.route('/')
     .get(protect, getEmployeeAdvances)

@@ -226,6 +226,15 @@
     align-items: center;
 }
 
+.popover-submenu-content {
+    display: none;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.popover-submenu-content.show {
+    display: block !important;
+}
+
 .popover-item:hover {
     color: white;
     background-color: rgba(255, 255, 255, 0.05);

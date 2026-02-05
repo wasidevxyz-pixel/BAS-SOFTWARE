@@ -2,6 +2,9 @@
 
 class SidebarNavigation {
     constructor() {
+        if (window.hasSidebarNavigation) return;
+        window.hasSidebarNavigation = true;
+
         this.currentPage = this.getCurrentPage();
         this.userRole = this.getUserRole();
         // Default to mini mode on ALL pages as per user request
@@ -132,6 +135,15 @@ class SidebarNavigation {
                             { label: 'Cash Counter Report', link: '/cash-counter-report.html', permission: 'cash_counter_rpt_link' },
                             { label: 'Customer Receipts', link: '/customer-receipts-report.html', permission: 'receipts_link' },
                             { label: 'Party Statement', link: '/party-statement-report.html', permission: 'party_stmt_link' }
+                        ]
+                    },
+                    {
+                        id: 'emp-salary-reports', label: 'Emp Salary Reports', icon: 'fa-id-card-alt', permission: 'emp_salary_reports',
+                        submenu: [
+                            { label: 'Employee Ledger', link: '/employee-ledger-report.html', permission: 'emp_ledger_rpt_link' },
+                            { label: 'Employee Balances', link: '/employee-balances-report.html', permission: 'emp_balances_rpt_link' },
+                            { label: 'Employee Advance', link: '/advance-pay-rec-report.html', permission: 'advance_pay_rec_rpt_link' },
+                            { label: 'Employee Salary Detail', link: '/employee-salary-detail-report.html', permission: 'emp_salary_detail_rpt_link' }
                         ]
                     },
                     {
@@ -338,15 +350,33 @@ class SidebarNavigation {
                                 <span style="font-size:0.9rem;">${child.label}</span>
                                 <i class="fas fa-chevron-right arrow" style="font-size:0.7rem; margin-left: auto; transition: transform 0.2s;"></i>
                             </div>
-                            <div id="popover-sub-${child.id}" class="popover-submenu-content" style="display:none; background:rgba(0,0,0,0.2);">
+                            <div id="popover-sub-${child.id}" class="popover-submenu-content">
                         `;
                         child.submenu.forEach(subItem => {
                             const permAttr = subItem.permission ? `data-permission="${subItem.permission}"` : '';
-                            html += `
-                                <a href="${subItem.link}" class="popover-item" ${permAttr} style="padding-left: 30px;">
-                                    <i class="fas fa-circle bullet" style="font-size:0.4rem; margin-right:10px; color:#e74c3c;"></i> ${subItem.label}
-                                </a>
-                            `;
+                            if (subItem.submenu) {
+                                // Nested Submenu in Popover
+                                const subId = subItem.id || `sub-${Math.random().toString(36).substr(2, 9)}`;
+                                html += `
+                                    <div class="popover-submenu-toggle" ${permAttr} data-target="popover-sub-${subId}" style="cursor:pointer; padding: 6px 30px; color:#b8c7ce; display:flex; align-items:center;">
+                                        <i class="fas fa-circle bullet" style="font-size:0.4rem; margin-right:10px; color:#e67e22;"></i>
+                                        <span style="font-size:0.85rem;">${subItem.label}</span>
+                                        <i class="fas fa-chevron-right arrow" style="font-size:0.6rem; margin-left: auto;"></i>
+                                    </div>
+                                    <div id="popover-sub-${subId}" class="popover-submenu-content">
+                                `;
+                                subItem.submenu.forEach(deepItem => {
+                                    const dPerm = deepItem.permission ? `data-permission="${deepItem.permission}"` : '';
+                                    html += `<a href="${deepItem.link}" class="popover-item" ${dPerm} style="padding-left: 45px;"><i class="fas fa-circle bullet" style="font-size:0.35rem; margin-right:8px; color:#f1c40f;"></i> ${deepItem.label}</a>`;
+                                });
+                                html += `</div>`;
+                            } else {
+                                html += `
+                                    <a href="${subItem.link}" class="popover-item" ${permAttr} style="padding-left: 30px;">
+                                        <i class="fas fa-circle bullet" style="font-size:0.4rem; margin-right:10px; color:#e74c3c;"></i> ${subItem.label}
+                                    </a>
+                                `;
+                            }
                         });
                         html += `</div>`;
                     } else if (child.header) {
@@ -410,10 +440,11 @@ class SidebarNavigation {
                 const icon = toggle.querySelector('.arrow');
 
                 if (targetEl) {
-                    const isHidden = targetEl.style.display === 'none';
-                    targetEl.style.display = isHidden ? 'block' : 'none';
+                    const isShown = targetEl.classList.contains('show');
+                    // Close other submenus at the SAME level if desired, but for now just toggle
+                    targetEl.classList.toggle('show');
                     if (icon) {
-                        icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+                        icon.style.transform = !isShown ? 'rotate(90deg)' : 'rotate(0deg)';
                     }
                 }
             }
@@ -627,8 +658,8 @@ class SidebarNavigation {
         // Find all submenus (ULs and Popover Divs)
         const subContainers = document.querySelectorAll('ul.submenu-inline, div.popover-submenu-content');
         subContainers.forEach(container => {
-            // count visible children
-            const visibleChildren = Array.from(container.querySelectorAll('a, .popover-item')).filter(child => {
+            // count visible children (links or sub-toggles)
+            const visibleChildren = Array.from(container.querySelectorAll('a, .popover-submenu-toggle, .popover-item')).filter(child => {
                 return child.style.display !== 'none' && !child.classList.contains('auth-hidden');
             });
 
@@ -643,17 +674,23 @@ class SidebarNavigation {
                     const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"]`);
                     if (trigger) {
                         trigger.style.display = 'none';
-                        if (trigger.closest('li')) trigger.closest('li').style.display = 'none';
+                        // Only hide parent leaf if it's strictly a nav-item link without other visible peers
+                        const li = trigger.closest('li');
+                        if (li && li.classList.contains('nav-item')) {
+                            const otherVisible = Array.from(li.querySelectorAll('a, .popover-submenu-toggle')).some(el => el !== trigger && el.style.display !== 'none');
+                            if (!otherVisible) li.style.display = 'none';
+                        }
                     }
                 }
             } else {
-                // Ensure Trigger is VISIBLE even if its permission is false
+                // Ensure Trigger is VISIBLE
                 const id = container.id;
                 if (id) {
                     const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"]`);
                     if (trigger) {
                         trigger.style.display = '';
-                        if (trigger.closest('li')) trigger.closest('li').style.display = '';
+                        const li = trigger.closest('li');
+                        if (li) li.style.display = '';
                     }
                 }
             }

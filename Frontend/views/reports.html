@@ -156,6 +156,43 @@
                 </div>
             </div>
 
+            <h5 class="mb-3 mt-4">Emp Salary Reports</h5>
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow h-100 report-card"
+                        onclick="window.location.href='/employee-ledger-report.html'"
+                        data-permission="emp_ledger_rpt_link">
+                        <div class="card-body text-center">
+                            <i class="fas fa-id-card-alt fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Employee Ledger</h5>
+                            <p class="card-text">Advance, Payroll In/Out, and Running Balance</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow h-100 report-card"
+                        onclick="window.location.href='/employee-balances-report.html'"
+                        data-permission="emp_balances_rpt_link">
+                        <div class="card-body text-center">
+                            <i class="fas fa-file-invoice-dollar fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Employee Balances</h5>
+                            <p class="card-text">All Employee Outstanding Balances List</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow h-100 report-card"
+                        onclick="window.location.href='/advance-pay-rec-report.html'"
+                        data-permission="advance_pay_rec_rpt_link">
+                        <div class="card-body text-center">
+                            <i class="fas fa-hand-holding-usd fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Employee Advance</h5>
+                            <p class="card-text">Payments, Recoveries and Opening Balances</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mb-4">
                 <div class="col-md-4 mb-3">
                     <div class="card shadow h-100 report-card" onclick="openReport('profit-loss')">
