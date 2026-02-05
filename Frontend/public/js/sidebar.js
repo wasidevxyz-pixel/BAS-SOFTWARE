@@ -678,21 +678,21 @@ class SidebarNavigation {
         });
 
         // 4. Hierarchical Cleanup: Hide empty categories
-        // Run 3 times to propagate from nested menus up to top level
-        for (let i = 0; i < 3; i++) {
+        // IMPORTANT: We check for .auth-hidden only. We DO NOT check for .style.display !== 'none' 
+        // because in mini-mode, sub-menus are hidden by default until hover.
+        for (let i = 0; i < 4; i++) {
             const containers = document.querySelectorAll('.nav-item, .submenu-inline, .popover-menu, .popover-submenu-content');
             containers.forEach(container => {
-                if (container.classList.contains('auth-hidden') || container.style.display === 'none') return;
+                if (container.classList.contains('auth-hidden')) return;
 
-                // A container is empty if it has NO visible interactive children
+                // A container is empty if it has NO authorized interactive children
                 const selector = 'a:not(.auth-hidden), .popover-item:not(.auth-hidden), .popover-submenu-toggle:not(.auth-hidden)';
-                const visibleInternal = Array.from(container.querySelectorAll(selector))
-                    .filter(el => el.style.display !== 'none');
+                const authorizedChildren = container.querySelectorAll(selector);
 
-                if (visibleInternal.length === 0) {
+                if (authorizedChildren.length === 0) {
                     // One exception: if the container itself has a "True" permission, it stays
                     const perm = container.getAttribute('data-permission');
-                    if (perm && rights[perm] === true) return;
+                    if (perm && (rights[perm] === true || rights[perm] === 'true')) return;
 
                     // Otherwise, hide it
                     container.classList.add('auth-hidden');
