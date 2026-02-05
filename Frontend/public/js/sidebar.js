@@ -315,7 +315,7 @@ class SidebarNavigation {
                     if (child.submenu) {
                         // Nested Submenu Logic - with chevron arrows centered
                         html += `
-                            <li><a href="javascript:void(0)" class="nav-link small-link" data-permission="${child.permission}" onclick="document.getElementById('submenu-${child.id}').classList.toggle('show')" style="font-weight: normal !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding-left: 25px !important; padding-right: 15px !important;">
+                            <li><a href="javascript:void(0)" class="nav-link small-link" data-permission="${child.permission}" data-target="submenu-${child.id}" onclick="document.getElementById('submenu-${child.id}').classList.toggle('show')" style="font-weight: normal !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding-left: 25px !important; padding-right: 15px !important;">
                                 <span><i class="fas fa-circle bullet text-danger" style="font-size:0.5rem; margin-right:8px;"></i>${child.label}</span>
                                 <i class="fas fa-chevron-right" style="font-size:0.7rem;"></i>
                             </a></li>
@@ -671,13 +671,14 @@ class SidebarNavigation {
                 // Hide Trigger
                 const id = container.id;
                 if (id) {
-                    const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"]`);
+                    const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
                     if (trigger) {
                         trigger.style.display = 'none';
+                        trigger.classList.add('auth-hidden');
                         // Only hide parent leaf if it's strictly a nav-item link without other visible peers
                         const li = trigger.closest('li');
                         if (li && li.classList.contains('nav-item')) {
-                            const otherVisible = Array.from(li.querySelectorAll('a, .popover-submenu-toggle')).some(el => el !== trigger && el.style.display !== 'none');
+                            const otherVisible = Array.from(li.querySelectorAll('a, .popover-submenu-toggle')).some(el => el !== trigger && el.style.display !== 'none' && !el.classList.contains('auth-hidden'));
                             if (!otherVisible) li.style.display = 'none';
                         }
                     }
