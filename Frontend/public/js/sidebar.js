@@ -677,40 +677,45 @@ class SidebarNavigation {
             }
         });
 
-        // 4. Hierarchical Cleanup: Hide empty categories
-        // IMPORTANT: We check for .auth-hidden only. We DO NOT check for .style.display !== 'none' 
-        // because in mini-mode, sub-menus are hidden by default until hover.
+        // 4. Hierarchical Cleanup & UPWARD PROPAGATION
+        // If a child is authorized, the parent MUST show. We run 4 times to propagate up levels.
         for (let i = 0; i < 4; i++) {
             const containers = document.querySelectorAll('.nav-item, .submenu-inline, .popover-menu, .popover-submenu-content');
             containers.forEach(container => {
-                if (container.classList.contains('auth-hidden')) return;
-
-                // A container is empty if it has NO authorized interactive children
                 const selector = 'a:not(.auth-hidden), .popover-item:not(.auth-hidden), .popover-submenu-toggle:not(.auth-hidden)';
-                const authorizedChildren = container.querySelectorAll(selector);
+                const hasVisibleChildren = container.querySelectorAll(selector).length > 0;
 
-                if (authorizedChildren.length === 0) {
-                    // One exception: if the container itself has a "True" permission, it stays
-                    const perm = container.getAttribute('data-permission');
-                    if (perm && (rights[perm] === true || rights[perm] === 'true')) return;
-
-                    // Otherwise, hide it
-                    container.classList.add('auth-hidden');
-                    container.style.display = 'none';
-
-                    // Also hide the trigger
+                if (hasVisibleChildren) {
+                    // Category has active children! Show it.
+                    container.classList.remove('auth-hidden');
+                    container.style.display = '';
                     const id = container.id;
                     if (id) {
-                        const triggers = document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
-                        triggers.forEach(t => {
-                            t.classList.add('auth-hidden');
-                            t.style.display = 'none';
+                        document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`).forEach(t => {
+                            t.classList.remove('auth-hidden');
+                            t.style.display = '';
                             const li = t.closest('li');
-                            if (li) {
-                                li.classList.add('auth-hidden');
-                                li.style.display = 'none';
-                            }
+                            if (li) { li.classList.remove('auth-hidden'); li.style.display = ''; }
                         });
+                    }
+                } else {
+                    // Container empty - Hide it UNLESS the section itself is authorized
+                    const perm = container.getAttribute('data-permission');
+                    if (perm && (rights[perm] === true || rights[perm] === 'true')) {
+                        container.classList.remove('auth-hidden');
+                        container.style.display = '';
+                    } else {
+                        container.classList.add('auth-hidden');
+                        container.style.display = 'none';
+                        const id = container.id;
+                        if (id) {
+                            document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`).forEach(t => {
+                                t.classList.add('auth-hidden');
+                                t.style.display = 'none';
+                                const li = t.closest('li');
+                                if (li) { li.classList.add('auth-hidden'); li.style.display = 'none'; }
+                            });
+                        }
                     }
                 }
             });
