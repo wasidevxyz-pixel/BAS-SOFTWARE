@@ -617,12 +617,16 @@ class SidebarNavigation {
     }
 
     setupRoleBasedAccess() {
+        console.log('Setting up role-based access...');
         const user = this.getCurrentUser();
         if (!user) return;
 
         // Admin has full access
         const isAdmin = user.role === 'admin' || (user.group && user.group.isAdmin) || (user.groupId && user.groupId.isAdmin);
-        if (isAdmin) return;
+        if (isAdmin) {
+            console.log('User is admin, showing all items.');
+            return;
+        }
 
         // Rights can be in multiple places
         let rights = user.rights || {};
@@ -631,58 +635,91 @@ class SidebarNavigation {
         if (Object.keys(rights).length === 0) {
             if (user.group && user.group.rights) {
                 rights = user.group.rights;
-            } else if (user.groupId && user.groupId.rights) {
+            } else if (user.groupId && typeof user.groupId === 'object' && user.groupId.rights) {
                 rights = user.groupId.rights;
             }
+        }
+
+        console.log('Active Rights:', rights);
+        if (Object.keys(rights).length === 0) {
+            console.warn('No rights found for user, keeping sidebar as-is to avoid complete blackout.');
+            // Only hide the Dashboard if specifically unauthorized, otherwise leave sidebar alone
+            // as something might have gone wrong with the rights load.
+            return;
         }
 
         // 1. Hide anything with a data-permission that isn't allowed
         const allPermElements = document.querySelectorAll('[data-permission]');
         allPermElements.forEach(el => {
             const perm = el.getAttribute('data-permission');
-            if (perm && !rights[perm]) {
-                el.classList.add('auth-hidden');
-                el.style.display = 'none';
+            if (perm && rights[perm] === false) { // Explicitly unauthorized
+                const isSubToggle = el.getAttribute('data-bs-toggle') === 'collapse' || el.classList.contains('popover-submenu-toggle');
 
-                // If it's a link in a list item, hide the list item too
-                const li = el.closest('li');
-                if (li) {
-                    li.classList.add('auth-hidden');
-                    li.style.display = 'none';
+                // Only hide leaf links here, letting the container check handle the groups
+                if (!isSubToggle) {
+                    el.classList.add('auth-hidden');
+                    el.style.display = 'none';
+                    const li = el.closest('li');
+                    if (li && li.classList.contains('nav-item') === false) { // only hide narrow LI items
+                        li.style.display = 'none';
+                        li.classList.add('auth-hidden');
+                    }
                 }
             }
         });
 
         // 2. Hide Containers (Submenus) that have no visible children
-        // Run 3 times to propagate from deepest child to grandparent
-        for (let i = 0; i < 3; i++) {
-            const containers = document.querySelectorAll('.submenu-inline, .popover-submenu-content, .popover-menu, .nav-item');
-            containers.forEach(container => {
-                // Skip if already hidden
-                if (container.classList.contains('auth-hidden') || container.style.display === 'none') return;
+        // Use a more targeted approach for sub-menus
+        const subContainers = document.querySelectorAll('.submenu-inline, .popover-submenu-content');
+        subContainers.forEach(container => {
+            const visibleLinks = Array.from(container.querySelectorAll('a, .popover-submenu-toggle, .popover-item'))
+                .filter(el => !el.classList.contains('auth-hidden') && el.style.display !== 'none');
 
-                // Check for visible interactive children
-                const visibleLinks = Array.from(container.querySelectorAll('a, .popover-submenu-toggle, .popover-item, .popover-header'))
-                    .filter(el => !el.classList.contains('auth-hidden') && el.style.display !== 'none');
+            if (visibleLinks.length === 0) {
+                container.classList.add('auth-hidden');
+                container.style.display = 'none';
 
-                if (visibleLinks.length === 0) {
-                    container.classList.add('auth-hidden');
-                    container.style.display = 'none';
-
-                    // If we hide a container, we MUST hide its trigger
-                    const id = container.id;
-                    if (id) {
-                        const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
-                        if (trigger) {
-                            trigger.classList.add('auth-hidden');
-                            trigger.style.display = 'none';
-                            const li = trigger.closest('li');
-                            if (li) li.style.display = 'none';
-                        }
+                // Hide the trigger for this container
+                const id = container.id;
+                if (id) {
+                    const trigger = document.querySelector(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`);
+                    if (trigger) {
+                        trigger.classList.add('auth-hidden');
+                        trigger.style.display = 'none';
+                        const li = trigger.closest('li');
+                        if (li) li.style.display = 'none';
                     }
                 }
-            });
-        }
+            }
+        });
+
+        // 3. Final cleanup for top-level nav items
+        document.querySelectorAll('.nav-item').forEach(navItem => {
+            const perm = navItem.getAttribute('data-permission');
+            // If the item itself is restricted
+            if (perm && rights[perm] === false) {
+                navItem.style.display = 'none';
+                return;
+            }
+
+            // If it's a category, check if it still has anything visible inside
+            const hasSubmenu = navItem.querySelector('.submenu-inline, .popover-menu');
+            if (hasSubmenu) {
+                const visible = Array.from(navItem.querySelectorAll('.nav-link:not(.auth-hidden), .popover-item:not(.auth-hidden)'))
+                    .filter(el => el.style.display !== 'none');
+
+                // If the only visible thing is the category header itself, hide it
+                if (visible.length <= 1 && hasSubmenu) {
+                    // Check if children are hidden
+                    const visibleChildren = Array.from(hasSubmenu.querySelectorAll('a:not(.auth-hidden)'))
+                        .filter(el => el.style.display !== 'none');
+
+                    if (visibleChildren.length === 0) {
+                        navItem.style.display = 'none';
+                    }
+                }
+            }
+        });
     }
 
     collapseAllMenus() {
