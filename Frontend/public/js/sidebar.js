@@ -19,8 +19,32 @@ class SidebarNavigation {
         this.applyBodyClass();
         this.highlightCurrentPage();
         this.setupEventListeners();
-        this.setupRoleBasedAccess();
+        this.setupRoleBasedAccess(); // Initial
+        // Force refresh significantly 
+        this.refreshPermissions();
         this.setupHeader();
+    }
+
+    async refreshPermissions() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const updatedUser = await response.json();
+                // Update local storage with fresh data
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                // Re-run permission check with new data
+                this.setupRoleBasedAccess();
+                this.setupHeader(); // Update avatar/name if changed
+            }
+        } catch (error) {
+            console.error('Sidebar: Failed to refresh permissions', error);
+        }
     }
 
     injectStyles() {
@@ -628,8 +652,10 @@ class SidebarNavigation {
         let rights = {};
         if (user.role === 'admin') rights.admin = true;
         if (user.rights) Object.assign(rights, user.rights);
-        if (user.group && user.group.rights) Object.assign(rights, user.group.rights);
-        if (user.groupId && typeof user.groupId === 'object' && user.groupId.rights) Object.assign(rights, user.groupId.rights);
+
+        // Removed redundant merging of raw group rights to prevent overwriting processed rights from controller
+        // if (user.group && user.group.rights) Object.assign(rights, user.group.rights);
+        // if (user.groupId && typeof user.groupId === 'object' && user.groupId.rights) Object.assign(rights, user.groupId.rights);
 
         // Check for Group Admin flag
         const isGroupAdmin = (user.group && user.group.isAdmin) || (user.groupId && typeof user.groupId === 'object' && user.groupId.isAdmin);
@@ -678,48 +704,103 @@ class SidebarNavigation {
         });
 
         // 4. Hierarchical Cleanup & UPWARD PROPAGATION
-        // If a child is authorized, the parent MUST show. We run 4 times to propagate up levels.
-        for (let i = 0; i < 4; i++) {
+        // If a child is authorized, the parent MUST show. We run multiple times to propagate up levels.
+
+        // Define helpers
+        const isVisible = (el) => {
+            return el && !el.classList.contains('auth-hidden') && el.style.display !== 'none';
+        };
+
+        const hasVisibleChildren = (container) => {
+            // Look for direct links or submenu toggles that are visible
+            // We need to look deeper than just immediate children for nested structures
+            const links = container.querySelectorAll('a, .popover-item, .popover-submenu-toggle');
+            for (let link of links) {
+                if (isVisible(link)) return true;
+            }
+            return false;
+        };
+
+        for (let i = 0; i < 6; i++) {
             const containers = document.querySelectorAll('.nav-item, .submenu-inline, .popover-menu, .popover-submenu-content');
             containers.forEach(container => {
-                const selector = 'a:not(.auth-hidden), .popover-item:not(.auth-hidden), .popover-submenu-toggle:not(.auth-hidden)';
-                const hasVisibleChildren = container.querySelectorAll(selector).length > 0;
-
-                if (hasVisibleChildren) {
+                if (hasVisibleChildren(container)) {
                     // Category has active children! Show it.
                     container.classList.remove('auth-hidden');
                     container.style.display = '';
+
+                    // Also ensure the trigger (the link that opens this container) is shown
                     const id = container.id;
                     if (id) {
                         document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`).forEach(t => {
                             t.classList.remove('auth-hidden');
                             t.style.display = '';
+                            // And the LI wrapping that trigger
                             const li = t.closest('li');
                             if (li) { li.classList.remove('auth-hidden'); li.style.display = ''; }
                         });
                     }
                 } else {
-                    // Container empty - Hide it UNLESS the section itself is authorized
+                    // Container empty - Hide it UNLESS the section itself is expressly authorized
                     const perm = container.getAttribute('data-permission');
+                    // Only hide if NOT authorized AND no children
                     if (perm && (rights[perm] === true || rights[perm] === 'true')) {
-                        container.classList.remove('auth-hidden');
-                        container.style.display = '';
+                        // Keep it visible
                     } else {
-                        container.classList.add('auth-hidden');
-                        container.style.display = 'none';
-                        const id = container.id;
-                        if (id) {
-                            document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`).forEach(t => {
-                                t.classList.add('auth-hidden');
-                                t.style.display = 'none';
-                                const li = t.closest('li');
-                                if (li) { li.classList.add('auth-hidden'); li.style.display = 'none'; }
-                            });
+                        // If it determines visibility solely by children (like a pure folder), and no children -> hide
+                        // Or if explicit permission is false/undefined -> hide
+
+                        // BUT: We must check if we already processed it as visible in a previous loop?
+                        // Actually, if hasVisibleChildren is false, we can safely hide it IF it relies on children.
+                        // Ideally, we shouldn't hide something that was explicitly true.
+                        if (!perm || !rights[perm]) {
+                            container.classList.add('auth-hidden');
+                            container.style.display = 'none';
+
+                            const id = container.id;
+                            if (id) {
+                                document.querySelectorAll(`[href="#${id}"], [data-target="${id}"], [data-bs-target="#${id}"]`).forEach(t => {
+                                    t.classList.add('auth-hidden');
+                                    t.style.display = 'none';
+                                    const li = t.closest('li');
+                                    if (li) { li.classList.add('auth-hidden'); li.style.display = 'none'; }
+                                });
+                            }
                         }
                     }
                 }
             });
         }
+
+
+        // 5. FAILSAFE: explicitly unhide items that are definitely allowed
+        // This handles cases where parent/child logic might have been too aggressive
+        Object.keys(rights).forEach(key => {
+            if (rights[key] === true || rights[key] === 'true') {
+                const els = document.querySelectorAll(`[data-permission="${key}"]`);
+                els.forEach(el => {
+                    el.classList.remove('auth-hidden');
+                    el.style.display = '';
+                    // Also ensure its parent container is visible if it's a submenu item
+                    const parent = el.closest('.submenu-inline, .popover-submenu-content');
+                    if (parent) {
+                        parent.classList.remove('auth-hidden');
+                        parent.style.display = '';
+                        // And the trigger for that parent
+                        const parentId = parent.id;
+                        if (parentId) {
+                            const trigger = document.querySelector(`[data-target="${parentId}"], [href="#${parentId}"]`);
+                            if (trigger) {
+                                trigger.classList.remove('auth-hidden');
+                                trigger.style.display = '';
+                                const li = trigger.closest('li');
+                                if (li) { li.classList.remove('auth-hidden'); li.style.display = ''; }
+                            }
+                        }
+                    }
+                });
+            }
+        });
 
         console.log('Sidebar: [PERMISSION CHECK] Finalized.');
     }
