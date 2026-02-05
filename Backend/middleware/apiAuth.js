@@ -9,16 +9,32 @@ const User = require('../models/User');
 exports.verifyApiKey = async (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
     const apiSecret = req.headers['x-api-secret'];
+    const basSecret = req.headers['bas-secret-key'];
 
     // If no API headers, just move to next (standard auth will pick it up)
-    if (!apiKey || !apiSecret) {
+    if (!apiKey && !apiSecret && !basSecret) {
         return next();
     }
 
     try {
-        const settings = await Settings.findOne({ apiKey, apiSecret });
+        let isAuthorized = false;
 
-        if (!settings) {
+        // Handle bas-secret-key (Biometric app simple secret)
+        if (basSecret) {
+            const MASTER_SECRET = process.env.BIOMETRIC_SECRET || 'BAS_SECURE_TOKEN_XYZ';
+            const settings = await Settings.findOne({});
+            if (basSecret === MASTER_SECRET || (settings && settings.apiSecret === basSecret)) {
+                isAuthorized = true;
+            }
+        }
+
+        // Handle standard API Key/Secret
+        if (!isAuthorized && apiKey && apiSecret) {
+            const settings = await Settings.findOne({ apiKey, apiSecret });
+            if (settings) isAuthorized = true;
+        }
+
+        if (!isAuthorized) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid API Key or Secret'
@@ -34,11 +50,13 @@ exports.verifyApiKey = async (req, res, next) => {
             req.user = adminUser;
         } else {
             // Fallback to virtual user if no real admin exists (unlikely)
+            const settings = await Settings.findOne({});
             req.user = {
-                _id: settings.createdBy,
+                _id: settings ? settings.createdBy : '000000000000000000000000',
                 role: 'admin',
                 isActive: true,
-                isApiAccess: true
+                isApiAccess: true,
+                branch: [] // Empty array for admin means "All Branches"
             };
         }
 

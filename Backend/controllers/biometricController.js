@@ -88,7 +88,8 @@ exports.syncBiometricLog = async (req, res) => {
                     branch: branch || employee.branch || 'Main',
                     displayStatus: 'Present',
                     isPresent: true,
-                    checkIn: timeStr
+                    checkIn: timeStr,
+                    remarks: `Check-in from ${branch || 'Unknown'}`
                 });
                 await attendance.save();
                 return res.status(200).json({
@@ -173,6 +174,7 @@ exports.syncBiometricLog = async (req, res) => {
 
         // PERFORM CHECK-OUT
         attendance.checkOut = timeStr;
+        attendance.remarks = (attendance.remarks || '') + ` | Check-out from ${branch || 'Unknown'}`;
         await attendance.save();
 
         res.status(200).json({
