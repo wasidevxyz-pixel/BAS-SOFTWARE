@@ -121,10 +121,10 @@ function renderDetailTable() {
         const tr = document.createElement('tr');
         // Initial color based on strict rules
         tr.className = '';
-        const mins = parseTime(att.workedHrs);
-        if (mins >= 1020) {
+        const workedMins = parseTime(att.workedHrs);
+        if (workedMins >= 1020) {
             tr.className = 'row-overtime';
-        } else if (mins > 0 && mins <= 60) {
+        } else if (workedMins > 0 && workedMins <= 60) {
             tr.className = 'row-warning';
         } else if (att.checkIn && att.checkOut) {
             tr.className = 'row-completed';
@@ -147,20 +147,20 @@ function renderDetailTable() {
             <td class="text-center col-date" style="font-weight: 600;">${dateStr}</td>
             <td class="text-center">${dayName}</td>
             <td class="px-1 col-checkin">
-                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${att.checkIn || ''}" oninput="updateRowCalc(this)">
+                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${convertTo24Hour(att.checkIn)}" oninput="updateRowCalc(this)">
                 <span class="print-value">${att.checkIn || ''}</span>
             </td>
             <td class="px-1 col-checkout">
-                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${att.checkOut || ''}" oninput="updateRowCalc(this)">
+                <input type="time" class="form-control form-control-xs text-center fw-bold" value="${convertTo24Hour(att.checkOut)}" oninput="updateRowCalc(this)">
                 <span class="print-value">${att.checkOut || ''}</span>
             </td>
             <td class="text-center fw-bold col-worked">${att.workedHrs || ''}</td>
             <td class="px-1 col-breakout">
-                <input type="time" class="form-control form-control-xs text-center" value="${att.breakOut || ''}" oninput="updateRowCalc(this)">
+                <input type="time" class="form-control form-control-xs text-center" value="${convertTo24Hour(att.breakOut)}" oninput="updateRowCalc(this)">
                 <span class="print-value">${att.breakOut || ''}</span>
             </td>
             <td class="px-1 col-breakin">
-                <input type="time" class="form-control form-control-xs text-center" value="${att.breakIn || ''}" oninput="updateRowCalc(this)">
+                <input type="time" class="form-control form-control-xs text-center" value="${convertTo24Hour(att.breakIn)}" oninput="updateRowCalc(this)">
                 <span class="print-value">${att.breakIn || ''}</span>
             </td>
             <td class="text-center col-breakhrs">${att.breakHrs || ''}</td>
@@ -170,8 +170,8 @@ function renderDetailTable() {
                     <button class="btn btn-diff btn-danger ${att.diffMode === '-' ? '' : 'opacity-50'}" onclick="setDiffMode(this, '-')">-</button>
                 </div>
             </td>
-            <td class="px-1 col-diffin"><input type="time" class="input-diff-box" value="${att.timeDiffIn || ''}" oninput="updateRowCalc(this)"></td>
-            <td class="px-1 col-diffout"><input type="time" class="input-diff-box" value="${att.timeDiffOut || ''}" oninput="updateRowCalc(this)"></td>
+            <td class="px-1 col-diffin"><input type="time" class="input-diff-box" value="${convertTo24Hour(att.timeDiffIn)}" oninput="updateRowCalc(this)"></td>
+            <td class="px-1 col-diffout"><input type="time" class="input-diff-box" value="${convertTo24Hour(att.timeDiffOut)}" oninput="updateRowCalc(this)"></td>
             <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
             <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
             <td class="px-1 text-center col-status">
@@ -196,8 +196,8 @@ function updateRowColor(element) {
     const status = tr.cells[15].querySelector('select').value;
     const checkIn = tr.cells[4].querySelector('input').value;
     const checkOut = tr.cells[5].querySelector('input').value;
-    const workedHrsText = tr.cells[6].textContent;
-    const mins = parseTime(workedHrsText);
+    const totalHrsText = tr.cells[14].textContent;
+    const mins = parseTime(totalHrsText);
 
     tr.className = '';
     if (mins >= 1020) {
@@ -283,12 +283,29 @@ function updateRowCalc(element) {
         tr.cells[6].textContent = '';
         tr.cells[14].textContent = '';
     }
+    updateRowColor(tr);
     calculateTotals();
 }
 
+function convertTo24Hour(timeStr) {
+    if (!timeStr) return '';
+    if (timeStr.includes(':') && (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm'))) {
+        let [time, modifier] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':');
+        if (hours === '12') hours = '00';
+        if (modifier.toLowerCase() === 'pm') hours = parseInt(hours, 10) + 12;
+        return `${hours.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+    }
+    return timeStr;
+}
+
 function parseTime(timeStr) {
-    if (!timeStr || !timeStr.includes(':')) return 0;
+    if (!timeStr) return 0;
+    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+        timeStr = convertTo24Hour(timeStr);
+    }
     const parts = timeStr.split(':').map(Number);
+    if (parts.length < 2) return 0;
     return parts[0] * 60 + parts[1];
 }
 
