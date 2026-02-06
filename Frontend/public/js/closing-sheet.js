@@ -2335,6 +2335,24 @@ async function loadIncomeStatementData() {
             currentIncomeStatementData = json.data;
             const { cashSaleTotal, bankSaleTotal, payExpenses, incomeExpenses, openingBalance } = json.data;
 
+            // Sort Expenses by Date Ascending (User Request: 1st date show first)
+            if (payExpenses && payExpenses.length > 0) {
+                payExpenses.sort((a, b) => {
+                    const dateA = new Date(a.date || a.createdAt || 0);
+                    const dateB = new Date(b.date || b.createdAt || 0);
+                    return dateA - dateB;
+                });
+            }
+
+            // Sort Income Receipts by Date Ascending
+            if (incomeExpenses && incomeExpenses.length > 0) {
+                incomeExpenses.sort((a, b) => {
+                    const dateA = new Date(a.date || a.createdAt || 0);
+                    const dateB = new Date(b.date || b.createdAt || 0);
+                    return dateA - dateB;
+                });
+            }
+
             // Populate Income Inputs
             document.getElementById('incomeOpening').value = openingBalance || 0;
             document.getElementById('incomeCashSale').value = cashSaleTotal || 0;
