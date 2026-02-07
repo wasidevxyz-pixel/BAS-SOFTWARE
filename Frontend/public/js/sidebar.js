@@ -30,7 +30,7 @@ class SidebarNavigation {
         if (!token) return;
 
         try {
-            const response = await fetch('/api/auth/me', {
+            const response = await fetch('/api/v1/auth/me', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

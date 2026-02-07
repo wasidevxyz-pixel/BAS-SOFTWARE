@@ -3,6 +3,7 @@ let currentPage = 1;
 let currentLimit = 10;
 
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('Parties.js: DOMContentLoaded');
     // Check if user is authenticated
     if (!isAuthenticated()) {
         window.location.href = 'login.html';
@@ -107,6 +108,7 @@ function setUserName() {
 
 // Initialize parties page
 function initPartiesPage() {
+    console.log('Parties.js: initPartiesPage called');
     loadBranches(); // Load branches on init
 
     // Disable category dropdown initially (no type selected)
@@ -285,6 +287,7 @@ async function loadCategories(partyType = '') {
 
 // Load parties from API
 async function loadParties(page = 1, limit = 10) {
+    console.log('Parties.js: loadParties called', page, limit);
     try {
         showLoading();
 
