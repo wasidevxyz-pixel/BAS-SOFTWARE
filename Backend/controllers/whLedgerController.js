@@ -127,6 +127,7 @@ exports.getWHStockPosition = asyncHandler(async (req, res) => {
             category: item.category,
             costPrice: item.costPrice || 0,
             salePrice: item.salePrice || 0,
+            retailPrice: item.retailPrice || 0,
             incentive: item.incentive || 0,
             currentStock: currentStock
         };
