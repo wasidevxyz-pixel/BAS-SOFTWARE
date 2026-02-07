@@ -560,6 +560,7 @@
                             <th>Item Name</th>
                             <th style="width: 150px" class="text-end">Stock</th>
                             <th style="width: 120px" class="text-end">Cost</th>
+                            <th style="width: 120px" class="text-end">Retail Price</th>
                             ${showIncentive ? '<th style="width: 120px" class="text-end">Incentive</th>' : ''}
                             <th style="width: 150px" class="text-end">Value</th>
                         </tr>
@@ -584,6 +585,7 @@
                         <td>${item.name}</td>
                         <td class="text-end fw-bold ${stock <= 0 ? 'text-danger' : 'text-success'}">${stock.toLocaleString()}</td>
                         <td class="text-end">${price.toLocaleString()}</td>
+                        <td class="text-end">${(item.retailPrice || 0).toLocaleString()}</td>
                         ${showIncentive ? `<td class="text-end">${(item.incentive || 0).toLocaleString()}</td>` : ''}
                         <td class="text-end fw-bold">${stockVal.toLocaleString()}</td>
                     `;
@@ -629,6 +631,7 @@
                 'Category': item.category?.name || '',
                 'Stock': item.currentStock,
                 'Cost': item.costPrice,
+                'Retail Price': item.retailPrice || 0,
                 'Value': Math.round(item.currentStock * item.costPrice),
                 'Incentive': item.incentive || 0
             }));
