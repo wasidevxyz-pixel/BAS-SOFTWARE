@@ -102,16 +102,42 @@ async function loadEmployees() {
 }
 
 function handleGlobalSearch(value) {
-    const filter = value.toUpperCase();
+    const filter = value.trim().toUpperCase();
     const rows = document.getElementById('employeeTableBody').getElementsByTagName('tr');
 
     for (let i = 0; i < rows.length; i++) {
-        const text = rows[i].textContent || rows[i].innerText;
-        if (text.toUpperCase().indexOf(filter) > -1) {
-            rows[i].style.display = "";
-        } else {
-            rows[i].style.display = "none";
+        let rowMatch = false;
+
+        // 1. Check all text nodes in the row (for SrNo, Code, etc.)
+        const simpleText = rows[i].innerText || rows[i].textContent;
+        if (simpleText.toUpperCase().indexOf(filter) > -1) {
+            rowMatch = true;
         }
+
+        // 2. Check all input values (for Name, CNIC, Acc No, Salary, etc.)
+        if (!rowMatch) {
+            const inputs = rows[i].querySelectorAll('input');
+            for (let input of inputs) {
+                if (input.value.toUpperCase().indexOf(filter) > -1) {
+                    rowMatch = true;
+                    break;
+                }
+            }
+        }
+
+        // 3. Check all select selected options (for Branch, Designation, Department, etc.)
+        if (!rowMatch) {
+            const selects = rows[i].querySelectorAll('select');
+            for (let select of selects) {
+                const selectedText = select.options[select.selectedIndex]?.text || "";
+                if (selectedText.toUpperCase().indexOf(filter) > -1) {
+                    rowMatch = true;
+                    break;
+                }
+            }
+        }
+
+        rows[i].style.display = rowMatch ? "" : "none";
     }
 }
 
@@ -184,6 +210,12 @@ function renderTable() {
         `;
         tbody.appendChild(tr);
     });
+
+    // Re-apply global search filter if active
+    const globalSearchInput = document.getElementById('globalSearch');
+    if (globalSearchInput && globalSearchInput.value) {
+        handleGlobalSearch(globalSearchInput.value);
+    }
 }
 
 function updateRowIncrDate(salaryInput) {
