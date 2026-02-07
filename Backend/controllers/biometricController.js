@@ -94,7 +94,13 @@ exports.syncBiometricLog = async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     message: "Check-IN successful",
-                    data: { employee: employee.name, checkIn: timeStr, action: 'IN' }
+                    data: {
+                        employee: employee.name,
+                        code: employee.code,
+                        photo: employee.photo || employee.profilePicture || '',
+                        checkIn: timeStr,
+                        action: 'IN'
+                    }
                 });
             }
         }
@@ -108,7 +114,13 @@ exports.syncBiometricLog = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 message: "Check-IN successful",
-                data: { employee: employee.name, checkIn: timeStr, action: 'IN' }
+                data: {
+                    employee: employee.name,
+                    code: employee.code,
+                    photo: employee.photo || employee.profilePicture || '',
+                    checkIn: timeStr,
+                    action: 'IN'
+                }
             });
         }
 
@@ -168,6 +180,8 @@ exports.syncBiometricLog = async (req, res) => {
             message: "Check-OUT successful",
             data: {
                 employee: employee.name,
+                code: employee.code,
+                photo: employee.photo || employee.profilePicture || '',
                 checkIn: attendance.checkIn,
                 checkOut: attendance.checkOut,
                 action: 'OUT'

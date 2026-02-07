@@ -343,7 +343,16 @@ async function saveEmployee() {
         maritalStatus: document.getElementById('maritalStatus').value,
         isActive: document.getElementById('isActive').checked,
         commEmp: document.getElementById('isSalesman').checked,
-        photo: document.getElementById('photoPreview').querySelector('img')?.src || '',
+        photo: (function () {
+            const img = document.getElementById('photoPreview').querySelector('img');
+            const src = img ? img.src : '';
+            if (src) {
+                console.log(`📸 Capturing photo for save. Type: ${src.startsWith('data:') ? 'Base64' : 'Link'}, Length: ${src.length}`);
+            } else {
+                console.log('📸 No photo captured for save.');
+            }
+            return src;
+        })(),
 
         opening: parseFloat(document.getElementById('opening').value) || 0,
         basicSalary: parseFloat(document.getElementById('basicSalary').value) || 0,
@@ -444,7 +453,13 @@ async function editEmployee(id) {
             // Set Photo Preview
             const photoPreview = document.getElementById('photoPreview');
             if (emp.photo) {
-                photoPreview.innerHTML = `<img src="${emp.photo.startsWith('http') ? emp.photo : _config?.ServerUrl ? _config.ServerUrl + emp.photo : emp.photo}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+                let photoSrc = emp.photo;
+                // If it's not a data URL and not an absolute link, try prepending ServerUrl
+                if (!photoSrc.startsWith('data:') && !photoSrc.startsWith('http')) {
+                    const serverUrl = typeof _config !== 'undefined' && _config?.ServerUrl ? _config.ServerUrl : '';
+                    photoSrc = serverUrl + photoSrc;
+                }
+                photoPreview.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
             } else {
                 photoPreview.innerHTML = '<div class="photo-placeholder"><i class="fas fa-camera"></i></div>';
             }

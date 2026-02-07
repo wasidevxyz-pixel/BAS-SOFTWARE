@@ -60,6 +60,17 @@ exports.createEmployee = async (req, res) => {
             req.body.code = String(nextNum).padStart(4, '0');
         }
 
+        if (req.body.photo) {
+            console.log(`📸 Creating employee with photo. Data length: ${req.body.photo.length}`);
+            if (req.body.photo.startsWith('data:')) {
+                console.log(`📸 Photo is Base64 (starts with data:)`);
+            } else {
+                console.log(`📸 Photo is NOT Base64 (starts with: ${req.body.photo.substring(0, 20)}...)`);
+            }
+        } else {
+            console.log(`📸 Creating employee WITHOUT photo`);
+        }
+
         const employee = await Employee.create(req.body);
         res.status(201).json({ success: true, data: employee });
     } catch (error) {
@@ -71,6 +82,12 @@ exports.createEmployee = async (req, res) => {
 // @route   PUT /api/v1/employees/:id
 exports.updateEmployee = async (req, res) => {
     try {
+        if (req.body.photo) {
+            console.log(`📸 Updating employee ${req.params.id} with photo. Data length: ${req.body.photo.length}`);
+        } else if (req.body.hasOwnProperty('photo')) {
+            console.log(`📸 Updating employee ${req.params.id} - Clearing photo`);
+        }
+
         const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
