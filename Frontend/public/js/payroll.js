@@ -594,12 +594,8 @@ function calculateTotals() {
 
     // Dynamic ST.LessAllow calculation
     const fullSTAllow = window.fullStLessAllow || 0;
-    let stAllow = fullSTAllow;
-
-    if (workedHrs < totalHrsReq) {
-        // (Full Allowance / 30 / DutyHours) * WorkedHours
-        stAllow = (fullSTAllow / 30 / (dutyHrs || 8)) * workedHrs;
-    }
+    const stDeduction = (fullSTAllow / 30 / (dutyHrs || 8)) * getValue('shortTimeHrs');
+    const stAllow = Math.max(0, fullSTAllow - stDeduction);
     setValue('stLessAllow', Math.round(stAllow));
 
     const updatedEarnings = Math.round(

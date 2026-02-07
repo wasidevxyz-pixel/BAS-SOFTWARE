@@ -300,14 +300,10 @@ exports.calculatePayroll = async (req, res) => {
             console.error('Error fetching commissions:', commErr);
         }
 
-        // Pro-rated ST.LessAllow logic
+        // Dynamic ST.LessAllow calculation: Deduct based on ShortTime hours
         const fullStLessAllow = employee.stLoss || 0;
-        let calculatedStLessAllow = fullStLessAllow;
-
-        if (totalWorkedHours < totalHrsPerMonth) {
-            // Formula: (Full Allowance / 30 / DutyHours) * WorkedHours
-            calculatedStLessAllow = (fullStLessAllow / 30 / (dutyHours || 8)) * totalWorkedHours;
-        }
+        const stDeduction = (fullStLessAllow / 30 / (dutyHours || 8)) * shortTimeHrs;
+        const calculatedStLessAllow = Math.max(0, fullStLessAllow - stDeduction);
 
         const calculatedData = {
             employee: employeeId,
