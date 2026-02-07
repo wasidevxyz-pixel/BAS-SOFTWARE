@@ -626,3 +626,32 @@ function loadPartyTypes() {
     // This would be implemented if party types are dynamic
     console.log('Load party types');
 }
+
+// --- Helper Functions (Fallbacks) ---
+function showSuccess(message) {
+    if (window.showNotification) {
+        window.showNotification(message, false);
+    } else {
+        alert('Success: ' + message);
+    }
+}
+
+function showError(message) {
+    if (window.showNotification) {
+        window.showNotification(message, true);
+    } else {
+        alert('Error: ' + message);
+    }
+}
+
+function showLoading() {
+    if (window.showLoading) {
+        window.showLoading();
+    }
+}
+
+function hideLoading() {
+    if (window.hideLoading) {
+        window.hideLoading();
+    }
+}
