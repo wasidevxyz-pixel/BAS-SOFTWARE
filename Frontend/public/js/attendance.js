@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadDesignations(),
     ]);
     await loadAttendanceList();
+
+    // Auto-refresh every 5 seconds (5000ms)
+    setInterval(() => loadAttendanceList(true), 5000);
 });
 
 function setDefaultDates() {
@@ -80,9 +83,16 @@ async function loadDesignations() {
     } catch (err) { console.error(err); }
 }
 
-async function loadAttendanceList() {
+async function loadAttendanceList(isBackground = false) {
+    // Skip background refresh if user is interacting with inputs
+    if (isBackground && document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) {
+        return;
+    }
+
     const tbody = document.getElementById('attendanceRecordsBody');
-    tbody.innerHTML = '<tr><td colspan="19" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    if (!isBackground) {
+        tbody.innerHTML = '<tr><td colspan="19" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    }
 
     try {
         const token = localStorage.getItem('token');
@@ -163,7 +173,17 @@ async function loadAttendanceList() {
                 }
             }
 
+            // Preserve scroll position during refresh
+            const tableContainer = document.querySelector('.table-container');
+            const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
+            const scrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+
             renderAttendanceTable();
+
+            if (isBackground && tableContainer) {
+                tableContainer.scrollTop = scrollTop;
+                tableContainer.scrollLeft = scrollLeft;
+            }
         }
     } catch (error) {
         console.error('Error loading attendance:', error);
