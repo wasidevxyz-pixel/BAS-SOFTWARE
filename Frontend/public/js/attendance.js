@@ -416,11 +416,9 @@ function updateWorkedHrs(input) {
             updateRowColor(statusSelect);
         }
     } else {
-        // Helper to clear displays if incomplete
-        if (!checkIn && !checkOut) {
-            tr.querySelector('.col-worked').textContent = '';
-            tr.querySelector('.col-totalhrs').textContent = '';
-        }
+        // Only show Worked Hrs if BOTH CheckIn and CheckOut are present
+        tr.querySelector('.col-worked').textContent = '';
+        tr.querySelector('.col-totalhrs').textContent = '';
     }
     updateRowColor(input);
 }
