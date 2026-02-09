@@ -28,7 +28,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             console.log('Response Status:', res.status);
 
-            const data = await res.json();
+            let data;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await res.json();
+            } else {
+                data = { message: await res.text() };
+            }
             console.log('Response Data:', data);
 
             if (res.ok) {
