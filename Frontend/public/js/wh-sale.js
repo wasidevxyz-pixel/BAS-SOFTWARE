@@ -10,6 +10,7 @@ let editingId = null;
 let itemListModal, customerListModal;
 let searchIndex = -1;
 let customerSearchIndex = -1;
+let editingItemOriginalQty = 0; // Track qty of item being edited to avoid stock errors
 
 async function initializePage() {
     document.getElementById('invoiceDate').valueAsDate = new Date();
@@ -526,8 +527,10 @@ function addItemToTable() {
 
     // Stock Check
     const currentStock = parseFloat(document.getElementById('itemStock').value) || 0;
-    if (pack > currentStock) {
-        return alert(`Insufficient Stock! Available: ${currentStock}`);
+    const effectiveStock = (editingId) ? (currentStock + editingItemOriginalQty) : currentStock;
+
+    if (pack > effectiveStock) {
+        return alert(`Insufficient Stock! Available: ${effectiveStock}`);
     }
 
     const saleItem = {
@@ -615,6 +618,7 @@ async function editItem(index) {
     const item = saleItems[index];
 
     // Remove from array and update table
+    editingItemOriginalQty = item.quantity || 0;
     saleItems.splice(index, 1);
     renderTable();
     updateGrandTotals();
@@ -660,7 +664,7 @@ function resetRowInput() {
     document.getElementById('itemNetTotal').value = '0';
     document.getElementById('itemStock').value = '0';
     if (document.getElementById('footerCurrentStock')) document.getElementById('footerCurrentStock').textContent = '0';
-    if (document.getElementById('footerCurrentStock')) document.getElementById('footerCurrentStock').textContent = '0';
+    editingItemOriginalQty = 0;
 
     // Clear and hide suggestions
     const suggestions = document.getElementById('itemSuggestions');
