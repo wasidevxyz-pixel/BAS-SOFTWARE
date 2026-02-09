@@ -11,6 +11,10 @@ const cookieParser = require('cookie-parser');
 const fileupload = require('express-fileupload');
 const morgan = require('morgan');
 
+const rateLimit = require('express-rate-limit');
+const xssClean = require('./middleware/xss');
+const hpp = require('hpp');
+
 // Route files
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
@@ -128,17 +132,28 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Set security headers
-// Set security headers - Disabled completely for debugging
-// app.use(helmet({
-//   contentSecurityPolicy: false,
-// }));
+// Using a PERMISSIVE CSP to allow inline scripts and prevent breaking the live site
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+    },
+  },
+}));
 
-// Rate limiting temporarily disabled
-// const limiter = rateLimit({
-//   windowMs: 10 * 60 * 1000,
-//   max: 100
-// });
-// app.use('/api/', limiter);
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api/', limiter);
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
@@ -155,14 +170,14 @@ app.use((req, res, next) => {
 // Cookie parser
 app.use(cookieParser());
 
-// Data sanitization against NoSQL injection - temporarily disabled due to Express v5 req.query setter incompatibility
-// app.use('/api/', mongoSanitize());
+// Data sanitization against NoSQL injection
+// app.use(mongoSanitize()); // Disabled due to Express 5 req.query readonly issue
 
 // Data sanitization against XSS
-// app.use(xssClean()); // Commented out - package not installed
+app.use(xssClean);
 
 // Prevent parameter pollution
-// app.use(hpp());
+app.use(hpp());
 
 // File upload middleware temporarily disabled
 app.use(fileupload());
