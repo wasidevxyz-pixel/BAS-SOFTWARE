@@ -144,14 +144,28 @@ exports.updateWHSaleReturn = async (req, res) => {
 
         // CASE 1: Transitioning to Posted OR already Posted (Modifying)
         if (saleReturn.status === 'Posted') {
-            // If it was already Posted, reverse the OLD impact first
             if (existingStatus === 'Posted') {
-                for (const line of oldItems) {
-                    const whItem = await WHItem.findById(line.item);
+                // Optimize: Calculate NET changes to avoid log noise
+                const itemMap = {};
+                oldItems.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) - (parseFloat(it.quantity) || 0);
+                });
+                saleReturn.items.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) + (parseFloat(it.quantity) || 0);
+                });
+
+                for (const itemId of Object.keys(itemMap)) {
+                    const netQty = itemMap[itemId];
+                    if (netQty === 0) continue; // No quantity change, no stock log needed
+
+                    const whItem = await WHItem.findById(itemId);
                     if (whItem) {
                         const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                        const oldReturnQty = parseFloat(line.quantity) || 0;
-                        const newQty = previousQty - oldReturnQty; // Reverse Sale Return: SUBTRACT
+                        const logType = netQty > 0 ? 'in' : 'out'; // Positive net means more returned (stock increases)
+                        const absQty = Math.abs(netQty);
+                        const newQty = logType === 'in' ? previousQty + absQty : previousQty - absQty;
 
                         if (whItem.stock && whItem.stock.length > 0) {
                             whItem.stock[0].quantity = newQty;
@@ -164,47 +178,47 @@ exports.updateWHSaleReturn = async (req, res) => {
                         await WHStockLog.create({
                             item: whItem._id,
                             date: saleReturn.returnDate,
-                            type: 'out',
-                            qty: oldReturnQty,
+                            type: logType,
+                            qty: absQty,
                             previousQty: previousQty,
                             newQty: newQty,
                             refType: 'sales_return',
                             refId: saleReturn._id,
-                            remarks: `REVERSED (Update) Sale Return #${saleReturn.returnNo}`,
+                            remarks: `Updated Sale Return #${saleReturn.returnNo} (Net Change)`,
                             createdBy: req.user ? req.user._id : null
                         });
                     }
                 }
-            }
+            } else {
+                // Apply NEW impact (Draft -> Posted)
+                for (const line of saleReturn.items) {
+                    const whItem = await WHItem.findById(line.item);
+                    if (whItem) {
+                        const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                        const returnQty = parseFloat(line.quantity) || 0;
+                        const newQty = previousQty + returnQty; // Add sale return
 
-            // Apply NEW impact
-            for (const line of saleReturn.items) {
-                const whItem = await WHItem.findById(line.item);
-                if (whItem) {
-                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                    const returnQty = parseFloat(line.quantity) || 0;
-                    const newQty = previousQty + returnQty; // Add sale return
+                        if (whItem.stock && whItem.stock.length > 0) {
+                            whItem.stock[0].quantity = newQty;
+                        } else {
+                            whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        }
+                        whItem.markModified('stock');
+                        await whItem.save();
 
-                    if (whItem.stock && whItem.stock.length > 0) {
-                        whItem.stock[0].quantity = newQty;
-                    } else {
-                        whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        await WHStockLog.create({
+                            item: whItem._id,
+                            date: saleReturn.returnDate,
+                            type: 'in',
+                            qty: returnQty,
+                            previousQty: previousQty,
+                            newQty: newQty,
+                            refType: 'sales_return',
+                            refId: saleReturn._id,
+                            remarks: `Sale Return #${saleReturn.returnNo}`,
+                            createdBy: req.user ? req.user._id : null
+                        });
                     }
-                    whItem.markModified('stock');
-                    await whItem.save();
-
-                    await WHStockLog.create({
-                        item: whItem._id,
-                        date: saleReturn.returnDate,
-                        type: 'in',
-                        qty: returnQty,
-                        previousQty: previousQty,
-                        newQty: newQty,
-                        refType: 'sales_return',
-                        refId: saleReturn._id,
-                        remarks: `Updated Sale Return #${saleReturn.returnNo}`,
-                        createdBy: req.user ? req.user._id : null
-                    });
                 }
             }
 

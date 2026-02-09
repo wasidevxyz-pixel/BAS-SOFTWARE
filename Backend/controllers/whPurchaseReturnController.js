@@ -187,14 +187,32 @@ exports.updateWHPurchaseReturn = async (req, res) => {
 
         // CASE 1: Transitioning to Posted OR already Posted (Modifying)
         if (updated.status === 'Posted') {
-            // If it was already Posted, reverse the OLD impact first
             if (existingStatus === 'Posted') {
-                for (const line of oldItems) {
-                    const whItem = await WHItem.findById(line.item);
+                // Optimize: Calculate NET changes to avoid log noise
+                const itemMap = {};
+                oldItems.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) - (parseFloat(it.quantity) || 0);
+                });
+                updated.items.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) + (parseFloat(it.quantity) || 0);
+                });
+
+                for (const itemId of Object.keys(itemMap)) {
+                    const netQty = itemMap[itemId];
+                    if (netQty === 0) continue; // No quantity change, no stock log needed
+
+                    const whItem = await WHItem.findById(itemId);
                     if (whItem) {
                         const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                        const oldReturnQty = parseFloat(line.quantity) || 0;
-                        const newQty = previousQty + oldReturnQty; // Reverse Return: ADD back
+                        const logType = netQty > 0 ? 'out' : 'in'; // Positive net means more returned (stock decreases)
+                        const absQty = Math.abs(netQty);
+                        const newQty = logType === 'out' ? previousQty - absQty : previousQty + absQty;
+
+                        if (newQty < 0) {
+                            throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Request Net: ${absQty}`);
+                        }
 
                         if (whItem.stock && whItem.stock.length > 0) {
                             whItem.stock[0].quantity = newQty;
@@ -207,51 +225,51 @@ exports.updateWHPurchaseReturn = async (req, res) => {
                         await WHStockLog.create({
                             item: whItem._id,
                             date: updated.returnDate,
-                            type: 'in',
-                            qty: oldReturnQty,
+                            type: logType,
+                            qty: absQty,
                             previousQty: previousQty,
                             newQty: newQty,
                             refType: 'purchase_return',
                             refId: updated._id,
-                            remarks: `REVERSED (Update) Purchase Return #${updated.postingNumber}`,
+                            remarks: `Updated Purchase Return #${updated.postingNumber} (Net Change)`,
                             createdBy: req.user ? req.user._id : null
                         });
                     }
                 }
-            }
+            } else {
+                // Apply NEW impact (Draft -> Posted)
+                for (const line of updated.items) {
+                    const whItem = await WHItem.findById(line.item);
+                    if (whItem) {
+                        const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                        const returnQty = parseFloat(line.quantity) || 0;
+                        const newQty = previousQty - returnQty; // Subtract return
 
-            // Apply NEW impact
-            for (const line of updated.items) {
-                const whItem = await WHItem.findById(line.item);
-                if (whItem) {
-                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                    const returnQty = parseFloat(line.quantity) || 0;
-                    const newQty = previousQty - returnQty; // Subtract return
+                        if (newQty < 0) {
+                            throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Returning: ${returnQty}`);
+                        }
 
-                    if (newQty < 0) {
-                        throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Returning: ${returnQty}`);
+                        if (whItem.stock && whItem.stock.length > 0) {
+                            whItem.stock[0].quantity = newQty;
+                        } else {
+                            whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        }
+                        whItem.markModified('stock');
+                        await whItem.save();
+
+                        await WHStockLog.create({
+                            item: whItem._id,
+                            date: updated.returnDate,
+                            type: 'out',
+                            qty: returnQty,
+                            previousQty: previousQty,
+                            newQty: newQty,
+                            refType: 'purchase_return',
+                            refId: updated._id,
+                            remarks: `Purchase Return #${updated.postingNumber}`,
+                            createdBy: req.user ? req.user._id : null
+                        });
                     }
-
-                    if (whItem.stock && whItem.stock.length > 0) {
-                        whItem.stock[0].quantity = newQty;
-                    } else {
-                        whItem.stock = [{ quantity: newQty, opening: 0 }];
-                    }
-                    whItem.markModified('stock');
-                    await whItem.save();
-
-                    await WHStockLog.create({
-                        item: whItem._id,
-                        date: updated.returnDate,
-                        type: 'out',
-                        qty: returnQty,
-                        previousQty: previousQty,
-                        newQty: newQty,
-                        refType: 'purchase_return',
-                        refId: updated._id,
-                        remarks: `Updated Purchase Return #${updated.postingNumber}`,
-                        createdBy: req.user ? req.user._id : null
-                    });
                 }
             }
         }

@@ -144,14 +144,32 @@ exports.updateWHSale = async (req, res) => {
 
         // CASE 1: Transitioning to Posted OR already Posted (Modifying)
         if (sale.status === 'Posted') {
-            // If it was already Posted, reverse the OLD impact first
             if (existingStatus === 'Posted') {
-                for (const line of oldItems) {
-                    const whItem = await WHItem.findById(line.item);
+                // Optimize: Calculate NET changes to avoid log noise
+                const itemMap = {};
+                oldItems.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) - (parseFloat(it.quantity) || 0);
+                });
+                sale.items.forEach(it => {
+                    const id = it.item.toString();
+                    itemMap[id] = (itemMap[id] || 0) + (parseFloat(it.quantity) || 0);
+                });
+
+                for (const itemId of Object.keys(itemMap)) {
+                    const netQty = itemMap[itemId];
+                    if (netQty === 0) continue; // No quantity change, no stock log needed
+
+                    const whItem = await WHItem.findById(itemId);
                     if (whItem) {
                         const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                        const oldSaleQty = parseFloat(line.quantity) || 0;
-                        const newQty = previousQty + oldSaleQty; // Reverse Sale: ADD back
+                        const logType = netQty > 0 ? 'out' : 'in';
+                        const absQty = Math.abs(netQty);
+                        const newQty = logType === 'out' ? previousQty - absQty : previousQty + absQty;
+
+                        if (newQty < 0) {
+                            throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Request Net: ${absQty}`);
+                        }
 
                         if (whItem.stock && whItem.stock.length > 0) {
                             whItem.stock[0].quantity = newQty;
@@ -164,51 +182,51 @@ exports.updateWHSale = async (req, res) => {
                         await WHStockLog.create({
                             item: whItem._id,
                             date: sale.invoiceDate,
-                            type: 'in',
-                            qty: oldSaleQty,
+                            type: logType,
+                            qty: absQty,
                             previousQty: previousQty,
                             newQty: newQty,
                             refType: 'sale',
                             refId: sale._id,
-                            remarks: `REVERSED (Update) Sale #${sale.invoiceNo}`,
+                            remarks: `Updated Sale #${sale.invoiceNo} (Net Change)`,
                             createdBy: req.user ? req.user._id : null
                         });
                     }
                 }
-            }
+            } else {
+                // Draft -> Posted (Apply all as new)
+                for (const line of sale.items) {
+                    const whItem = await WHItem.findById(line.item);
+                    if (whItem) {
+                        const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
+                        const saleQty = parseFloat(line.quantity) || 0;
+                        const newQty = previousQty - saleQty;
 
-            // Apply NEW impact
-            for (const line of sale.items) {
-                const whItem = await WHItem.findById(line.item);
-                if (whItem) {
-                    const previousQty = (whItem.stock && whItem.stock.length > 0) ? whItem.stock[0].quantity : 0;
-                    const saleQty = parseFloat(line.quantity) || 0;
-                    const newQty = previousQty - saleQty;
+                        if (newQty < 0) {
+                            throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Sale: ${saleQty}`);
+                        }
 
-                    if (newQty < 0) {
-                        throw new Error(`Insufficient stock for item: ${whItem.name}. Available: ${previousQty}, Sale: ${saleQty}`);
+                        if (whItem.stock && whItem.stock.length > 0) {
+                            whItem.stock[0].quantity = newQty;
+                        } else {
+                            whItem.stock = [{ quantity: newQty, opening: 0 }];
+                        }
+                        whItem.markModified('stock');
+                        await whItem.save();
+
+                        await WHStockLog.create({
+                            item: whItem._id,
+                            date: sale.invoiceDate,
+                            type: 'out',
+                            qty: saleQty,
+                            previousQty: previousQty,
+                            newQty: newQty,
+                            refType: 'sale',
+                            refId: sale._id,
+                            remarks: `Sale #${sale.invoiceNo}`,
+                            createdBy: req.user ? req.user._id : null
+                        });
                     }
-
-                    if (whItem.stock && whItem.stock.length > 0) {
-                        whItem.stock[0].quantity = newQty;
-                    } else {
-                        whItem.stock = [{ quantity: newQty, opening: 0 }];
-                    }
-                    whItem.markModified('stock');
-                    await whItem.save();
-
-                    await WHStockLog.create({
-                        item: whItem._id,
-                        date: sale.invoiceDate,
-                        type: 'out',
-                        qty: saleQty,
-                        previousQty: previousQty,
-                        newQty: newQty,
-                        refType: 'sale',
-                        refId: sale._id,
-                        remarks: `Updated Sale #${sale.invoiceNo}`,
-                        createdBy: req.user ? req.user._id : null
-                    });
                 }
             }
 

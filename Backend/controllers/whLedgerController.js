@@ -314,10 +314,18 @@ exports.getWHStockActivity = asyncHandler(async (req, res) => {
             date: { $gte: fromDate, $lte: toDate }
         });
 
-        const purchases = logsInRange.filter(l => l.refType === 'purchase').reduce((acc, curr) => acc + curr.qty, 0);
-        const sales = logsInRange.filter(l => l.refType === 'sale').reduce((acc, curr) => acc + curr.qty, 0);
-        const salesReturns = logsInRange.filter(l => l.refType === 'sales_return').reduce((acc, curr) => acc + curr.qty, 0);
-        const purchaseReturns = logsInRange.filter(l => l.refType === 'purchase_return').reduce((acc, curr) => acc + curr.qty, 0);
+        const purchases = logsInRange.filter(l => l.refType === 'purchase').reduce((acc, curr) => {
+            return acc + (curr.type === 'in' ? curr.qty : -curr.qty);
+        }, 0);
+        const sales = logsInRange.filter(l => l.refType === 'sale').reduce((acc, curr) => {
+            return acc + (curr.type === 'out' ? curr.qty : -curr.qty);
+        }, 0);
+        const salesReturns = logsInRange.filter(l => l.refType === 'sales_return').reduce((acc, curr) => {
+            return acc + (curr.type === 'in' ? curr.qty : -curr.qty);
+        }, 0);
+        const purchaseReturns = logsInRange.filter(l => l.refType === 'purchase_return').reduce((acc, curr) => {
+            return acc + (curr.type === 'out' ? curr.qty : -curr.qty);
+        }, 0);
         const adjustments = logsInRange.filter(l => l.refType === 'audit').reduce((acc, curr) => {
             return acc + (curr.type === 'in' ? curr.qty : -curr.qty);
         }, 0);
