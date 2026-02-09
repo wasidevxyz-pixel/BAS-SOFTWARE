@@ -194,12 +194,18 @@ exports.getWHItemLedger = asyncHandler(async (req, res) => {
         if (lastLogBefore) {
             openingBalance = lastLogBefore.newQty;
         } else {
-            // Use the item's initial opening stock if no logs before 'from'
-            openingBalance = itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0;
+            // Check if there are ANY logs at all for this item
+            // If logs exist (even after 'from'), it means the stock started from 0 in logs
+            const anyLog = await WHStockLog.findOne({ item });
+            if (anyLog) {
+                openingBalance = 0;
+            } else {
+                openingBalance = itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0;
+            }
         }
     } else {
-        // If no 'from' date, the opening balance is the item's initial opening
-        openingBalance = itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0;
+        const anyLog = await WHStockLog.findOne({ item });
+        openingBalance = anyLog ? 0 : (itemDoc.stock && itemDoc.stock.length > 0 ? itemDoc.stock[0].opening : 0);
     }
 
     // --- Fetch Details to Append Names ---
@@ -294,7 +300,12 @@ exports.getWHStockActivity = asyncHandler(async (req, res) => {
         if (lastLogBefore) {
             opening = lastLogBefore.newQty;
         } else {
-            opening = item.stock && item.stock.length > 0 ? item.stock[0].opening : 0;
+            const anyLog = await WHStockLog.findOne({ item: item._id });
+            if (anyLog) {
+                opening = 0;
+            } else {
+                opening = item.stock && item.stock.length > 0 ? item.stock[0].opening : 0;
+            }
         }
 
         // Get activities in range

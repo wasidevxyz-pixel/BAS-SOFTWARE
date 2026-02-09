@@ -244,13 +244,13 @@ exports.importStock = async (req, res) => {
 
                 // Update or Init Stock
                 if (item.stock && item.stock.length > 0) {
-                    item.stock[0].opening = stockQty;
+                    item.stock[0].opening = 0; // Use 0 because we create a log instead
                     item.stock[0].quantity = stockQty;
                 } else {
                     item.stock = [{
                         store: store._id,
                         quantity: stockQty,
-                        opening: stockQty
+                        opening: 0 // Use 0 because we create a log instead
                     }];
                 }
 
