@@ -645,6 +645,14 @@ app.get('/attendance-list.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'attendance-list.html'));
 });
 
+app.get('/import-attendance.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'import-attendance.html'));
+});
+
+app.get('/EmployeeInfo/Import_Attendance', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'import-attendance.html'));
+});
+
 app.get('/attendance-add.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'attendance-add.html'));
 });

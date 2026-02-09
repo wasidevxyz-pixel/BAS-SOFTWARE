@@ -480,6 +480,7 @@
 
     <!-- JS Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>
     <script>
         // Initialize Sidebar
@@ -519,8 +520,8 @@
 
         async function loadFilters() {
             try {
-                // Load Branches from Store Module
-                const branchRes = await fetch('/api/v1/stores', { headers });
+                // 1. Load Branches from Store (Unified Source)
+                const branchRes = await window.pageAccess.authenticatedFetch('/api/v1/stores');
                 const branchData = await branchRes.json();
                 const branchSelect = document.getElementById('branchFilter');
                 branchSelect.innerHTML = '<option value="All Branches">All Branches</option>';
@@ -533,35 +534,39 @@
                     });
                 }
 
-                // Load Employees first to extract Dept/Desig from Registration
-                const empRes = await fetch('/api/v1/employees?limit=2000', { headers });
+                // 2. Load Departments from Employee Registration Module
+                const deptRes = await window.pageAccess.authenticatedFetch('/api/v1/employee-departments');
+                const deptData = await deptRes.json();
+                const deptSelect = document.getElementById('deptFilter');
+                deptSelect.innerHTML = '<option value="">Select Department</option>';
+                if (deptData.success && deptData.data) {
+                    deptData.data.sort((a, b) => a.name.localeCompare(b.name)).forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d._id;
+                        opt.textContent = d.name;
+                        deptSelect.appendChild(opt);
+                    });
+                }
+
+                // 3. Load Designations from Designation Module
+                const desigRes = await window.pageAccess.authenticatedFetch('/api/v1/designations');
+                const desigData = await desigRes.json();
+                const desigSelect = document.getElementById('desigFilter');
+                desigSelect.innerHTML = '<option value="">Select Designation</option>';
+                if (desigData.success && desigData.data) {
+                    desigData.data.sort((a, b) => a.name.localeCompare(b.name)).forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d._id;
+                        opt.textContent = d.name;
+                        desigSelect.appendChild(opt);
+                    });
+                }
+
+                // 4. Load Employees for Search Suggestions only
+                const empRes = await window.pageAccess.authenticatedFetch('/api/v1/employees?limit=2000');
                 const empData = await empRes.json();
                 if (empData.success && empData.data) {
                     allEmployees = empData.data;
-
-                    // Extract Unique Departments
-                    const deptSelect = document.getElementById('deptFilter');
-                    deptSelect.innerHTML = '<option value="">Select Department</option>';
-                    const departments = [...new Set(allEmployees.map(e => e.department?.name).filter(Boolean))].sort();
-                    departments.forEach(d => {
-                        const opt = document.createElement('option');
-                        const empWithDept = allEmployees.find(e => e.department.name === d);
-                        opt.value = empWithDept.department._id;
-                        opt.textContent = d;
-                        deptSelect.appendChild(opt);
-                    });
-
-                    // Extract Unique Designations
-                    const desigSelect = document.getElementById('desigFilter');
-                    desigSelect.innerHTML = '<option value="">Select Designation</option>';
-                    const designations = [...new Set(allEmployees.map(e => e.designation?.name).filter(Boolean))].sort();
-                    designations.forEach(d => {
-                        const opt = document.createElement('option');
-                        const empWithDesig = allEmployees.find(e => e.designation.name === d);
-                        opt.value = empWithDesig.designation._id;
-                        opt.textContent = d;
-                        desigSelect.appendChild(opt);
-                    });
                 }
 
             } catch (err) { console.error('Error loading filters:', err); }
@@ -650,7 +655,7 @@
                     code: document.getElementById('codeSearch').value
                 });
 
-                const res = await fetch(`/api/v1/employee-salary-detail/report?${params}`, { headers });
+                const res = await window.pageAccess.authenticatedFetch(`/api/v1/employee-salary-detail/report?${params}`);
                 const data = await res.json();
 
                 if (!data.success || Object.keys(data.data).length === 0) {

@@ -18,11 +18,110 @@ class SidebarNavigation {
         this.createSidebar();
         this.applyBodyClass();
         this.highlightCurrentPage();
+        this.buildStandardHeader(); // Brand new global header standard
+        this.injectReportsBackButton(); // Add back button only to reports
         this.setupEventListeners();
-        this.setupRoleBasedAccess(); // Initial
-        // Force refresh significantly 
+        this.setupRoleBasedAccess();
         this.refreshPermissions();
         this.setupHeader();
+    }
+
+    buildStandardHeader() {
+        // This function forces a consistent look across ALL pages:
+        // Left: Menu + Back | Center: Title | Right: User Profile + Sign Out
+        setTimeout(() => {
+            const pageHeader = document.querySelector('.page-header');
+            if (!pageHeader) return;
+
+            // 1. Get original title text before we clean up
+            let originalTitle = document.title.split('-')[0].trim();
+            const h4 = pageHeader.querySelector('h1, h2, h3, h4, h5, h6, .header-title-text, .page-title');
+            if (h4) originalTitle = h4.innerText || h4.textContent;
+
+            // 2. Clear old manual junk and setup clean zones
+            pageHeader.className = "page-header d-flex align-items-center justify-content-between px-3 shadow-sm";
+            pageHeader.style.cssText = 'height: 55px !important; background: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%) !important; border: none !important; z-index: 1045; padding: 0 10px !important; color: white !important;';
+
+            pageHeader.innerHTML = `
+                <div id="header-left-zone" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
+                    <div id="sidebarToggleBtnHeader" style="height: 38px; padding: 0 12px; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.2s;">
+                        <i class="fas fa-bars" style="font-size: 1rem;"></i>
+                        <span style="font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase;">Menu</span>
+                    </div>
+                    <!-- Back button will be injected here if it's a report -->
+                </div>
+                <div id="header-center-zone" style="flex: 2; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <span id="globalHeaderTitle" style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px;">
+                        ${originalTitle}
+                    </span>
+                </div>
+                <div id="header-right-zone" style="display: flex; align-items: center; justify-content: flex-end; flex: 1; min-width: 80px;">
+                    <div class="dropdown">
+                        <div class="d-flex align-items-center profile-trigger" data-bs-toggle="dropdown" style="cursor: pointer; background: rgba(255,255,255,0.15); padding: 5px 8px; border-radius: 25px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1);">
+                            <div class="user-avatar-circle-header" style="width: 26px; height: 26px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 8px; overflow: hidden;">
+                                <i class="fas fa-user" style="color: #1e4c8c; font-size: 0.8rem;"></i>
+                            </div>
+                            <span id="standardUserName" class="d-none d-md-inline" style="font-size: 0.8rem; font-weight: 600; margin-right: 5px;">User</span>
+                            <i class="fas fa-chevron-down" style="font-size: 0.6rem; opacity: 0.8;"></i>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2" style="border-radius: 12px; min-width: 200px; padding: 10px;">
+                            <li class="px-3 py-2 border-bottom mb-2">
+                                <div id="standardUserNameFull" style="font-weight: 700; color: #1e4bc8; font-size: 0.9rem;">User Account</div>
+                                <div id="standardUserRoleDisplay" style="font-size: 0.75rem; color: #666; text-transform: capitalize;">Role</div>
+                            </li>
+                            <li><a class="dropdown-item py-2 rounded" href="/main.html"><i class="fas fa-home me-2 text-muted"></i>Dashboard Home</a></li>
+                            <li><a class="dropdown-item py-2 rounded" href="/profile.html"><i class="fas fa-user-circle me-2 text-muted"></i>My Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item py-2 rounded text-danger logout-btn" href="#"><i class="fas fa-sign-out-alt me-2"></i>Sign Out Permanently</a></li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            // Attach toggle event specifically to the new header button
+            const headerToggleBtn = pageHeader.querySelector('#sidebarToggleBtnHeader');
+            if (headerToggleBtn) {
+                headerToggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleSidebarMode();
+                });
+            }
+
+            // Sync user data
+            this.setupHeader();
+        }, 150);
+    }
+
+    injectReportsBackButton() {
+        // Detect if we are on a report-related page
+        const path = window.location.pathname.toLowerCase();
+
+        // Skip entry forms, vouchers, and setup screens
+        if (path.includes('voucher') || path.includes('entry') || path.includes('setup')) return;
+
+        const isReportPage = path.includes('report') ||
+            path.includes('ledger') ||
+            path.includes('balance') ||
+            path.includes('statement') ||
+            path.includes('audit');
+
+        if (path.includes('reports.html')) return;
+        if (!isReportPage) return;
+
+        // Use a longer delay to wait for buildStandardHeader to finish
+        setTimeout(() => {
+            const leftZone = document.getElementById('header-left-zone');
+            if (!leftZone) return;
+
+            const btn = document.createElement('a');
+            btn.href = '/reports.html';
+            btn.className = 'btn btn-sm btn-light reports-hub-btn';
+            btn.style.cssText = 'display: flex !important; align-items: center; justify-content: center; color: #1e4c8c !important; font-weight: bold; background: white !important; border: 1px solid #ddd; width: 38px; height: 38px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+            btn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+            btn.title = 'Back to Reports Hub';
+
+            leftZone.appendChild(btn);
+        }, 350);
     }
 
     async refreshPermissions() {
@@ -54,6 +153,36 @@ class SidebarNavigation {
         style.innerHTML = `
             .auth-hidden { display: none !important; }
             .active-parent { background-color: rgba(255,255,255,0.05) !important; color: white !important; }
+            
+            /* GLOBAL HEADER NORMALIZATION AND PURGE */
+            /* Hide manual sidebar toggles in the header as requested */
+            #sidebarToggle, #sidebarToggleBtn, .page-header .fa-bars {
+                display: none !important;
+            }
+
+            .page-header div {
+                background: transparent !important; /* Remove manual background on inner divs */
+            }
+
+            .user-avatar-small i {
+                font-size: 0.8rem;
+            }
+
+            .profile-trigger:hover {
+                background: rgba(255,255,255,0.25) !important;
+            }
+
+            @media (max-width: 768px) {
+                .header-title-text {
+                    font-size: 0.9rem !important;
+                }
+            }
+
+            /* Desktop Hover Effects */
+            .reports-hub-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            }
         `;
         document.head.appendChild(style);
     }
@@ -92,7 +221,13 @@ class SidebarNavigation {
         // (Moved loadCompanyLogo call to end of function to ensure DOM elements exist)
 
         const menuItems = [
-            { id: 'main', icon: 'fa-home', label: 'Home Page', link: '/main.html', permission: 'dashboard' },
+            {
+                id: 'main', icon: 'fa-home', label: 'Home & Overview', permission: 'dashboard',
+                children: [
+                    { label: 'Home Page', link: '/main.html', permission: 'dashboard' },
+                    { label: 'Dashboard', link: '/dashboard.html', permission: 'dashboard' }
+                ]
+            },
             {
                 id: 'admin', icon: 'fa-cogs', label: 'Administration', permission: 'administration',
                 children: [
@@ -102,6 +237,31 @@ class SidebarNavigation {
                     { label: 'Parties', link: '/parties.html', permission: 'parties' },
                     { label: 'Commission Item', link: '/commission-item.html', permission: 'commission_item' },
                     { label: 'WHT Supplier', link: '/wht-supplier.html', permission: 'wht_supplier_link' }
+                ]
+            },
+            {
+                id: 'accounts', icon: 'fa-calculator', label: 'Accounts', permission: 'accounts',
+                children: [
+                    { label: 'Supplier Voucher', link: '/payment-vouchers.html?tab=supplier', permission: 'pv_supplier' },
+                    { label: 'Category Voucher', link: '/payment-vouchers.html?tab=category', permission: 'pv_category' },
+                    { label: 'Vouchers', link: '/voucher.html', permission: 'vouchers' },
+                    { label: 'Expenses', link: '/expenses.html', permission: 'expenses' },
+                    { label: 'Account Register', link: '/accounts.html', permission: 'account_register' },
+                    { label: 'Account Groups', link: '/account-groups.html', permission: 'account_groups' },
+                    { label: 'Account Categories', link: '/account-categories.html', permission: 'account_categories' },
+                    {
+                        id: 'closing-sub',
+                        label: 'Closing',
+                        icon: 'fa-file-invoice-dollar',
+                        permission: 'closing',
+                        submenu: [
+                            { label: 'Branch Departments', link: '/branch-departments.html', permission: 'branch_departments' },
+                            { label: 'Daily Cash', link: '/daily-cash.html', permission: 'daily_cash' },
+                            { label: 'Cash Counter', link: '/cash-counter.html', permission: 'cash_counter' },
+                            { label: 'Closing Sheet', link: '/closing-sheet.html', permission: 'closing_sheet' },
+                            { label: 'Zakat Entry', link: '/zakat.html', permission: 'zakat_entry' }
+                        ]
+                    }
                 ]
             },
             {
@@ -116,137 +276,6 @@ class SidebarNavigation {
                     { label: 'WH Sale Entry Return', link: '/wh-sale-return.html', permission: 'wh_sale_return' },
                     { label: 'WH Customer Payment', link: '/wh-customer-payment.html', permission: 'wh_customer_payment' },
                     { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
-                ]
-            },
-
-            {
-                id: 'overview', icon: 'fa-tachometer-alt', label: 'Overview', permission: 'dashboard',
-                children: [
-                    { label: 'Dashboard', link: '/dashboard.html', permission: 'dashboard' }
-                ]
-            },
-            {
-                id: 'reports', icon: 'fa-chart-bar', label: 'Reports', permission: 'reports',
-                children: [
-                    {
-                        id: 'wh-sales-reports', label: 'WH Sales Reports', icon: 'fa-warehouse', permission: 'warehouse_sales_reports',
-                        submenu: [
-                            { label: 'Sales Report', link: '/sales-report.html', permission: 'sales_report_link' },
-                            { label: 'Sales Comparison', link: '/sales-comparison-report.html', permission: 'sales_comparison_link' },
-                            { label: 'Date-Wise Sales', link: '/date-wise-sales-report.html', permission: 'date_wise_sales_link' },
-                            { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' }
-                        ]
-                    },
-                    {
-                        id: 'wh-reports', icon: 'fa-chart-pie', label: 'WH Reports', permission: 'warehouse_reports',
-                        submenu: [
-                            { label: 'WH Customer Ledger Report', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
-                            { label: 'WH Customer Balance Report', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' },
-                            { label: 'WH Stock Position', link: '/wh-stock-position-report.html', permission: 'wh_stock_position_rpt' },
-                            { label: 'WH Item Ledger', link: '/wh-item-ledger-report.html', permission: 'wh_item_ledger_rpt' },
-                            { label: 'WH Stock Activity', link: '/wh-stock-activity-report.html', permission: 'wh_stock_activity_rpt' }
-                        ]
-                    },
-                    {
-                        id: 'shop-reports', label: 'Shop Reports', icon: 'fa-store', permission: 'shop_reports',
-                        submenu: [
-                            { label: 'Department-Wise Report', link: '/dept-wise-report.html', permission: 'dept_wise_report_link' },
-                            { label: 'Sub-Department-Wise Report', link: '/sub-dept-wise-report.html', permission: 'sub_dept_wise_report_link' },
-                            { label: 'Department-Wise Sale Comparision', link: '/dept-wise-comparison.html', permission: 'dept_wise_comparison_link' },
-                            { label: 'Branch-Wise Sale Comparison', link: '/branch-wise-comparison.html', permission: 'branch_wise_comparison_link' }
-                        ]
-                    },
-                    {
-                        id: 'sales-reports', label: 'Sales Reports', icon: 'fa-shopping-cart', permission: 'sales_reports',
-                        submenu: [
-                            { label: 'Dept Wise Sale', link: '/department-sales-report.html', permission: 'dept_sale_link' },
-                            { label: 'Cash Counter Report', link: '/cash-counter-report.html', permission: 'cash_counter_rpt_link' },
-                            { label: 'Customer Receipts', link: '/customer-receipts-report.html', permission: 'receipts_link' },
-                            { label: 'Party Statement', link: '/party-statement-report.html', permission: 'party_stmt_link' }
-                        ]
-                    },
-                    {
-                        id: 'emp-salary-reports', label: 'Emp Salary Reports', icon: 'fa-id-card-alt', permission: 'emp_salary_reports',
-                        submenu: [
-                            { label: 'Employee Ledger', link: '/employee-ledger-report.html', permission: 'emp_ledger_rpt_link' },
-                            { label: 'Employee Balances', link: '/employee-balances-report.html', permission: 'emp_balances_rpt_link' },
-                            { label: 'Employee Advance', link: '/advance-pay-rec-report.html', permission: 'advance_pay_rec_rpt_link' },
-                            { label: 'Employee Salary Detail', link: '/employee-salary-detail-report.html', permission: 'emp_salary_detail_rpt_link' }
-                        ]
-                    },
-                    {
-                        id: 'purchase-reports', label: 'Purchase Reports', icon: 'fa-truck', permission: 'purchase_reports',
-                        submenu: [
-                            { label: 'Purchase Report', link: '/purchase-report.html', permission: 'purchase_rpt_link' },
-                            { label: 'Supplier Payments', link: '/supplier-payments-report.html', permission: 'supp_pay_link' },
-                            { label: 'Supplier WHT Certificate', link: '/supplier-tax-certificate.html', permission: 'supplier_tax_cert_link' },
-                            { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' },
-                            { label: 'Exemption Invoices Report', link: '/exemption-invoices-report.html', permission: 'exemption_invoices_report_link' }
-                        ]
-                    },
-                    {
-                        id: 'stock-reports', label: 'Stock Reports', icon: 'fa-warehouse', permission: 'stock_reports',
-                        submenu: [
-                            { label: 'Stock Report', link: '/stock-report.html', permission: 'stock_rpt_link' },
-                            { label: 'Stock Adjustments', link: '/stock-adjustments-report.html', permission: 'stock_adj_rpt_link' },
-                            { label: 'Stock Audit', link: '/stock-audit-report.html', permission: 'stock_audit_rpt_link' }
-                        ]
-                    },
-                    {
-                        id: 'financial-reports', label: 'Financial Reports', icon: 'fa-file-invoice-dollar', permission: 'financial_reports',
-                        submenu: [
-                            { label: 'Profit & Loss', link: '/profit-loss-report.html', permission: 'pl_link' },
-                            { label: 'Ledger', link: '/ledger-report.html', permission: 'ledger_link' },
-                            { label: 'Bank Ledger', link: '/bank-ledger.html', permission: 'bank_ledger_link' },
-                            { label: 'Expense Report', link: '/expense-report.html', permission: 'expense_rpt_link' },
-                            { label: 'Income Statement', link: '/income-statement.html', permission: 'income_statement' },
-                            {
-                                id: 'pv-reports-group',
-                                label: 'Vouchers',
-                                permission: 'vouchers_rpt_link',
-                                submenu: [
-                                    { label: 'Supplier Vouchers', link: '/vouchers-report.html?context=supplier', permission: 'pv_supplier' },
-                                    { label: 'Category Vouchers', link: '/vouchers-report.html?context=category', permission: 'pv_category' },
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: 'accounts', icon: 'fa-calculator', label: 'Accounts', permission: 'accounts',
-                children: [
-                    {
-                        id: 'payment-vouchers-sub',
-                        label: 'Payment Vouchers',
-                        permission: 'payment_vouchers',
-                        submenu: [
-                            { label: 'Supplier Voucher', link: '/payment-vouchers.html?tab=supplier', permission: 'pv_supplier' },
-                            { label: 'Category Voucher', link: '/payment-vouchers.html?tab=category', permission: 'pv_category' },
-                        ]
-                    },
-                    { label: 'Vouchers', link: '/voucher.html', permission: 'vouchers' },
-                    { label: 'Expenses', link: '/expenses.html', permission: 'expenses' },
-                    { label: 'Account Register', link: '/accounts.html', permission: 'account_register' },
-                    { label: 'Account Groups', link: '/account-groups.html', permission: 'account_groups' },
-                    { label: 'Account Categories', link: '/account-categories.html', permission: 'account_categories' }
-                ]
-            },
-            {
-                id: 'bank-mgmt', icon: 'fa-university', label: 'Bank Management', permission: 'bank_mgmt',
-                children: [
-                    { label: 'Banks', link: '/banks.html', permission: 'banks' },
-                    { label: 'Bank Management', link: '/bank-management.html', permission: 'bank_management' },
-                ]
-            },
-            {
-                id: 'closing', icon: 'fa-file-invoice-dollar', label: 'Closing', permission: 'closing',
-                children: [
-                    { label: 'Branch Departments', link: '/branch-departments.html', permission: 'branch_departments' },
-                    { label: 'Daily Cash', link: '/daily-cash.html', permission: 'daily_cash' },
-                    { label: 'Cash Counter', link: '/cash-counter.html', permission: 'cash_counter' },
-                    { label: 'Closing Sheet', link: '/closing-sheet.html', permission: 'closing_sheet' },
-                    { label: 'Zakat Entry', link: '/zakat.html', permission: 'zakat_entry' }
                 ]
             },
             {
@@ -264,6 +293,15 @@ class SidebarNavigation {
                     { label: 'Emp. Adjustment', link: '/employee-adjustment.html', permission: 'emp_adjustment' }
                 ]
             },
+
+            {
+                id: 'bank-mgmt', icon: 'fa-university', label: 'Bank Management', permission: 'bank_mgmt',
+                children: [
+                    { label: 'Banks', link: '/banks.html', permission: 'banks' },
+                    { label: 'Bank Management', link: '/bank-management.html', permission: 'bank_management' },
+                ]
+            },
+            { id: 'reports', icon: 'fa-chart-bar', label: 'Reports', link: '/reports.html', permission: 'reports' },
             {
                 id: 'sales', icon: 'fa-shopping-cart', label: 'Sales', permission: 'sales',
                 children: [
@@ -834,12 +872,18 @@ class SidebarNavigation {
         const user = this.getCurrentUser();
         if (!user) return;
 
-        // Common IDs for user name display
-        const nameElements = ['userName', 'userNameHeader', 'headerUserName'];
+        // Update all user name displays including the new standard one
+        const nameElements = ['userName', 'userNameHeader', 'headerUserName', 'standardUserName', 'standardUserNameFull'];
         nameElements.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerText = user.name;
         });
+
+        // Update Account Info in dropdown
+        const roleEl = document.getElementById('standardUserRoleDisplay');
+        const emailEl = document.getElementById('standardUserEmailDisplay');
+        if (roleEl) roleEl.innerText = user.role || 'User';
+        if (emailEl) emailEl.innerText = user.email || 'Connected';
 
         // Built-in Avatar SVGs (same as in profile.html)
         const AVATARS = [

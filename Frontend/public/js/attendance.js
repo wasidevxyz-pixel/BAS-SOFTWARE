@@ -198,10 +198,16 @@ function renderAttendanceTable() {
     attendanceRecords.forEach((att, index) => {
         const tr = document.createElement('tr');
 
+        // Calculate mins for initial coloring
+        const mins = att.totalHrs ? (att.totalHrs * 60) : parseTime(att.workedHrs);
+
         // Initial color based on activity
         tr.className = '';
-        const mins = parseTime(att.workedHrs);
-        if (mins >= 1020) {
+        if (att.displayStatus === 'Absent') {
+            tr.className = 'row-absent';
+        } else if (att.displayStatus === 'Leave') {
+            tr.className = 'row-leave';
+        } else if (mins >= 1020) {
             tr.className = 'row-overtime';
         } else if (mins > 0 && mins <= 60) {
             tr.className = 'row-warning';
@@ -209,10 +215,6 @@ function renderAttendanceTable() {
             tr.className = 'row-completed';
         } else if (att.checkIn) {
             tr.className = 'row-partial';
-        } else if (att.displayStatus === 'Absent') {
-            tr.className = 'row-absent';
-        } else if (att.displayStatus === 'Leave') {
-            tr.className = 'row-leave';
         }
 
         tr.dataset.id = att._id;
@@ -296,7 +298,11 @@ function updateRowColor(element) {
     const mins = parseTime(totalHrsText);
 
     tr.className = '';
-    if (mins >= 1020) {
+    if (status === 'Absent') {
+        tr.className = 'row-absent';
+    } else if (status === 'Leave') {
+        tr.className = 'row-leave';
+    } else if (mins >= 1020) {
         tr.className = 'row-overtime';
     } else if (mins > 0 && mins <= 60) {
         tr.className = 'row-warning';
@@ -304,10 +310,6 @@ function updateRowColor(element) {
         tr.className = 'row-completed';
     } else if (checkIn) {
         tr.className = 'row-partial';
-    } else if (status === 'Absent') {
-        tr.className = 'row-absent';
-    } else if (status === 'Leave') {
-        tr.className = 'row-leave';
     }
 }
 

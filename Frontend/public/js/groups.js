@@ -85,17 +85,14 @@ async function saveGroup() {
     document.querySelectorAll('#permissionsTree input[type="checkbox"]').forEach(cb => {
         // Only collect leaves or specifically named keys
         // Use checked OR indeterminate (for parents with partial selection)
-        if (cb.checked || cb.indeterminate) {
+        if (cb.checked) {
             rights[cb.id] = true;
 
-            // FIX: Explicitly ensure parent hierarchy is saved
-            // If a child is checked, we must ensure its parent path (e.g., 'reports') is also saved as true
-            const parentLi = cb.closest('li')?.parentElement?.closest('li');
-            if (parentLi) {
-                const parentCb = parentLi.querySelector('input[type="checkbox"]');
-                if (parentCb && parentCb.id) {
-                    rights[parentCb.id] = true;
-                }
+            // Recursively ensure all parent levels are also marked as true
+            let parent = cb.closest('ul')?.closest('li')?.querySelector('input[type="checkbox"]');
+            while (parent && parent.id) {
+                rights[parent.id] = true;
+                parent = parent.closest('ul')?.closest('li')?.querySelector('input[type="checkbox"]');
             }
         }
     });

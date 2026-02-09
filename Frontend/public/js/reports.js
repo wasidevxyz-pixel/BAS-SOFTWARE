@@ -23,8 +23,173 @@ document.addEventListener('DOMContentLoaded', function () {
     const reportType = urlParams.get('type');
     if (reportType) {
         openReport(reportType);
+    } else {
+        // Initialize the Reports Hub (Dashboard)
+        initReportsHub();
     }
 });
+
+// Reports Hub Configuration & Initialization
+function initReportsHub() {
+    const hubContainer = document.getElementById('reportsHub');
+    if (!hubContainer) return;
+
+    // Define all report categories and their individual reports
+    const reportCategories = [
+        {
+            title: 'WH Sales Reports',
+            icon: 'fa-warehouse',
+            permission: 'warehouse_sales_reports',
+            reports: [
+                { label: 'Sales Report', link: '/sales-report.html', permission: 'sales_report_link' },
+                { label: 'Sales Comparison', link: '/sales-comparison-report.html', permission: 'sales_comparison_link' },
+                { label: 'Date-Wise Sales', link: '/date-wise-sales-report.html', permission: 'date_wise_sales_link' },
+                { label: 'Payment Reports', link: '/payment-reports.html', permission: 'payment_reports_link' }
+            ]
+        },
+        {
+            title: 'WH Reports',
+            icon: 'fa-chart-pie',
+            permission: 'warehouse_reports',
+            reports: [
+                { label: 'WH Customer Ledger Report', link: '/wh-customer-ledger-report.html', permission: 'wh_customer_ledger_rpt' },
+                { label: 'WH Customer Balance Report', link: '/wh-customer-balance-report.html', permission: 'wh_customer_balance_rpt' },
+                { label: 'WH Stock Position', link: '/wh-stock-position-report.html', permission: 'wh_stock_position_rpt' },
+                { label: 'WH Item Ledger', link: '/wh-item-ledger-report.html', permission: 'wh_item_ledger_rpt' },
+                { label: 'WH Stock Activity', link: '/wh-stock-activity-report.html', permission: 'wh_stock_activity_rpt' }
+            ]
+        },
+        {
+            title: 'Shop Reports',
+            icon: 'fa-store',
+            permission: 'shop_reports',
+            reports: [
+                { label: 'Department-Wise Report', link: '/dept-wise-report.html', permission: 'dept_wise_report_link' },
+                { label: 'Sub-Department-Wise Report', link: '/sub-dept-wise-report.html', permission: 'sub_dept_wise_report_link' },
+                { label: 'Department-Wise Sale Comparision', link: '/dept-wise-comparison.html', permission: 'dept_wise_comparison_link' },
+                { label: 'Branch-Wise Sale Comparison', link: '/branch-wise-comparison.html', permission: 'branch_wise_comparison_link' }
+            ]
+        },
+        {
+            title: 'Sales Reports',
+            icon: 'fa-shopping-cart',
+            permission: 'sales_reports',
+            reports: [
+                { label: 'Dept Wise Sale', link: '/department-sales-report.html', permission: 'dept_sale_link' },
+                { label: 'Cash Counter Report', link: '/cash-counter-report.html', permission: 'cash_counter_rpt_link' },
+                { label: 'Customer Receipts', link: '/customer-receipts-report.html', permission: 'receipts_link' },
+                { label: 'Party Statement', link: '/party-statement-report.html', permission: 'party_stmt_link' }
+            ]
+        },
+        {
+            title: 'Emp Salary Reports',
+            icon: 'fa-id-card-alt',
+            permission: 'emp_salary_reports',
+            reports: [
+                { label: 'Employee Ledger', link: '/employee-ledger-report.html', permission: 'emp_ledger_rpt_link' },
+                { label: 'Employee Balances', link: '/employee-balances-report.html', permission: 'emp_balances_rpt_link' },
+                { label: 'Employee Advance', link: '/advance-pay-rec-report.html', permission: 'advance_pay_rec_rpt_link' },
+                { label: 'Employee Salary Detail', link: '/employee-salary-detail-report.html', permission: 'emp_salary_detail_rpt_link' }
+            ]
+        },
+        {
+            title: 'Purchase Reports',
+            icon: 'fa-truck',
+            permission: 'purchase_reports',
+            reports: [
+                { label: 'Purchase Report', link: '/purchase-report.html', permission: 'purchase_rpt_link' },
+                { label: 'Supplier Payments', link: '/supplier-payments-report.html', permission: 'supp_pay_link' },
+                { label: 'Supplier WHT Certificate', link: '/supplier-tax-certificate.html', permission: 'supplier_tax_cert_link' },
+                { label: 'Supplier Tax Report', link: '/supplier-tax-report.html', permission: 'supplier_tax_report_link' },
+                { label: 'Exemption Invoices Report', link: '/exemption-invoices-report.html', permission: 'exemption_invoices_report_link' }
+            ]
+        },
+        {
+            title: 'Stock Reports',
+            icon: 'fa-warehouse',
+            permission: 'stock_reports',
+            reports: [
+                { label: 'Stock Report', link: '/stock-report.html', permission: 'stock_rpt_link' },
+                { label: 'Stock Adjustments', link: '/stock-adjustments-report.html', permission: 'stock_adj_rpt_link' },
+                { label: 'Stock Audit', link: '/stock-audit-report.html', permission: 'stock_audit_rpt_link' }
+            ]
+        },
+        {
+            title: 'Financial Reports',
+            icon: 'fa-file-invoice-dollar',
+            permission: 'financial_reports',
+            reports: [
+                { label: 'Profit & Loss', link: '/profit-loss-report.html', permission: 'pl_link' },
+                { label: 'Ledger', link: '/ledger-report.html', permission: 'ledger_link' },
+                { label: 'Bank Ledger', link: '/bank-ledger.html', permission: 'bank_ledger_link' },
+                { label: 'Expense Report', link: '/expense-report.html', permission: 'expense_rpt_link' },
+                { label: 'Income Statement', link: '/income-statement.html', permission: 'income_statement_link' },
+                { label: 'Supplier Vouchers', link: '/vouchers-report.html?context=supplier', permission: 'pv_supplier' },
+                { label: 'Category Vouchers', link: '/vouchers-report.html?context=category', permission: 'pv_category' }
+            ]
+        }
+    ];
+
+    // Get user and rights
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const rights = user.rights || {};
+    const isAdmin = user.role === 'admin';
+
+    console.log('Reports Hub: Checking Rights for', user.name, 'isAdmin:', isAdmin);
+    console.log('Rights keys found:', Object.keys(rights).length);
+
+    let html = '<div class="row">';
+    let authorizedGroupsCount = 0;
+
+    reportCategories.forEach(category => {
+        // Filter reports within this category based on permissions
+        const authorizedReports = category.reports.filter(r => {
+            if (isAdmin) return true;
+            const right = rights[r.permission];
+            return right === true || right === 'true';
+        });
+
+        if (authorizedReports.length > 0) {
+            authorizedGroupsCount++;
+            html += `
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0 report-category-card">
+                        <div class="card-header bg-primary text-white d-flex align-items-center py-3">
+                            <i class="fas ${category.icon} me-3" style="font-size: 1.5rem;"></i>
+                            <h6 class="mb-0 fw-bold">${category.title}</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                ${authorizedReports.map(r => `
+                                    <li class="list-group-item list-group-item-action border-0 py-2 ps-4">
+                                        <a href="${r.link}" class="text-decoration-none text-dark d-flex align-items-center">
+                                            <i class="fas fa-chevron-right me-3 text-muted" style="font-size: 0.7rem;"></i>
+                                            <span style="font-size: 0.9rem;">${r.label}</span>
+                                        </a>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    html += '</div>';
+
+    if (authorizedGroupsCount === 0) {
+        html = `
+            <div class="text-center py-5">
+                <i class="fas fa-lock fa-3x text-light-gray mb-3"></i>
+                <h4 class="text-muted">No Reports Authorized</h4>
+                <p>Please contact your administrator for report access rights.</p>
+            </div>
+        `;
+    }
+
+    hubContainer.innerHTML = html;
+}
 
 // Set user name
 function setUserName() {
@@ -39,20 +204,43 @@ function setUserName() {
 function openReport(reportType) {
     currentReportType = reportType;
 
-    // Hide report cards, show report display
-    // Hide all report cards containers
-    document.querySelectorAll('.row.mb-4').forEach(row => {
-        if (!row.closest('#reportCard')) {
-            row.style.display = 'none';
-        }
-    });
-    document.getElementById('reportCard').style.display = 'block';
+    // Hide the hub dashboard
+    const hubContainer = document.getElementById('reportsHub');
+    if (hubContainer) hubContainer.style.display = 'none';
+
+    // Show the report card
+    const reportCard = document.getElementById('reportCard');
+    if (reportCard) reportCard.style.display = 'block';
 
     // Set report title and configure filters
     configureReport(reportType);
 
     // Generate report
     generateReport();
+
+    // Update URL without reload to allow bookmarking/sharing
+    const url = new URL(window.location);
+    url.searchParams.set('type', reportType);
+    window.history.pushState({}, '', url);
+}
+
+// Close specific report and return to hub
+function closeReport() {
+    // Show the hub dashboard
+    const hubContainer = document.getElementById('reportsHub');
+    if (hubContainer) hubContainer.style.display = 'block';
+
+    // Hide the report card
+    const reportCard = document.getElementById('reportCard');
+    if (reportCard) reportCard.style.display = 'none';
+
+    // Reset title
+    currentReportType = null;
+
+    // Update URL (remove parameters)
+    const url = new URL(window.location);
+    url.searchParams.delete('type');
+    window.history.pushState({}, '', url);
 }
 
 // Configure report based on type

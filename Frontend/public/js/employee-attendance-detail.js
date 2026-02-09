@@ -180,7 +180,7 @@ function renderDetailTable() {
             <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
             <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
             <td class="px-1 text-center col-status">
-                <select class="form-select form-select-xs fw-bold" onchange="updateRowColor(this)">
+                <select class="form-select form-select-xs fw-bold" onchange="updateRowCalc(this)">
                     <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>P</option>
                     <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>A</option>
                     <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>L</option>
@@ -191,21 +191,42 @@ function renderDetailTable() {
             <td class="px-1 col-remarks"><input type="text" class="form-control form-control-xs" value="${att.remarks || ''}"></td>
         `;
         tbody.appendChild(tr);
-        updateRowCalc(tr.querySelector('input[type="time"]')); // Initial calc for each row
+        updateRowCalc(tr.querySelector('input[type="time"]'), true); // Initial calc for each row
     });
     calculateTotals();
 }
 
 function updateRowColor(element) {
     const tr = element.closest('tr');
-    const status = tr.cells[15].querySelector('select').value;
-    const checkIn = tr.cells[4].querySelector('input').value;
-    const checkOut = tr.cells[5].querySelector('input').value;
-    const totalHrsText = tr.cells[14].textContent;
+    // Use named selectors instead of raw indices for safety
+    const statusSelect = tr.querySelector('.col-status select');
+    const status = statusSelect ? statusSelect.value : 'Present';
+
+    // Check if check-in/out are filled
+    const checkInInput = tr.querySelector('.col-checkin input');
+    const checkOutInput = tr.querySelector('.col-checkout input');
+    const checkIn = checkInInput ? checkInInput.value : '';
+    const checkOut = checkOutInput ? checkOutInput.value : '';
+
+    const totalHrsText = tr.querySelector('.col-totalhrs').textContent;
     const mins = parseTime(totalHrsText);
 
     tr.className = '';
-    if (mins >= 1020) {
+
+    // If user is currently editing this row, keep it white until save
+    if (tr.dataset.isDirty === 'true') {
+        tr.className = 'row-editing';
+        return;
+    }
+
+    // Priority 1: Absent/Leave strictly color by status
+    if (status === 'Absent') {
+        tr.className = 'row-absent';
+    } else if (status === 'Leave') {
+        tr.className = 'row-leave';
+    }
+    // Priority 2: If Present, color by hours/completion
+    else if (mins >= 1020) {
         tr.className = 'row-overtime';
     } else if (mins > 0 && mins <= 60) {
         tr.className = 'row-warning';
@@ -213,10 +234,6 @@ function updateRowColor(element) {
         tr.className = 'row-completed';
     } else if (checkIn) {
         tr.className = 'row-partial';
-    } else if (status === 'Absent') {
-        tr.className = 'row-absent';
-    } else if (status === 'Leave') {
-        tr.className = 'row-leave';
     }
 }
 
@@ -228,16 +245,34 @@ function setDiffMode(btn, mode) {
     updateRowCalc(btn);
 }
 
-function updateRowCalc(element) {
+function updateRowCalc(element, isInitial = false) {
     if (!element) return;
     const tr = element.closest('tr');
-    const checkIn = tr.cells[4].querySelector('input').value;
-    const checkOut = tr.cells[5].querySelector('input').value;
-    const breakOut = tr.cells[7].querySelector('input').value;
-    const breakIn = tr.cells[8].querySelector('input').value;
-    const diffIn = tr.cells[11].querySelector('input').value;
-    const diffOut = tr.cells[12].querySelector('input').value;
-    const mode = tr.cells[10].querySelector('.diff-btns').dataset.mode || '+';
+
+    // Mark as dirty if this is a user-triggered calculation
+    if (!isInitial) {
+        tr.dataset.isDirty = 'true';
+    }
+
+    const checkIn = tr.querySelector('.col-checkin input').value;
+    const checkOut = tr.querySelector('.col-checkout input').value;
+    const breakOut = tr.querySelector('.col-breakout input').value;
+    const breakIn = tr.querySelector('.col-breakin input').value;
+    const diffIn = tr.querySelector('.col-diffin input').value;
+    const diffOut = tr.querySelector('.col-diffout input').value;
+    const mode = tr.querySelector('.diff-btns').dataset.mode || '+';
+    const status = tr.querySelector('.col-status select').value;
+
+    // IF ABSENT OR LEAVE -> FORCE 0 HOURS
+    if (status === 'Absent' || status === 'Leave') {
+        tr.querySelector('.col-breakhrs').textContent = '';
+        tr.querySelector('.col-totaldiff').textContent = '';
+        tr.querySelector('.col-worked').textContent = '0:00';
+        tr.querySelector('.col-totalhrs').textContent = '0:00';
+        updateRowColor(tr);
+        calculateTotals();
+        return;
+    }
 
     let bMin = 0;
     if (breakOut && breakIn) {
@@ -245,9 +280,9 @@ function updateRowCalc(element) {
         const outParts = breakOut.split(':').map(Number);
         bMin = (inParts[0] * 60 + inParts[1]) - (outParts[0] * 60 + outParts[1]);
         if (bMin < 0) bMin += 1440;
-        tr.cells[9].textContent = `${Math.floor(bMin / 60)}:${(bMin % 60).toString().padStart(2, '0')}`;
+        tr.querySelector('.col-breakhrs').textContent = `${Math.floor(bMin / 60)}:${(bMin % 60).toString().padStart(2, '0')}`;
     } else {
-        tr.cells[9].textContent = '';
+        tr.querySelector('.col-breakhrs').textContent = '';
     }
 
     let totalDiffMin = 0;
@@ -256,9 +291,9 @@ function updateRowCalc(element) {
         const outParts = diffOut.split(':').map(Number);
         totalDiffMin = (outParts[0] * 60 + outParts[1]) - (inParts[0] * 60 + inParts[1]);
         if (totalDiffMin < 0) totalDiffMin += 1440;
-        tr.cells[13].textContent = `${Math.floor(totalDiffMin / 60)}:${(totalDiffMin % 60).toString().padStart(2, '0')}`;
+        tr.querySelector('.col-totaldiff').textContent = `${Math.floor(totalDiffMin / 60)}:${(totalDiffMin % 60).toString().padStart(2, '0')}`;
     } else {
-        tr.cells[13].textContent = '';
+        tr.querySelector('.col-totaldiff').textContent = '';
     }
 
     if (checkIn && checkOut) {
@@ -268,7 +303,7 @@ function updateRowCalc(element) {
         if (wMin < 0) wMin += 1440;
 
         // Display Gross Worked in Column 6
-        tr.cells[6].textContent = formatTime(wMin);
+        tr.querySelector('.col-worked').textContent = formatTime(wMin);
 
         let netMin = wMin - bMin;
         if (netMin < 0) netMin = 0;
@@ -279,10 +314,10 @@ function updateRowCalc(element) {
         if (finalMin < 0) finalMin = 0;
 
         // Display Final Net (after breaks and diffs) in Column 14
-        tr.cells[14].textContent = formatTime(finalMin);
+        tr.querySelector('.col-totalhrs').textContent = formatTime(finalMin);
     } else {
-        tr.cells[6].textContent = '';
-        tr.cells[14].textContent = '';
+        tr.querySelector('.col-worked').textContent = '';
+        tr.querySelector('.col-totalhrs').textContent = '';
     }
     updateRowColor(tr);
     calculateTotals();
@@ -323,15 +358,15 @@ function calculateTotals() {
     const rows = document.querySelectorAll('#detailRecordsBody tr');
 
     rows.forEach(row => {
-        const workedStr = row.cells[6].textContent;
-        const breakStr = row.cells[9].textContent;
-        const diffStr = row.cells[13].textContent;
-        const finalStr = row.cells[14].textContent;
+        const workedStr = row.querySelector('.col-worked').textContent; // Use selector
+        const breakStr = row.querySelector('.col-breakhrs').textContent;
+        const diffStr = row.querySelector('.col-totaldiff').textContent;
+        const finalStr = row.querySelector('.col-totalhrs').textContent;
 
-        if (workedStr) tWorked += parseTime(workedStr);
+        if (workedStr && workedStr !== '0:00') tWorked += parseTime(workedStr);
         if (breakStr) tBreak += parseTime(breakStr);
         if (diffStr) tDiff += parseTime(diffStr);
-        if (finalStr) tFinal += parseTime(finalStr);
+        if (finalStr && finalStr !== '0:00') tFinal += parseTime(finalStr);
     });
 
     if (document.getElementById('tWorkedHrs')) document.getElementById('tWorkedHrs').textContent = formatTime(tWorked);
