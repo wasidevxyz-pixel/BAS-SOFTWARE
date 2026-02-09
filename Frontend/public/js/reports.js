@@ -124,8 +124,8 @@ function initReportsHub() {
                 { label: 'Bank Ledger', link: '/bank-ledger.html', permission: 'bank_ledger_link' },
                 { label: 'Expense Report', link: '/expense-report.html', permission: 'expense_rpt_link' },
                 { label: 'Income Statement', link: '/income-statement.html', permission: 'income_statement_link' },
-                { label: 'Supplier Vouchers', link: '/vouchers-report.html?context=supplier', permission: 'pv_supplier' },
-                { label: 'Category Vouchers', link: '/vouchers-report.html?context=category', permission: 'pv_category' }
+                { label: 'Supplier Vouchers', link: '/vouchers-report.html?context=supplier', permission: 'pv_supplier_rpt_link' },
+                { label: 'Category Vouchers', link: '/vouchers-report.html?context=category', permission: 'pv_category_rpt_link' }
             ]
         }
     ];
