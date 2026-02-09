@@ -240,6 +240,8 @@ exports.getWHItemLedger = asyncHandler(async (req, res) => {
     purchaseReturns.forEach(p => { if (p.supplier) nameMap[p._id.toString()] = ' - ' + p.supplier.supplierName; });
     saleReturns.forEach(s => { if (s.customer) nameMap[s._id.toString()] = ' - ' + s.customer.customerName; });
 
+    // Filter out technical update logs that cancel each other out
+    const filteredEntries = [];
     const entries = logs.map(l => {
         let suffix = '';
         if (l.refId && nameMap[l.refId.toString()]) {
@@ -253,15 +255,46 @@ exports.getWHItemLedger = asyncHandler(async (req, res) => {
             quantity: l.qty,
             type: l.type, // 'in' or 'out'
             previousQty: l.previousQty,
-            newQty: l.newQty
+            newQty: l.newQty,
+            createdAt: l.createdAt
         };
     });
+
+    // Strategy: Look for entries with same refId, same quantity, one IN, one OUT, created very close to each other
+    for (let i = 0; i < entries.length; i++) {
+        const current = entries[i];
+        let isTechnical = false;
+
+        // Only check "Update" or "REVERSED" logs
+        if (current.description.toLowerCase().includes('update') || current.description.toLowerCase().includes('reversed')) {
+            for (let j = 0; j < entries.length; j++) {
+                if (i === j) continue;
+                const other = entries[j];
+
+                if (current.refId && other.refId &&
+                    current.refId.toString() === other.refId.toString() &&
+                    current.quantity === other.quantity &&
+                    current.type !== other.type) {
+
+                    const timeDiff = Math.abs(new Date(current.createdAt) - new Date(other.createdAt));
+                    if (timeDiff < 5000) { // If within 5 seconds
+                        isTechnical = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!isTechnical) {
+            filteredEntries.push(current);
+        }
+    }
 
     res.status(200).json({
         success: true,
         data: {
             openingBalance,
-            entries
+            entries: filteredEntries
         }
     });
 });
