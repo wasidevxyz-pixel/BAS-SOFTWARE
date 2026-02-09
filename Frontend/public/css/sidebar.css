@@ -66,7 +66,10 @@
     /* Keep logo shape natural inside the circle */
 }
 
-.mini .sidebar-header,
+.mini:not(.show-mobile) .sidebar-header {
+    display: none !important;
+}
+
 .show-mobile .sidebar-header {
     justify-content: center;
 }
