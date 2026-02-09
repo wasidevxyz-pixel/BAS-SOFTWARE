@@ -640,7 +640,7 @@ function selectItemForRow(item, id) {
     row.querySelector('input[name="barcode"]').value = item.barcode || item.itemsCode || '';
     row.querySelector('.item-search').value = item.name;
     row.querySelector('input[name="costPrice"]').value = item.costPrice || 0;
-    row.querySelector('input[name="retailPrice"]').value = item.retailPrice || 0;
+    row.querySelector('input[name="retailPrice"]').value = item.retailPrice || item.salePrice || 0;
 
     // Default quantity empty - user will enter
     row.querySelector('input[name="quantity"]').value = '';
@@ -847,13 +847,14 @@ async function editReturn(id, status = 'Draft') {
             rowCount = 0;
 
             p.items.forEach(item => {
+                const itemDoc = item.item || {};
                 const itemData = {
-                    _id: item.item._id,
-                    name: item.item.name,
-                    barcode: item.barcode || item.item.barcode || item.item.itemsCode || '',
+                    _id: itemDoc._id || item.item,
+                    name: itemDoc.name || 'N/A',
+                    barcode: item.barcode || itemDoc.barcode || itemDoc.itemsCode || '',
                     costPrice: item.costPrice,
                     salePrice: item.salePrice,
-                    retailPrice: item.retailPrice
+                    retailPrice: item.retailPrice || itemDoc.retailPrice || itemDoc.salePrice || 0
                 };
                 addNewRow(itemData);
 

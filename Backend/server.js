@@ -102,6 +102,7 @@ const subBranchRoutes = require('./routes/subBranchRoutes');
 const employeeLedgerRoutes = require('./routes/employeeLedgerRoutes');
 const biometricRoutes = require('./routes/biometric');
 const employeeSalaryDetailRoutes = require('./routes/employeeSalaryDetailRoutes');
+const bankPaidSalaryReportRoutes = require('./routes/bankPaidSalaryReportRoutes');
 
 
 
@@ -454,6 +455,7 @@ app.use('/api/v1/commission-branches', commissionBranchRoutes);
 app.use('/api/v1/sub-branches', subBranchRoutes);
 app.use('/api/v1/attendance/biometric', biometricRoutes);
 app.use('/api/v1/employee-salary-detail', employeeSalaryDetailRoutes);
+app.use('/api/v1/salary-reports', bankPaidSalaryReportRoutes);
 
 
 
@@ -778,6 +780,10 @@ app.get('/print-payroll.html', (req, res) => {
 
 app.get('/employee-salary-detail-report.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-salary-detail-report.html'));
+});
+
+app.get('/bank-paid-salary-report.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'bank-paid-salary-report.html'));
 });
 
 // Serve the main HTML file for all other routes (catch-all)

@@ -35,9 +35,10 @@ async function initializePage() {
     itemListModal = new bootstrap.Modal(document.getElementById('itemListModal'));
     customerListModal = new bootstrap.Modal(document.getElementById('customerListModal'));
 
-    // Set user name
+    // Set user name safely
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.name) document.getElementById('userName').textContent = user.name;
+    const userEl = document.getElementById('userName');
+    if (user.name && userEl) userEl.textContent = user.name;
 }
 
 function setupEventListeners() {
@@ -404,7 +405,7 @@ async function handleItemSelect(localItem) {
         // Initial population from cached list
         document.getElementById('itemCode').value = item.barcode || item.itemsCode || '';
         document.getElementById('itemPrice').value = item.costPrice || 0;
-        document.getElementById('itemRetailPrice').value = item.retailPrice || 0;
+        document.getElementById('itemRetailPrice').value = item.retailPrice || item.salePrice || 0;
         document.getElementById('itemIncentive').value = item.incentive || 0;
         document.getElementById('itemStock').value = (item.stock && item.stock.length > 0) ? item.stock[0].quantity : 0;
         if (document.getElementById('footerCurrentStock')) document.getElementById('footerCurrentStock').textContent = document.getElementById('itemStock').value;
@@ -423,7 +424,9 @@ async function handleItemSelect(localItem) {
 
                 // Only overwrite if API returns a value
                 if (it.costPrice !== undefined) document.getElementById('itemPrice').value = it.costPrice;
-                if (it.retailPrice !== undefined) document.getElementById('itemRetailPrice').value = it.retailPrice;
+                if (it.retailPrice !== undefined || it.salePrice !== undefined) {
+                    document.getElementById('itemRetailPrice').value = it.retailPrice || it.salePrice || 0;
+                }
                 if (it.incentive !== undefined) document.getElementById('itemIncentive').value = it.incentive;
                 if (it.barcode || it.itemsCode) document.getElementById('itemCode').value = it.barcode || it.itemsCode;
             }
@@ -848,11 +851,15 @@ async function editReturn(id) {
             document.getElementById('biltyNo').value = r.biltyNo || '';
             document.getElementById('transporterSelect').value = r.transporter || '';
 
-            returnItems = r.items.map(it => ({
-                ...it,
-                item: it.item._id,
-                name: it.item.name || '' // Populate safely
-            }));
+            returnItems = r.items.map(it => {
+                const itemDoc = it.item || {};
+                return {
+                    ...it,
+                    item: itemDoc._id || it.item,
+                    name: itemDoc.name || 'N/A',
+                    retailPrice: it.retailPrice || itemDoc.retailPrice || itemDoc.salePrice || 0
+                };
+            });
 
             renderTable();
 

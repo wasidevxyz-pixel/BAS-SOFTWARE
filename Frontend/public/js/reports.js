@@ -89,7 +89,8 @@ function initReportsHub() {
                 { label: 'Employee Ledger', link: '/employee-ledger-report.html', permission: 'emp_ledger_rpt_link' },
                 { label: 'Employee Balances', link: '/employee-balances-report.html', permission: 'emp_balances_rpt_link' },
                 { label: 'Employee Advance', link: '/advance-pay-rec-report.html', permission: 'advance_pay_rec_rpt_link' },
-                { label: 'Employee Salary Detail', link: '/employee-salary-detail-report.html', permission: 'emp_salary_detail_rpt_link' }
+                { label: 'Employee Salary Detail', link: '/employee-salary-detail-report.html', permission: 'emp_salary_detail_rpt_link' },
+                { label: 'Bank Paid Salary Report', link: '/bank-paid-salary-report.html', permission: 'bank_paid_salary_rpt_link' }
             ]
         },
         {

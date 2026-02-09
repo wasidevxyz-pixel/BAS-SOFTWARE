@@ -50,6 +50,10 @@ const whSaleSchema = new mongoose.Schema({
             required: true,
             min: 0
         },
+        retailPrice: {
+            type: Number,
+            default: 0
+        },
         subTotal: {
             type: Number,
             default: 0
