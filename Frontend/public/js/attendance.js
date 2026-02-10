@@ -273,7 +273,7 @@ function renderAttendanceTable() {
             <td class="text-center fw-bold text-primary col-totaldiff">${att.totalDiffHrs || ''}</td>
             <td class="text-center fw-bold col-totalhrs">${att.totalHrs ? (Math.floor(att.totalHrs) + ':' + Math.round((att.totalHrs % 1) * 60).toString().padStart(2, '0')) : (att.workedHrs || '')}</td>
             <td class="px-1 text-center col-status">
-                <select class="form-select form-select-xs fw-bold" onchange="updateRowColor(this)">
+                <select class="form-select form-select-xs fw-bold" onchange="if(this.value === 'Absent' && !confirm('ARE YOU SURE YOU WANT TO MARK AS ABSENT?')) { this.value = 'Present'; return; } updateRowColor(this); quickSaveAttendance(this.closest('tr').dataset.id, this.closest('tr').querySelector('.btn-primary, .btn-success'))">
                     <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>Present</option>
                     <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>Absent</option>
                 </select>
@@ -369,6 +369,11 @@ function toggleAbsent(badge) {
     if (statusSelect.value === 'Absent') {
         statusSelect.value = 'Present'; // Toggle back to Present
     } else {
+        // ASK FOR CONFIRMATION BEFORE MARKING ABSENT
+        const employeeName = tr.querySelector('.col-name').childNodes[0].textContent.trim();
+        if (!confirm(`ARE YOU SURE YOU WANT TO MARK "${employeeName}" AS ABSENT?`)) {
+            return; // Abort if user clicks No/Cancel
+        }
         statusSelect.value = 'Absent'; // Set to Absent
     }
 
@@ -378,8 +383,6 @@ function toggleAbsent(badge) {
     // AUTO SAVE
     const saveBtn = tr.querySelector('.btn-primary, .btn-success');
     if (saveBtn) {
-        // Need to wait slightly for UI update or just call it directly
-        // We need the ID. 
         const id = tr.dataset.id;
         quickSaveAttendance(id, saveBtn);
     }
