@@ -3,10 +3,11 @@ const router = express.Router();
 const {
     getAttendance,
     getSingleAttendance,
-    createAttendance,
     updateAttendance,
     bulkCreateAttendance,
-    deleteAttendance
+    deleteAttendance,
+    getTotalPresentEmployee,
+    createAttendance
 } = require('../controllers/attendanceController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -18,6 +19,9 @@ router.route('/')
 
 router.route('/bulk')
     .post(verifyApiKey, protect, authorize('admin', 'manager'), bulkCreateAttendance);
+
+router.route('/total-present')
+    .get(protect, getTotalPresentEmployee);
 
 router.route('/:id')
     .get(protect, getSingleAttendance)

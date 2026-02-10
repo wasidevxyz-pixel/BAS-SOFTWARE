@@ -43,6 +43,26 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBranches();
     loadEmployees();
 
+    // Global Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S for Save
+        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            savePayroll();
+        }
+        // Alt + L for List (Toggle)
+        if (e.altKey && (e.key === 'l' || e.key === 'L')) {
+            e.preventDefault();
+            const modalEl = document.getElementById('payrollListModal');
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal && modalEl.classList.contains('show')) {
+                modal.hide();
+            } else {
+                showList();
+            }
+        }
+    });
+
     // Handle Manual Code Input for Search
     document.getElementById('code').addEventListener('change', async (e) => {
         const code = e.target.value.trim();
@@ -116,9 +136,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthYear = document.getElementById('monthYear').value;
         const branch = e.target.value;
 
+        // Load Banks for the selected branch
+        await loadBranchBanks(branch);
+
         if (employeeId && monthYear) {
             await loadOrCalculate(employeeId, monthYear, branch);
         }
+        // Update Present Count
+        GetTotalPresentEmployee();
     });
 
     // Handle List Search Text
@@ -137,20 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkboxes.forEach(cb => cb.checked = e.target.checked);
         });
     }
-
-    // Global Shortcut Keys
-    document.addEventListener('keydown', (e) => {
-        // Alt + S to Save
-        if (e.altKey && e.key.toLowerCase() === 's') {
-            e.preventDefault();
-            savePayroll();
-        }
-        // Alt + L to Show List
-        if (e.altKey && e.key.toLowerCase() === 'l') {
-            e.preventDefault();
-            showList();
-        }
-    });
 
     // Enter key for Auth Modal
     document.getElementById('authPassword')?.addEventListener('keypress', (e) => {
@@ -206,6 +217,40 @@ async function loadBranches() {
     }
 }
 
+async function loadBranchBanks(branchName, selectedValue = null) {
+    const field = document.getElementById('branchBank');
+    if (!field) return;
+
+    if (!branchName) {
+        field.value = '';
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/banks', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            // Filter: Must be 'Branch Bank' type
+            const branchBanks = data.data.filter(b => b.branch === branchName && b.isActive && b.bankType === 'Branch Bank');
+
+            if (selectedValue) {
+                field.value = selectedValue;
+            } else if (branchBanks.length > 0) {
+                // Only auto-select if field is currently empty
+                if (!field.value) {
+                    field.value = branchBanks[0].bankName;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading branch banks:', error);
+    }
+}
+
 async function loadDepartments() {
     // Collect unique departments from allEmployees
     const depts = new Set();
@@ -231,6 +276,42 @@ async function loadDepartments() {
 let allEmployees = [];
 let filteredEmployees = [];
 let selectedSearchIndex = -1;
+
+function GetTotalPresentEmployee() {
+    const monthYear = $("#monthYear").val();
+    const branch = $("#branch").val();
+
+    if (!monthYear) {
+        $("#totalPresentEmployees").text('0');
+        return;
+    }
+
+    $.ajax({
+        type: "get",
+        dataType: "json",
+        url: "/api/v1/payrolls",
+        data: {
+            monthYear: monthYear,
+            branch: branch
+        },
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        success: function (response) {
+            if (response.success) {
+                $("#totalPresentEmployees").text(response.count);
+            } else {
+                $("#totalPresentEmployees").text('0');
+            }
+        },
+        error: function (err) {
+            console.error('Error fetching present employees:', err);
+            $("#totalPresentEmployees").text('0');
+        }
+    });
+}
+
+
 async function loadEmployees() {
     try {
         const token = localStorage.getItem('token');
@@ -348,6 +429,8 @@ async function selectEmployee(emp) {
     hiddenInput.value = emp._id;
     resultsDiv.style.display = 'none';
     document.getElementById('code').value = emp.code || '';
+    // Initial Count Load
+    GetTotalPresentEmployee();
 
     const monthYear = document.getElementById('monthYear').value;
     const branch = document.getElementById('branch').value;
@@ -367,7 +450,14 @@ async function findEmployeeByCode(code) {
 
 async function loadOrCalculate(employeeId, monthYear, branch) {
     try {
+        // Reset current ID and form values before loading new data
+        currentPayrollId = null;
+
+        // Ensure banks are loaded for this branch
+        await loadBranchBanks(branch);
+
         const token = localStorage.getItem('token');
+        // Search without branch filter to detect duplicates even if branch changed
         const checkRes = await fetch(`/api/v1/payrolls?employee=${employeeId}&monthYear=${monthYear}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -377,11 +467,16 @@ async function loadOrCalculate(employeeId, monthYear, branch) {
             const payroll = checkData.data[0];
             currentPayrollId = payroll._id;
             populateForm(payroll);
-            alert('Existing payroll loaded for this month.');
-        } else {
-            currentPayrollId = null;
 
-            // Get checkbox states from UI
+            if (branch && payroll.branch !== branch) {
+                alert(`Note: This employee already has a payroll record for this month in branch "${payroll.branch}". We have loaded that record.`);
+                // Sync the branch dropdown to the existing record's branch
+                const branchDropdown = document.getElementById('branch');
+                if (branchDropdown) branchDropdown.value = payroll.branch;
+            }
+            // Removed redundant 'Existing payroll loaded' alert as requested
+        } else {
+            // No existing payroll, proceed with calculation
             const thirtyWorkingDays = document.getElementById('wkDays30').checked;
 
             const calcRes = await fetch('/api/v1/payrolls/calculate', {
@@ -401,6 +496,7 @@ async function loadOrCalculate(employeeId, monthYear, branch) {
         calculateTotals();
     } catch (error) {
         console.error('Error processing payroll:', error);
+        alert('An error occurred while loading payroll data. Please check connection and try again.');
     }
 }
 
@@ -515,12 +611,23 @@ function populateForm(data) {
     setValue('bankPaid', data.bankPaid);
     setValue('cashPaid', data.cashPaid);
     setValue('remarks', data.remarks);
-    setValue('branchBank', data.branchBank);
+
+    // Only overwrite branchBank if it exists in the data (for existing records)
+    // Otherwise keep the auto-detected value from loadBranchBanks()
+    if (data.branchBank) {
+        setValue('branchBank', data.branchBank);
+    }
 }
 
 function setValue(id, val) {
     const el = document.getElementById(id);
-    if (el) el.value = val !== undefined ? val : 0;
+    if (!el) return;
+
+    if (val === undefined || val === null) {
+        el.value = (el.type === 'number') ? 0 : '';
+    } else {
+        el.value = val;
+    }
 }
 
 function getValue(id) {
@@ -725,6 +832,11 @@ function calculateTotals() {
 
 
 async function savePayroll() {
+    if (currentPayrollId) {
+        alert("Payroll already exists for this employee and month. To update or make changes, please delete the existing record from the list first and then save again.");
+        return;
+    }
+
     const data = {
         employee: document.getElementById('employee').value,
         monthYear: document.getElementById('monthYear').value,
@@ -787,6 +899,36 @@ async function savePayroll() {
         thirtyWorkingDays: document.getElementById('wkDays30').checked,
         payFullSalaryThroughBank: document.getElementById('salThrBank').checked
     };
+
+    // Validation: Basic Salary and Worked Hours must be > 0
+    if (!data.perMonth || data.perMonth <= 0) {
+        alert("Employee Basic Salary cannot be zero.");
+        return;
+    }
+    if (!data.workedHrs || data.workedHrs <= 0) {
+        alert("Employee Worked(Hrs) cannot be zero.");
+        return;
+    }
+
+    // Trim values for comparison
+    const empBank = data.bank ? data.bank.trim() : '';
+    const brBank = data.branchBank ? data.branchBank.trim() : '';
+
+    // Validation: If Employee has a bank, Branch Bank MUST be selected
+    if (empBank && !brBank) {
+        alert("Please select a Branch Bank to proceed.");
+        return;
+    }
+
+    // Bank Mismatch Check
+    if (brBank && empBank && brBank !== empBank) {
+        const confirmMsg = `Employee Bank (${empBank}) and Branch Bank (${brBank}) are different.\nDo you want to continue?`;
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+        // Force Full Bank Paid flag
+        data.payFullSalaryThroughBank = true;
+    }
 
     try {
         const token = localStorage.getItem('token');
@@ -861,7 +1003,7 @@ function resetForm() {
 }
 
 function showList() {
-    const modal = new bootstrap.Modal(document.getElementById('payrollListModal'));
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('payrollListModal'));
     modal.show();
 
     // Sync Month-Year
@@ -1082,7 +1224,14 @@ async function confirmDelete() {
             if (modal) modal.hide();
 
             alert('Payroll deleted successfully');
+
+            // If we deleted the payroll that is currently loaded, reset the form
+            if (pendingDeleteId === currentPayrollId) {
+                resetForm();
+            }
+
             loadPayrollList();
+            GetTotalPresentEmployee(); // Update count
         } else {
             alert('Error: ' + result.message);
         }

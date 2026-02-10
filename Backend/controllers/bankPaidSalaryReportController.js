@@ -89,16 +89,20 @@ exports.getBankPaidReport = async (req, res) => {
             console.log(`  - Employee bankCash: ${emp.bankCash}, payFullSalaryThroughBank: ${emp.payFullSalaryThroughBank}`);
             console.log(`  - Payroll bankPaid: ${payroll.bankPaid}, netTotal: ${payroll.netTotal}`);
 
+            const pBrBank = (payroll.branchBank || '').trim().toLowerCase();
+            const pEmpBank = (payroll.bank || '').trim().toLowerCase();
+            const isBankMismatch = (pBrBank !== '' && pEmpBank !== '' && pBrBank !== pEmpBank);
+
             if (type === 'full') {
-                // Full bank paid: only employees with payFullSalaryThroughBank = true
-                if (emp.payFullSalaryThroughBank === true || payroll.payFullSalaryThroughBank === true) {
+                // Full bank paid: payFullSalaryThroughBank = true OR Bank Mismatch
+                if (emp.payFullSalaryThroughBank === true || payroll.payFullSalaryThroughBank === true || isBankMismatch) {
                     includeInReport = true;
                     amount = payroll.bankPaid || payroll.netTotal || 0;
-                    console.log(`  - INCLUDED in Full Bank Paid (amount: ${amount})`);
+                    console.log(`  - INCLUDED in Full Bank Paid (amount: ${amount}, mismatch: ${isBankMismatch})`);
                 }
             } else if (type === 'half') {
-                // Half bank paid: employees with bankCash='Bank' but not full bank paid
-                if ((emp.bankCash === 'Bank' || payroll.bankPaid > 0) &&
+                // Half bank paid: employees with bankCash='Bank' but not full bank paid AND NOT mismatch
+                if (!isBankMismatch && (emp.bankCash === 'Bank' || payroll.bankPaid > 0) &&
                     emp.payFullSalaryThroughBank !== true &&
                     payroll.payFullSalaryThroughBank !== true) {
                     includeInReport = true;
@@ -106,11 +110,12 @@ exports.getBankPaidReport = async (req, res) => {
                     console.log(`  - INCLUDED in Half Bank Paid (amount: ${amount})`);
                 }
             } else if (type === 'branch_bank') {
-                // Branch bank: Show ALL employees with payroll (most inclusive)
-                // Use bankPaid if available, otherwise use netTotal
-                includeInReport = true;
-                amount = payroll.bankPaid || payroll.netTotal || 0;
-                console.log(`  - INCLUDED in Branch Bank (amount: ${amount}, bankPaid: ${payroll.bankPaid}, netTotal: ${payroll.netTotal})`);
+                // Branch bank: Show employees where Branch Bank matches Employee Bank
+                if (!isBankMismatch) {
+                    includeInReport = true;
+                    amount = payroll.bankPaid || payroll.netTotal || 0;
+                    console.log(`  - INCLUDED in Branch Bank (amount: ${amount})`);
+                }
             }
 
 

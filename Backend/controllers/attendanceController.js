@@ -1,4 +1,6 @@
 const Attendance = require('../models/Attendance');
+const mongoose = require('mongoose');
+
 
 // @desc    Get attendance records
 // @route   GET /api/v1/attendance
@@ -138,6 +140,126 @@ exports.deleteAttendance = async (req, res) => {
         }
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get total count of unique present employees
+// @route   GET /api/v1/attendance/total-present
+exports.getTotalPresentEmployee = async (req, res) => {
+    try {
+        const {
+            F_Dated,
+            T_Dated,
+            Employee_ID,
+            Department_ID,
+            Designation_ID,
+            Branch_ID,
+            Criteria
+        } = req.query;
+
+        // Match Stage (Only Date)
+        // User Requirement: "check in out when complete when present day will count on payroll"
+        // This means we need:
+        // 1. Status to be Present/P
+        // 2. checkIn to be present (not null/empty)
+        // 3. checkOut to be present (not null/empty)
+        const matchStage = {
+            displayStatus: { $in: ['Present', 'P'] },
+            checkIn: { $exists: true, $ne: '' },
+            checkOut: { $exists: true, $ne: '' }
+        };
+
+        // Date Range Filter
+        if (F_Dated && T_Dated) {
+            matchStage.date = {
+                $gte: new Date(F_Dated),
+                $lte: new Date(T_Dated)
+            };
+        } else if (F_Dated) {
+            matchStage.date = { $gte: new Date(F_Dated) };
+        }
+
+        // Branch filter is applied AFTER lookup to ensure correct branch assignment (especially if attendance branch field is missing)
+
+        // Employee Match
+        if (Employee_ID && Employee_ID !== '0' && Employee_ID !== 'null' && Employee_ID !== '') {
+            matchStage.employee = new mongoose.Types.ObjectId(Employee_ID);
+        }
+
+        // Pipeline Construction
+        const pipeline = [
+            { $match: matchStage },
+            // Lookup Employee details for Branch/Dept/Designation filtering
+            {
+                $lookup: {
+                    from: 'employees',
+                    localField: 'employee',
+                    foreignField: '_id',
+                    as: 'empDetails'
+                }
+            },
+            { $unwind: '$empDetails' }
+        ];
+
+        // Filters that require Employee Lookup
+        const empMatch = {};
+
+        // Branch Match (Applied via Employee details now)
+        if (Branch_ID && Branch_ID !== '0' && Branch_ID !== 'null' && Branch_ID !== '') {
+            const escapedBranch = Branch_ID.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            empMatch['empDetails.branch'] = { $regex: escapedBranch, $options: 'i' };
+        }
+
+        if (Department_ID && Department_ID !== '0' && Department_ID !== 'null' && Department_ID !== '') {
+            empMatch['empDetails.department'] = new mongoose.Types.ObjectId(Department_ID);
+        }
+
+        if (Designation_ID && Designation_ID !== '0' && Designation_ID !== 'null' && Designation_ID !== '') {
+            empMatch['empDetails.designation'] = new mongoose.Types.ObjectId(Designation_ID);
+        }
+
+        // Apply Criteria Filter (Search by Name or Code)
+        if (Criteria) {
+            empMatch['$or'] = [
+                { 'empDetails.name': { $regex: Criteria, $options: 'i' } },
+                { 'empDetails.code': { $regex: Criteria, $options: 'i' } }
+            ];
+        }
+
+        // Add secondary match stage if there are employee-level filters
+        if (Object.keys(empMatch).length > 0) {
+            pipeline.push({ $match: empMatch });
+        }
+
+        // Group by Employee ID removed. We want total man-days.
+        // pipeline.push({
+        //     $group: {
+        //         _id: '$employee'
+        //     }
+        // });
+
+        // // Count the groups
+        // pipeline.push({
+        //     $count: 'totalPresent'
+        // });
+
+        // Count TOTAL RECORDS matching criteria (Man-Days)
+        pipeline.push({
+            $count: 'totalPresent'
+        });
+
+        const result = await Attendance.aggregate(pipeline);
+
+        const count = result.length > 0 ? result[0].totalPresent : 0;
+
+        res.status(200).json({
+            success: true,
+            count: count
+        });
+
+    } catch (error) {
+        console.error('Aggregation Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

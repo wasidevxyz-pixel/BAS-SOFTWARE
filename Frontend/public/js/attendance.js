@@ -234,7 +234,13 @@ function renderAttendanceTable() {
                     <span class="print-value">${att.employee?.code || '-'}</span>
                 </div>
             </td>
-            <td class="ps-2 fw-bold text-uppercase col-name">${att.employee?.name || '-'}</td>
+            <td class="ps-2 fw-bold text-uppercase col-name">
+                ${att.employee?.name || '-'}
+                <span class="badge rounded-circle ms-1 px-2 py-1 ${att.displayStatus === 'Absent' ? 'bg-danger text-white' : 'bg-white text-danger border border-danger'}" 
+                      style="font-size: 0.6rem; cursor: pointer;" 
+                      onclick="toggleAbsent(this)"
+                      title="Toggle Absent/Present">A</span>
+            </td>
             <td class="text-center col-dept">${att.employee?.department?.name || '-'}</td>
             <td class="text-center col-desig">${att.employee?.designation?.name || '-'}</td>
             <td class="text-center col-duty" style="font-weight: 600;">${getDutyHoursDisplay(att.employee)}</td>
@@ -270,8 +276,6 @@ function renderAttendanceTable() {
                 <select class="form-select form-select-xs fw-bold" onchange="updateRowColor(this)">
                     <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>Present</option>
                     <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>Absent</option>
-                    <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>Leave</option>
-                    <option value="Half Day" ${att.displayStatus === 'Half Day' ? 'selected' : ''}>Half Day</option>
                 </select>
                 <span class="print-value">${att.displayStatus ? att.displayStatus.charAt(0) : ''}</span>
             </td>
@@ -297,6 +301,28 @@ function updateRowColor(element) {
     const checkOut = checkOutInput ? checkOutInput.value : '';
     const mins = parseTime(totalHrsText);
 
+    // CLEAR DATA IF ABSENT OR LEAVE
+    if (status === 'Absent' || status === 'Leave') {
+        const inputs = tr.querySelectorAll('input[type="time"]');
+        inputs.forEach(input => input.value = '');
+
+        tr.querySelector('.col-worked').textContent = '';
+        tr.querySelector('.col-breakhrs').textContent = '';
+        tr.querySelector('.col-totaldiff').textContent = '';
+        tr.querySelector('.col-totalhrs').textContent = '';
+
+        // Update print values
+        tr.querySelectorAll('.print-value').forEach(span => {
+            // Skip the code/name print values, only clear time/calc ones
+            // Actually, safest is just to let the inputs clear them? No, print values are separate spans.
+            // Let's just specific ones if we can, or iterate.
+            // The spans are next to inputs.
+            if (span.previousElementSibling && span.previousElementSibling.tagName === 'INPUT') {
+                span.textContent = '';
+            }
+        });
+    }
+
     tr.className = '';
     if (status === 'Absent') {
         tr.className = 'row-absent';
@@ -310,6 +336,52 @@ function updateRowColor(element) {
         tr.className = 'row-completed';
     } else if (checkIn) {
         tr.className = 'row-partial';
+    }
+
+    // Dynamic Name Badge Update
+    const nameCell = tr.querySelector('.col-name');
+    if (nameCell) {
+        let badge = nameCell.querySelector('.badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'badge rounded-circle ms-1 px-2 py-1';
+            badge.style.fontSize = '0.6rem';
+            badge.style.cursor = 'pointer';
+            badge.textContent = 'A';
+            badge.onclick = function () { toggleAbsent(this); };
+            badge.title = "Toggle Absent/Present";
+            nameCell.appendChild(badge);
+        }
+
+        if (status === 'Absent') {
+            badge.className = 'badge rounded-circle ms-1 px-2 py-1 bg-danger text-white';
+        } else {
+            badge.className = 'badge rounded-circle ms-1 px-2 py-1 bg-white text-danger border border-danger';
+        }
+    }
+}
+
+function toggleAbsent(badge) {
+    const tr = badge.closest('tr');
+    const statusSelect = tr.querySelector('.col-status select');
+    if (!statusSelect) return;
+
+    if (statusSelect.value === 'Absent') {
+        statusSelect.value = 'Present'; // Toggle back to Present
+    } else {
+        statusSelect.value = 'Absent'; // Set to Absent
+    }
+
+    // Trigger update logic
+    updateRowColor(statusSelect);
+
+    // AUTO SAVE
+    const saveBtn = tr.querySelector('.btn-primary, .btn-success');
+    if (saveBtn) {
+        // Need to wait slightly for UI update or just call it directly
+        // We need the ID. 
+        const id = tr.dataset.id;
+        quickSaveAttendance(id, saveBtn);
     }
 }
 

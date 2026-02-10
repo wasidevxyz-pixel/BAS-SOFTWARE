@@ -181,10 +181,8 @@ function renderDetailTable() {
             <td class="text-center fw-bold col-totalhrs">${att.workedHrs || ''}</td>
             <td class="px-1 text-center col-status">
                 <select class="form-select form-select-xs fw-bold" onchange="updateRowCalc(this)">
-                    <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>P</option>
-                    <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>A</option>
-                    <option value="Leave" ${att.displayStatus === 'Leave' ? 'selected' : ''}>L</option>
-                    <option value="Half Day" ${att.displayStatus === 'Half Day' ? 'selected' : ''}>H</option>
+                    <option value="Present" ${att.displayStatus === 'Present' ? 'selected' : ''}>Present</option>
+                    <option value="Absent" ${att.displayStatus === 'Absent' ? 'selected' : ''}>Absent</option>
                 </select>
                 <span class="print-value">${att.displayStatus ? att.displayStatus.charAt(0) : ''}</span>
             </td>
@@ -263,8 +261,15 @@ function updateRowCalc(element, isInitial = false) {
     const mode = tr.querySelector('.diff-btns').dataset.mode || '+';
     const status = tr.querySelector('.col-status select').value;
 
-    // IF ABSENT OR LEAVE -> FORCE 0 HOURS
+    // IF ABSENT OR LEAVE -> FORCE 0 HOURS AND CLEAR INPUTS
     if (status === 'Absent' || status === 'Leave') {
+        tr.querySelector('.col-checkin input').value = '';
+        tr.querySelector('.col-checkout input').value = '';
+        tr.querySelector('.col-breakout input').value = '';
+        tr.querySelector('.col-breakin input').value = '';
+        tr.querySelector('.col-diffin input').value = '';
+        tr.querySelector('.col-diffout input').value = '';
+
         tr.querySelector('.col-breakhrs').textContent = '';
         tr.querySelector('.col-totaldiff').textContent = '';
         tr.querySelector('.col-worked').textContent = '0:00';

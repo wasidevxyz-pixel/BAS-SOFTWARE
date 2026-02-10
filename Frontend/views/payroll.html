@@ -851,9 +851,8 @@
                         <div class="row row-custom align-items-center">
                             <div class="col-4"><label class="form-label-custom">Branch Bank</label></div>
                             <div class="col-8">
-                                <select id="branchBank" class="form-select form-control-custom bg-blue-input">
-                                    <option value="">Select Bank</option>
-                                </select>
+                                <input type="text" id="branchBank"
+                                    class="form-control form-control-custom bg-blue-input" readonly>
                             </div>
                         </div>
 
@@ -997,10 +996,11 @@
         </button>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/pageAccess.js"></script>
     <script src="/js/sidebar.js"></script>
-    <script src="/js/payroll.js"></script>
+    <script src="/js/payroll.js?v=17"></script>
 </body>
 
 </html>

@@ -9,6 +9,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('searchInput').addEventListener('input', filterBanks);
 
     loadBanks();
+
+    // Global Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S for Save
+        if (e.altKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveBank();
+        }
+    });
 });
 
 // Handle branch change - filter bank list and load departments

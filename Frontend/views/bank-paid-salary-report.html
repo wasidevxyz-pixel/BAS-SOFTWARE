@@ -187,25 +187,55 @@
 
         .data-table th,
         .data-table td {
-            border: 1px solid #dee2e6;
+            border: 1px solid #000000;
             padding: 8px 10px;
         }
 
         .data-table thead th {
-            background: #1e4c8c;
-            /* Dark Blue Header */
+            background: var(--primary-gradient);
             color: white;
             font-weight: 800;
             text-transform: uppercase;
             text-align: center;
-            /* Center align headers */
             font-size: 0.75rem;
-            /* Increased Size */
             letter-spacing: 0.5px;
             white-space: nowrap;
             padding: 12px 10px;
-            border-color: white;
-            /* White border for contrast */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .data-table thead th {
+                background: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #000000 !important;
+                font-size: 10pt !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .data-table td {
+                border: 1px solid #000000 !important;
+                font-size: 9pt !important;
+            }
+
+            .data-table tfoot tr {
+                background: #ffffff !important;
+                color: #000000 !important;
+                border-top: 2px solid #000000 !important;
+            }
         }
 
         .data-table tbody td {
@@ -247,7 +277,7 @@
         }
 
         .grand-total-row {
-            background: #334155 !important;
+            background: var(--primary-gradient) !important;
             color: white !important;
             font-weight: 900;
             font-size: 1rem;
@@ -626,13 +656,14 @@
 
                 <!-- Row 3: Action Buttons -->
                 <div class="filter-row mt-4 gap-3">
-                    <button class="btn btn-success fw-bold px-4" onclick="generateReport('full')">Full Bank Paid
-                        Salary</button>
+                    <button class="btn btn-success fw-bold px-4" onclick="generateReport('full')">OTH BRANCH BANK
+                        SALARY</button>
                     <button class="btn btn-success fw-bold px-4" onclick="generateReport('half')">Half Bank Paid
                         Salary</button>
                     <!-- <button class="btn btn-success fw-bold px-4" onclick="generateReport('lhf')">Full Bank Paid LHF Salary</button> -->
-                    <button class="btn btn-success fw-bold px-4" onclick="generateReport('branch_bank')">Employee Branch
-                        Bank</button>
+                    <button class="btn btn-success fw-bold px-4" onclick="generateReport('branch_bank')">SAME BRANCH
+                        BANK
+                        SALARY</button>
                 </div>
             </div>
 
@@ -894,16 +925,25 @@
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
-                            <tr>
-                                <th style="width: 50px;">Sr No</th>
-                                <th style="width: 120px;">DEBIT ACCT.NO</th>
-                                <th>ACCOUNT TITLE</th>
-                                <th style="width: 100px;">CREDIT ACCT.NO</th>
-                                <th style="width: 60px;">DEBIT CURRENCY</th>
-                                <th style="width: 100px;">DEBIT AMOUNT</th>
-                                <th style="width: 80px;">MONTH</th>
-                                <th style="width: 80px;">ORDERING BANK</th>
+                            ${type === 'full' ? `
+                            <tr style="background: var(--primary-gradient); color: white;">
+                                <th style="width: 50px; color: white; border: 1px solid rgba(255,255,255,0.1);">Sr No</th>
+                                <th style="color: white; border: 1px solid rgba(255,255,255,0.1);">Employee Name</th>
+                                <th style="width: 250px; color: white; border: 1px solid rgba(255,255,255,0.1);">Account #</th>
+                                <th style="width: 150px; color: white; border: 1px solid rgba(255,255,255,0.1);">Net Total</th>
                             </tr>
+                            ` : `
+                            <tr style="background: var(--primary-gradient); color: white;">
+                                <th style="width: 50px; color: white; border: 1px solid rgba(255,255,255,0.1);">Sr No</th>
+                                <th style="width: 120px; color: white; border: 1px solid rgba(255,255,255,0.1);">DEBIT ACCT.NO</th>
+                                <th style="color: white; border: 1px solid rgba(255,255,255,0.1);">ACCOUNT TITLE</th>
+                                <th style="width: 100px; color: white; border: 1px solid rgba(255,255,255,0.1);">CREDIT ACCT.NO</th>
+                                <th style="width: 60px; color: white; border: 1px solid rgba(255,255,255,0.1);">DEBIT CURRENCY</th>
+                                <th style="width: 100px; color: white; border: 1px solid rgba(255,255,255,0.1);">DEBIT AMOUNT</th>
+                                <th style="width: 80px; color: white; border: 1px solid rgba(255,255,255,0.1);">MONTH</th>
+                                <th style="width: 80px; color: white; border: 1px solid rgba(255,255,255,0.1);">ORDERING BANK</th>
+                            </tr>
+                            `}
                         </thead>
                         <tbody>
             `;
@@ -937,39 +977,49 @@
                 // Screenshot shows Month like "Jan-2026"
                 const monthStr = dateObj.toLocaleString('en-US', { month: 'short', year: 'numeric' }).replace(' ', '-');
 
-                html += `
-                    <tr>
-                        <td class="text-center">${index + 1}</td>
-                        <td class="text-center">${emp.debitAccount || 'PK53ALFH00335001005137840'}</td>
-                        <td>${emp.name}</td>
-                        <td class="text-center">${emp.creditAccount || ''}</td>
-                        <td class="text-center">PKR</td>
-                        <td class="amount-col">${amount.toLocaleString()}</td>
-                        <td class="text-center">${monthStr}</td>
-                        <td class="text-center">${emp.orderingBank || 'BAFL'}</td>
-                    </tr>
-                `;
+                if (type === 'full') {
+                    html += `
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td>${emp.name}</td>
+                            <td class="text-center">${emp.creditAccount || ''}</td>
+                            <td class="amount-col">${amount.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    html += `
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td class="text-center">${emp.debitAccount || 'PK53ALFH00335001005137840'}</td>
+                            <td>${emp.name}</td>
+                            <td class="text-center">${emp.creditAccount || ''}</td>
+                            <td class="text-center">PKR</td>
+                            <td class="amount-col">${amount.toLocaleString()}</td>
+                            <td class="text-center">${monthStr}</td>
+                            <td class="text-center">${emp.orderingBank || 'BAFL'}</td>
+                        </tr>
+                    `;
+                }
             });
 
             html += `
                         </tbody>
                         <tfoot>
-                            <tr style="background: #1e4c8c; color: white;">
-                                <td colspan="5" class="text-end fw-bold">TOTAL</td>
+                            <tr class="grand-total-row">
+                                <td colspan="${type === 'full' ? 3 : 5}" class="text-end fw-bold">TOTAL</td>
                                 <td class="amount-col fw-bold">${grandTotal.toLocaleString()}</td>
-                                <td colspan="2"></td>
+                                ${type === 'full' ? '' : '<td colspan="2"></td>'}
                             </tr>
                         </tfoot>
                     </table>
                 </div>
                 <!-- Signatures -->
-                <div class="mt-5 print-only">
+                <div class="print-only mt-5 pt-4">
                     <div class="row">
-                        <div class="col-4 text-center">
-                            <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto; padding-top: 5px;">
-                                <span class="fw-bold">Authorized Signatory</span>
-                                <br>
-                                <span class="small">D.Watson Pharmacy</span>
+                        <div class="col-4">
+                            <div style="border-top: 2px solid #000; padding-top: 5px; text-align: center;">
+                                <div class="fw-bold" style="font-size: 11pt;">Authorized Signatory</div>
+                                <div style="font-size: 9pt;">D.Watson Pharmacy</div>
                             </div>
                         </div>
                     </div>
