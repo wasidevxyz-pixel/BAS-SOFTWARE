@@ -275,6 +275,7 @@ class SidebarNavigation {
                     { label: 'WH Sale Entry', link: '/wh-sale.html', permission: 'wh_sale' },
                     { label: 'WH Sale Entry Return', link: '/wh-sale-return.html', permission: 'wh_sale_return' },
                     { label: 'WH Customer Payment', link: '/wh-customer-payment.html', permission: 'wh_customer_payment' },
+                    { label: 'Barcode Printing', link: '/wh-barcode.html', permission: 'wh_barcode_print' },
                     { label: 'WH Stock Audit', link: '/wh-stock-audit.html', permission: 'wh_stock_audit' }
                 ]
             },

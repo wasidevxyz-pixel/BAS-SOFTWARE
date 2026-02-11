@@ -213,7 +213,12 @@ function renderGrid() {
                         onkeydown="handleGridKeydown(event, ${index})">
             </td>
             <td class="text-end fw-bold ${diffColor}">${diff || 0}</td>
-            <td class="text-end">${row.costPrice || 0}</td>
+            <td class="p-1">
+                 <input type="number" class="form-control form-control-sm text-end border-0 bg-transparent" 
+                        value="${row.costPrice}" 
+                        onfocus="this.select()"
+                        onchange="updateRow(${index}, 'costPrice', this.value)">
+            </td>
             <td class="text-end">${row.salePrice || 0}</td>
             <td class="p-1">
                 <input type="text" class="form-control form-control-sm border-0 bg-transparent" 
@@ -542,7 +547,7 @@ window.addNewItemRow = async function () { // "Add All Checks" / "Add All Items"
 };
 
 window.updateRow = function (index, field, value) {
-    if (field === 'physicalQty') {
+    if (field === 'physicalQty' || field === 'costPrice') {
         value = parseFloat(value);
         if (isNaN(value)) value = 0;
     }

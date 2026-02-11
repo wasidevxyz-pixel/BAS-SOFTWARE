@@ -550,39 +550,74 @@
                 let calcDisc = 0;
                 let calcTax = 0;
                 let calcQty = 0;
+                let totalSystemVal = 0;
+                let totalPhysicalVal = 0;
 
-                doc.items.forEach(line => {
-                    const price = line.pcsPrice || line.costPrice || line.salePrice || line.price || 0;
-                    const qty = line.quantity || line.returnQty || 0;
-                    const itTax = line.taxAmount || line.taxRs || 0;
-                    const itDisc = line.discountAmount || line.disRs || 0;
+                (doc.items || []).forEach(line => {
+                    let cost = parseFloat(line.costPrice || 0);
+                    let sysQty = parseFloat(line.systemQty || 0);
+                    let physQty = parseFloat(line.physicalQty || 0);
 
-                    // Gross = Base Price * Qty (Value before tax or discount)
+                    totalSystemVal += (cost * sysQty);
+                    totalPhysicalVal += (cost * physQty);
+
+                    let price = parseFloat(line.pcsPrice || line.costPrice || line.salePrice || line.price || 0);
+                    let qty = parseFloat(line.quantity || line.returnQty || 0);
+
+                    if (type === 'stock-audit') {
+                        qty = physQty;
+                        price = cost;
+                    }
+
+                    const itTax = parseFloat(line.taxAmount || line.taxRs || 0);
+                    const itDisc = parseFloat(line.discountAmount || line.disRs || 0);
+
                     calcBase += (price * qty);
-                    // Discount only includes the line-level discount amount (Disc Rs)
                     calcDisc += itDisc;
                     calcTax += itTax;
-
-                    // Aggregate Qty
                     calcQty += qty;
                 });
 
-                document.getElementById('totalQty').textContent = calcQty;
+                document.getElementById('totalQty').textContent = Math.round(calcQty).toLocaleString();
 
-                const globalDisc = doc.globalDiscountAmount || doc.totalDiscount || 0;
+                const globalDisc = parseFloat(doc.globalDiscountAmount || doc.totalDiscount || 0);
                 const finalGross = calcBase + calcTax;
                 const finalDisc = calcDisc + globalDisc;
                 const finalNet = finalGross - finalDisc;
 
-                document.getElementById('totalGross').textContent = finalGross.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                document.getElementById('totalDisc').textContent = finalDisc.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                document.getElementById('totalSub').textContent = finalNet.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                if (type === 'stock-audit') {
+                    // Update Labels for Financial Audit
+                    document.querySelector('.totals-table tr:nth-child(1) td:first-child').textContent = 'System Value (Cost)';
+                    document.querySelector('.totals-table tr:nth-child(2) td:first-child').innerHTML = 'Physical Value (Cost)';
+                    document.querySelector('.totals-table tr:nth-child(3) td:first-child').textContent = 'Variance (Loss/Gain)';
 
-                document.getElementById('totalTax').textContent = (doc.taxAmount || doc.totalTax || doc.globalTaxAmount || calcTax || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                document.getElementById('totalGrand').textContent = (doc.grandTotal || doc.netTotal || doc.totalAmount || finalNet || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    // Hide Tax/Misc
+                    document.querySelector('.totals-table tr:nth-child(4)').style.display = 'none';
+                    document.querySelector('.totals-table tr:nth-child(5)').style.display = 'none';
 
-                if (document.getElementById('totalMisc')) {
-                    document.getElementById('totalMisc').textContent = (doc.miscCharges || doc.freightCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    const variance = totalPhysicalVal - totalSystemVal;
+
+                    document.getElementById('totalGross').textContent = Math.round(totalSystemVal).toLocaleString();
+                    document.getElementById('totalDisc').textContent = Math.round(totalPhysicalVal).toLocaleString();
+                    document.getElementById('totalDisc').classList.remove('text-danger');
+
+                    const subEl = document.getElementById('totalSub');
+                    subEl.textContent = Math.round(variance).toLocaleString();
+                    subEl.className = `text-end fw-bold ${variance < 0 ? 'text-danger' : 'text-success'}`;
+
+                    const grandEl = document.getElementById('totalGrand');
+                    grandEl.textContent = Math.round(variance).toLocaleString();
+                } else {
+                    document.getElementById('totalGross').textContent = finalGross.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    document.getElementById('totalDisc').textContent = finalDisc.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    document.getElementById('totalSub').textContent = finalNet.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+                    document.getElementById('totalTax').textContent = (doc.taxAmount || doc.totalTax || doc.globalTaxAmount || calcTax || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    document.getElementById('totalGrand').textContent = (doc.grandTotal || doc.netTotal || doc.totalAmount || finalNet || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+                    if (document.getElementById('totalMisc')) {
+                        document.getElementById('totalMisc').textContent = parseFloat(doc.miscCharges || doc.freightCharges || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    }
                 }
 
                 // Items Logic - GROUP BY ITEM CLASS
@@ -684,38 +719,75 @@
             // Update Headers for Audit
             const thead = document.querySelector('.main-table thead tr');
             thead.innerHTML = `
-                <th style="width: 40px;">#</th>
-                <th style="width: 80px;">Code</th>
+                <th style="width: 30px;">#</th>
+                <th style="width: 70px;">Code</th>
                 <th>Item Description</th>
-                <th>Store</th>
-                <th>System Qty</th>
-                <th>Physical Qty</th>
-                <th>Diff</th>
-                <th>Cost</th>
-                <th>Retail</th>
+                <th style="width: 40px;">System Qty</th>
+                <th style="width: 40px;">Physical Qty</th>
+                <th style="width: 40px;">Diff</th>
+                <th style="width: 60px;">Cost</th>
+                <th style="width: 70px;">Sys Val</th>
+                <th style="width: 70px;">Phy Val</th>
+                <th style="width: 70px;">Variance</th>
             `;
+
+            let totalSys = 0;
+            let totalPhys = 0;
+            let totalSysVal = 0;
+            let totalPhysVal = 0;
 
             items.forEach((line, index) => {
                 const item = line.item || {};
                 const tr = document.createElement('tr');
-                const diff = (line.physicalQty || 0) - (line.systemQty || 0);
+                const sys = parseFloat(line.systemQty || 0);
+                const phys = parseFloat(line.physicalQty || 0);
+                const cost = parseFloat(line.costPrice || 0);
+                const diff = phys - sys;
+
+                const sysV = sys * cost;
+                const physV = phys * cost;
+                const variV = diff * cost;
+
+                totalSys += sys;
+                totalPhys += phys;
+                totalSysVal += sysV;
+                totalPhysVal += physV;
 
                 tr.innerHTML = `
                     <td class="text-center">${index + 1}</td>
                     <td class="text-center">${item.itemsCode || item.code || ''}</td>
                     <td>
-                        <div class="fw-bold">${item.name || line.name || 'N/A'}</div>
+                        <div class="fw-bold" style="font-size: 0.65rem;">${item.name || line.name || 'N/A'}</div>
                         <small class="text-muted">${item.pack || ''}</small>
                     </td>
-                    <td class="text-center">${line.store || 'Shop'}</td>
-                    <td class="text-center">${line.systemQty || 0}</td>
-                    <td class="text-center fw-bold">${line.physicalQty || 0}</td>
+                    <td class="text-center">${sys}</td>
+                    <td class="text-center fw-bold">${phys}</td>
                     <td class="text-center ${diff < 0 ? 'text-danger' : (diff > 0 ? 'text-success' : '')} fw-bold">${diff}</td>
-                    <td class="text-end">${Math.round(line.costPrice || 0)}</td>
-                    <td class="text-end">${Math.round(line.retailPrice || 0)}</td>
+                    <td class="text-end">${Math.round(cost)}</td>
+                    <td class="text-end">${Math.round(sysV).toLocaleString()}</td>
+                    <td class="text-end fw-bold">${Math.round(physV).toLocaleString()}</td>
+                    <td class="text-end fw-bold ${variV < 0 ? 'text-danger' : (variV > 0 ? 'text-success' : '')}">${Math.round(variV).toLocaleString()}</td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            // Add Summary Footer Row inside the table
+            const footerTr = document.createElement('tr');
+            footerTr.className = 'subtotal-row';
+            const totalDiff = totalPhys - totalSys;
+            const totalVari = totalPhysVal - totalSysVal;
+
+            footerTr.innerHTML = `
+                <td colspan="3" class="text-end fw-bold">TOTALS:</td>
+                <td class="text-center fw-bold">${totalSys.toLocaleString()}</td>
+                <td class="text-center fw-bold">${totalPhys.toLocaleString()}</td>
+                <td class="text-center fw-bold ${totalDiff < 0 ? 'text-danger' : (totalDiff > 0 ? 'text-success' : '')}">${totalDiff.toLocaleString()}</td>
+                <td></td>
+                <td class="text-end fw-bold">${Math.round(totalSysVal).toLocaleString()}</td>
+                <td class="text-end fw-bold">${Math.round(totalPhysVal).toLocaleString()}</td>
+                <td class="text-end fw-bold ${totalVari < 0 ? 'text-danger' : (totalVari > 0 ? 'text-success' : '')}">${Math.round(totalVari).toLocaleString()}</td>
+            `;
+            tbody.appendChild(footerTr);
         }
     </script>
 </body>
