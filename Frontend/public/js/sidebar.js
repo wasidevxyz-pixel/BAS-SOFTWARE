@@ -28,17 +28,18 @@ class SidebarNavigation {
 
     buildStandardHeader() {
         // This function forces a consistent look across ALL pages:
-        // Left: Menu + Back | Center: Title | Right: User Profile + Sign Out
+        // Left: Menu + Back | Center: Title | Right: Action Buttons + Profile
         setTimeout(() => {
             const pageHeader = document.querySelector('.page-header');
             if (!pageHeader) return;
 
-            // 1. Get original title text before we clean up
-            let originalTitle = document.title.split('-')[0].trim();
+            // 1. Capture existing buttons before we wipe the header
+            const existingButtons = Array.from(pageHeader.querySelectorAll('button, .btn:not(.btn-header-light):not(.btn-header-info)'));
+            const originalTitle = document.title.split('-')[0].trim();
             const h4 = pageHeader.querySelector('h1, h2, h3, h4, h5, h6, .header-title-text, .page-title');
-            if (h4) originalTitle = h4.innerText || h4.textContent;
+            const titleText = h4 ? (h4.innerText || h4.textContent) : originalTitle;
 
-            // 2. Clear old manual junk and setup clean zones
+            // 2. Setup clean zones with an Action Zone for page-specific buttons
             pageHeader.className = "page-header d-flex align-items-center justify-content-between px-3 shadow-sm";
             pageHeader.style.cssText = 'height: 55px !important; background: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%) !important; border: none !important; z-index: 1045; padding: 0 10px !important; color: white !important;';
 
@@ -48,12 +49,14 @@ class SidebarNavigation {
                         <i class="fas fa-bars" style="font-size: 1rem;"></i>
                         <span style="font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase;">Menu</span>
                     </div>
-                    <!-- Back button will be injected here if it's a report -->
                 </div>
-                <div id="header-center-zone" style="flex: 2; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <div id="header-center-zone" style="flex: 1.5; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                     <span id="globalHeaderTitle" style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px;">
-                        ${originalTitle}
+                        ${titleText}
                     </span>
+                </div>
+                <div id="header-action-zone" style="flex: 2; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                    <!-- Original buttons will be moved here -->
                 </div>
                 <div id="header-right-zone" style="display: flex; align-items: center; justify-content: flex-end; flex: 1; min-width: 80px;">
                     <div class="dropdown">
@@ -78,6 +81,16 @@ class SidebarNavigation {
                 </div>
             `;
 
+            // 3. Re-inject the captured buttons into the action zone
+            const actionZone = pageHeader.querySelector('#header-action-zone');
+            existingButtons.forEach(btn => {
+                // Style cleanup for the new header
+                btn.classList.add('btn-sm');
+                btn.style.margin = '0';
+                btn.style.whiteSpace = 'nowrap';
+                actionZone.appendChild(btn);
+            });
+
             // Attach toggle event specifically to the new header button
             const headerToggleBtn = pageHeader.querySelector('#sidebarToggleBtnHeader');
             if (headerToggleBtn) {
@@ -96,8 +109,8 @@ class SidebarNavigation {
         // Detect if we are on a report-related page
         const path = window.location.pathname.toLowerCase();
 
-        // Skip entry forms, vouchers, and setup screens
-        if (path.includes('voucher') || path.includes('entry') || path.includes('setup')) return;
+        // Skip setup screens and vouchers
+        if (path.includes('voucher') || path.includes('setup') || path.includes('registration')) return;
 
         const isReportPage = path.includes('report') ||
             path.includes('ledger') ||
@@ -114,11 +127,13 @@ class SidebarNavigation {
             if (!leftZone) return;
 
             const btn = document.createElement('a');
-            btn.href = '/reports.html';
+            // Logic: If it's a Stock Audit Entry, back should go to Dashboard or Audit List.
+            // For now, Dashboard is the safest 'Exit' point.
+            btn.href = path.includes('stock-audit') ? '/main.html' : '/reports.html';
             btn.className = 'btn btn-sm btn-light reports-hub-btn';
             btn.style.cssText = 'display: flex !important; align-items: center; justify-content: center; color: #1e4c8c !important; font-weight: bold; background: white !important; border: 1px solid #ddd; width: 38px; height: 38px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
             btn.innerHTML = '<i class="fas fa-arrow-left"></i>';
-            btn.title = 'Back to Reports Hub';
+            btn.title = path.includes('stock-audit') ? 'Back to Dashboard' : 'Back to Reports Hub';
 
             leftZone.appendChild(btn);
         }, 350);

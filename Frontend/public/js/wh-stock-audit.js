@@ -604,8 +604,10 @@ window.resetForm = function () {
     currentAuditId = null;
 
     // Enable inputs
-    document.getElementById('btnPost').disabled = false;
-    document.getElementById('btnSaveDraft').disabled = false;
+    const postBtn = document.getElementById('btnPost');
+    const draftBtn = document.getElementById('btnSaveDraft');
+    if (postBtn) postBtn.disabled = false;
+    if (draftBtn) draftBtn.disabled = false;
 };
 
 // Save Audit
@@ -780,8 +782,10 @@ window.loadAuditDetails = async function (id) {
             isEditing = true;
 
             // Keeping buttons enabled for "rights" but updating badge
-            document.getElementById('btnPost').disabled = false;
-            document.getElementById('btnSaveDraft').disabled = false;
+            const postBtn = document.getElementById('btnPost');
+            const draftBtn = document.getElementById('btnSaveDraft');
+            if (postBtn) postBtn.disabled = false;
+            if (draftBtn) draftBtn.disabled = false;
         }
     } catch (error) {
         console.error('Error loading details:', error);
