@@ -123,8 +123,9 @@ exports.updateStockAudit = async (req, res, next) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
-                        type: 'audit',
-                        qty: -oldDiff,
+                        date: audit.date,
+                        type: (-oldDiff) > 0 ? 'in' : 'out',
+                        qty: Math.abs(oldDiff),
                         previousQty: currentQty,
                         newQty: reversedQty,
                         refType: 'audit',
@@ -153,8 +154,9 @@ exports.updateStockAudit = async (req, res, next) => {
 
                     await WHStockLog.create({
                         item: whItem._id,
-                        type: 'audit',
-                        qty: newDiff,
+                        date: audit.date,
+                        type: newDiff > 0 ? 'in' : 'out',
+                        qty: Math.abs(newDiff),
                         previousQty: currentQty,
                         newQty: finalQty,
                         refType: 'audit',
@@ -210,8 +212,9 @@ exports.deleteStockAudit = async (req, res, next) => {
                         // Create Reversal Log
                         await WHStockLog.create({
                             item: whItem._id,
-                            type: 'audit',
-                            qty: -diff, // Negative of the adjustment
+                            date: audit.date,
+                            type: (-diff) > 0 ? 'in' : 'out', // Negative of adjustment
+                            qty: Math.abs(diff),
                             previousQty: currentQty,
                             newQty: newQty,
                             refType: 'audit',
@@ -272,8 +275,9 @@ exports.postStockAudit = async (req, res, next) => {
                     // Create Stock Log
                     await WHStockLog.create({
                         item: whItem._id,
-                        type: 'audit',
-                        qty: diff, // The adjustment amount
+                        date: audit.date,
+                        type: diff > 0 ? 'in' : 'out',
+                        qty: Math.abs(diff),
                         previousQty: previousQty,
                         newQty: physicalQty,
                         refType: 'audit',

@@ -252,8 +252,8 @@ exports.getWHItemLedger = asyncHandler(async (req, res) => {
             refId: l.refId,
             refType: l.refType,
             description: (l.remarks || l.refType) + suffix,
-            quantity: l.qty,
-            type: l.type, // 'in' or 'out'
+            quantity: Math.abs(l.qty),
+            type: (l.type === 'in' || (l.type === 'audit' && l.qty > 0)) ? 'in' : 'out',
             previousQty: l.previousQty,
             newQty: l.newQty,
             createdAt: l.createdAt
@@ -360,7 +360,9 @@ exports.getWHStockActivity = asyncHandler(async (req, res) => {
             return acc + (curr.type === 'out' ? curr.qty : -curr.qty);
         }, 0);
         const adjustments = logsInRange.filter(l => l.refType === 'audit').reduce((acc, curr) => {
-            return acc + (curr.type === 'in' ? curr.qty : -curr.qty);
+            if (curr.type === 'in') return acc + curr.qty;
+            if (curr.type === 'out') return acc - curr.qty;
+            return acc + curr.qty; // Fallback for legacy 'audit' type logs where qty held the sign
         }, 0);
 
         const netReturns = salesReturns - purchaseReturns;
