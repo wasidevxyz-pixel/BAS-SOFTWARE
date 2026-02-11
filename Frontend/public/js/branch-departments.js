@@ -5,6 +5,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('branch').addEventListener('change', () => {
         renderTable(allDepartments);
     });
+
+    // Handle Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S for Save
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveDepartment();
+        }
+    });
 });
 
 let allDepartments = [];

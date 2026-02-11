@@ -24,6 +24,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadSheet();
 
+    // Handle Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Alt + S for Save
+        if (e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveSheet();
+        }
+    });
+
     // Fix: Manually handle tab switching cleanup to prevent overlap
     const tabLinks = document.querySelectorAll('button[data-bs-toggle="tab"]');
 
@@ -1027,8 +1036,12 @@ function updateClosing02State(deptId) {
     if (!deptId) return;
 
     const currentState = closing02State[deptId] || {};
+    const dept = currentDepartments.find(d => d._id === deptId);
+    const deduction = dept ? (dept.deduction || 0) : 0;
+
     closing02State[deptId] = {
         ...currentState,
+        deduction: deduction, // Save current rate into state
         counterClosing: parseFloat(document.getElementById('counterClosing').value) || 0,
         lp: parseFloat(document.getElementById('lp').value) || 0,
         misc: parseFloat(document.getElementById('misc').value) || 0,
@@ -1194,10 +1207,27 @@ async function saveSheet(customSuccessMsg = null) {
     };
 
     // Add Closing 02 Data
-    // Save the current form state to state object before saving
+    // 1. Ensure the currently active department is saved to state
     const currentC02Dept = document.getElementById('closing02Dept').value;
     if (currentC02Dept) {
         updateClosing02State(currentC02Dept);
+    }
+
+    // 2. Ensure ALL departments in the state have a deduction rate snapshotted
+    // This is vital for records saved before the update or departments not visited this session.
+    if (window.closing02State) {
+        Object.keys(closing02State).forEach(dId => {
+            // Skip non-department keys
+            if (['warehouseSale', 'prevRecovery', 'commission'].includes(dId)) return;
+
+            // Only add deduction if it's missing (helps preserve historical rates if already saved)
+            if (closing02State[dId].deduction === undefined) {
+                const dept = currentDepartments.find(d => d._id === dId);
+                if (dept) {
+                    closing02State[dId].deduction = dept.deduction || 0;
+                }
+            }
+        });
     }
     payload.closing02 = { data: closing02State };
 
@@ -1737,7 +1767,8 @@ async function generateReport(reportType) {
                 if (d.name.toUpperCase() === 'PERCENTAGE CASH') return;
                 const state = closing02[d._id] || {};
                 const sale = state.totalSaleComputer || 0;
-                const rate = d.deduction || 0;
+                // Use saved rate if available, otherwise fallback to current setting
+                const rate = state.deduction !== undefined ? state.deduction : (d.deduction || 0);
                 const ded = Math.round((sale * rate) / 100);
                 totalPercentageCashSum += ded;
             });
@@ -1805,8 +1836,8 @@ async function generateReport(reportType) {
                 // For legacy variable support in later code
                 let recCash = totalRecCashForDept;
 
-                // Rate: From Department Settings (Deduction field)
-                const rate = dept.deduction || 0;
+                // Rate: From Saved state if available, otherwise Department Settings (Deduction field)
+                const rate = state.deduction !== undefined ? state.deduction : (dept.deduction || 0);
 
                 // Total Sale Computer
                 const saleComp = state.totalSaleComputer || 0;
@@ -2127,6 +2158,12 @@ async function saveDepartmentSalesModal() {
 
     // 2. Save to State (Scoped to Current Department)
     if (!closing02State[currentDeptId]) closing02State[currentDeptId] = {};
+
+    // Ensure deduction rate is saved
+    const currentDept = currentDepartments.find(d => d._id === currentDeptId);
+    if (currentDept) {
+        closing02State[currentDeptId].deduction = currentDept.deduction || 0;
+    }
 
     closing02State[currentDeptId].salesBreakdown = breakdown;
     closing02State[currentDeptId].totalSaleComputer = grandTotalSale;
@@ -2673,7 +2710,8 @@ async function generateSMSPreview() {
                 if (d.name.toUpperCase() === 'PERCENTAGE CASH') return;
                 const state = closing02[d._id] || {};
                 const sale = state.totalSaleComputer || 0;
-                const rate = d.deduction || 0;
+                // Use saved rate if available
+                const rate = state.deduction !== undefined ? state.deduction : (d.deduction || 0);
                 const ded = Math.round((sale * rate) / 100);
                 totalPercentageCashSum += ded;
             });
@@ -2703,7 +2741,7 @@ async function generateSMSPreview() {
                     recCash = 0;
                 }
 
-                const rate = dept.deduction || 0;
+                const rate = state.deduction !== undefined ? state.deduction : (dept.deduction || 0);
                 const saleComp = state.totalSaleComputer || 0;
                 const ded = Math.round((saleComp * rate) / 100);
 
@@ -2845,7 +2883,7 @@ async function generateSMSPreview() {
                 if (d.name.toUpperCase() === 'PERCENTAGE CASH') return;
                 const state = closing02Fresh[d._id] || {};
                 const saleVal = state.totalSaleComputer || 0;
-                const rateVal = d.deduction || 0;
+                const rateVal = state.deduction !== undefined ? state.deduction : (d.deduction || 0);
                 const dedVal = Math.round((saleVal * rateVal) / 100);
                 totalPercentageCashSum += dedVal;
             });
@@ -2875,7 +2913,7 @@ async function generateSMSPreview() {
                     recCash = 0;
                 }
 
-                const rate = dept.deduction || 0;
+                const rate = state.deduction !== undefined ? state.deduction : (dept.deduction || 0);
                 const saleComp = state.totalSaleComputer || 0;
 
                 const ded = Math.round((saleComp * rate) / 100);
@@ -3000,9 +3038,13 @@ function getCashActivityContent(departments, branch, date, skipHeader = false) {
     const calcDepts = departments || [];
     calcDepts.forEach(d => {
         if (d.name.toUpperCase() === 'PERCENTAGE CASH') return;
-        const data = closing02State[d._id] || {};
+        const closing02Data = (window.currentSheetData && window.currentSheetData.closing02 && window.currentSheetData.closing02.data)
+            ? window.currentSheetData.closing02.data
+            : closing02State;
+        const data = closing02Data[d._id] || {};
         const sale = data.totalSaleComputer || 0;
-        const rate = d.deduction || 0;
+        // Use saved deduction rate from closing02Data if available, otherwise department default
+        const rate = data.deduction !== undefined ? data.deduction : (d.deduction || 0);
         const ded = Math.round((sale * rate) / 100);
         totalPercentageCashSum += ded;
     });
@@ -3058,7 +3100,7 @@ function getCashActivityContent(departments, branch, date, skipHeader = false) {
 
             // 5. Deduction
             const sale = data.totalSaleComputer || 0;
-            const rate = d.deduction || 0;
+            const rate = data.deduction !== undefined ? data.deduction : (d.deduction || 0);
             const ded = Math.round((sale * rate) / 100);
 
             // 6. Net Total (Cash)
