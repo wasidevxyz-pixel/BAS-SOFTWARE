@@ -48,11 +48,13 @@ async function loadEmployeeInfo() {
             if (document.getElementById('dispEmpName')) document.getElementById('dispEmpName').textContent = currentEmployeeData.name;
             if (document.getElementById('dispEmpCode')) document.getElementById('dispEmpCode').textContent = currentEmployeeData.code;
             if (document.getElementById('dispDutyHrs')) document.getElementById('dispDutyHrs').textContent = getDutyHoursDisplay(currentEmployeeData);
+            if (document.getElementById('filterBranchOption')) document.getElementById('filterBranchOption').textContent = currentEmployeeData.branch || '-';
 
             // Populate Print Grid directly (since screen grid is removed)
             if (document.getElementById('pNameGrid')) document.getElementById('pNameGrid').textContent = currentEmployeeData.name;
             if (document.getElementById('pCodeGrid')) document.getElementById('pCodeGrid').textContent = currentEmployeeData.code;
             if (document.getElementById('pBranchGrid')) document.getElementById('pBranchGrid').textContent = currentEmployeeData.branch;
+            if (document.getElementById('pBranchHeader')) document.getElementById('pBranchHeader').textContent = `Branch: ${currentEmployeeData.branch || '-'}`;
             if (document.getElementById('pDeptGrid')) document.getElementById('pDeptGrid').textContent = currentEmployeeData.department?.name || '-';
             if (document.getElementById('pDesigGrid')) document.getElementById('pDesigGrid').textContent = currentEmployeeData.designation?.name || '-';
         }

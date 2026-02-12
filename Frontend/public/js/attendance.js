@@ -513,8 +513,7 @@ async function quickSaveAttendance(id, btn) {
     const updatedData = {
         employee: realEmpId || (localRecord.employee?._id || localRecord.employee),
         date: localRecord.date,
-        branch: localRecord.branch || (document.getElementById('filterBranch').value || '(PWD-1)'),
-        branch: localRecord.branch || (document.getElementById('filterBranch').value || '(PWD-1)'),
+        branch: localRecord.branch || document.getElementById('filterBranch').value || '',
         checkIn: tr.querySelector('.col-checkin input').value,
         checkOut: tr.querySelector('.col-checkout input').value,
         workedHrs: tr.querySelector('.col-worked').textContent,
