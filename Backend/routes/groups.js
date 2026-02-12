@@ -12,7 +12,7 @@ const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 
 router.use(protect);
-router.use(authorize('admin')); // Only admin can manage groups
+router.use(authorize('admin', 'groups')); // Allow admin role OR anyone with 'groups' permission
 
 router
     .route('/')

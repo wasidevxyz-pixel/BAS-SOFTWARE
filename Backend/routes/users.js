@@ -15,7 +15,7 @@ const router = express.Router({ mergeParams: true });
 const { protect, authorize } = require('../middleware/auth');
 
 router.use(protect);
-router.use(authorize('admin')); // Only admin can manage users
+router.use(authorize('admin', 'users')); // Allow admin role OR anyone with 'users' permission
 
 router
     .route('/')

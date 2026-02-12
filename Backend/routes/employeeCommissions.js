@@ -12,12 +12,12 @@ const { protect, authorize } = require('../middleware/auth');
 
 router.use(protect);
 
-router.get('/list', authorize('admin', 'manager', 'accountant'), getCommissionsList);
-router.get('/detail/:id', authorize('admin', 'manager', 'accountant'), getCommissionById);
+router.get('/list', authorize('admin', 'manager', 'accountant', 'emp_commission'), getCommissionsList);
+router.get('/detail/:id', authorize('admin', 'manager', 'accountant', 'emp_commission'), getCommissionById);
 
 router.route('/')
-    .get(authorize('admin', 'manager', 'accountant'), getCommissions)
-    .post(authorize('admin', 'manager', 'accountant'), createCommission);
+    .get(authorize('admin', 'manager', 'accountant', 'emp_commission'), getCommissions)
+    .post(authorize('admin', 'manager', 'accountant', 'emp_commission'), createCommission);
 
 router.route('/:id')
     .delete(authorize('admin', 'manager'), deleteCommission);

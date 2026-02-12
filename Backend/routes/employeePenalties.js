@@ -12,11 +12,11 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect);
 
 router.route('/')
-    .get(authorize('admin', 'manager', 'accountant'), getPenalties)
-    .post(authorize('admin', 'manager'), createPenalty);
+    .get(authorize('admin', 'manager', 'accountant', 'employee_penalty'), getPenalties)
+    .post(authorize('admin', 'manager', 'employee_penalty'), createPenalty);
 
 router.route('/:id')
-    .put(authorize('admin', 'manager'), updatePenalty)
+    .put(authorize('admin', 'manager', 'employee_penalty'), updatePenalty)
     .delete(authorize('admin', 'manager'), deletePenalty);
 
 module.exports = router;

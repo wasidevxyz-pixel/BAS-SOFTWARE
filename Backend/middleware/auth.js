@@ -67,21 +67,28 @@ const hasGroupRight = (user, ...keys) => {
   return false;
 };
 
-// Grant access to specific roles
+// Grant access to specific roles or group permissions
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      // Also allow if generic 'admin' right is present
-      if (hasGroupRight(req.user, 'admin', 'administration')) {
-        return next();
-      }
-
-      return res.status(403).json({
-        success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`
-      });
+    // 1. Check if user's role is specifically authorized
+    if (roles.includes(req.user.role)) {
+      return next();
     }
-    next();
+
+    // 2. Check if user has any of these keys as a Group Right (Permission)
+    if (hasGroupRight(req.user, ...roles)) {
+      return next();
+    }
+
+    // 3. Fallback: Always allow if user has full 'admin' or 'administration' right
+    if (hasGroupRight(req.user, 'admin', 'administration')) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: `User role ${req.user.role} is not authorized to access this route`
+    });
   };
 };
 

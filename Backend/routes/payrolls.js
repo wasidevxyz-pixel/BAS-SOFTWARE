@@ -15,15 +15,15 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect);
 
 router.route('/')
-    .get(authorize('admin', 'manager', 'accountant'), getPayrolls)
-    .post(authorize('admin', 'manager', 'accountant'), createPayroll);
+    .get(authorize('admin', 'manager', 'accountant', 'monthly_payroll'), getPayrolls)
+    .post(authorize('admin', 'manager', 'accountant', 'monthly_payroll'), createPayroll);
 
 router.route('/calculate')
-    .post(authorize('admin', 'manager', 'accountant'), calculatePayroll);
+    .post(authorize('admin', 'manager', 'accountant', 'monthly_payroll'), calculatePayroll);
 
 router.route('/:id')
-    .get(authorize('admin', 'manager', 'accountant'), getPayroll)
-    .put(authorize('admin', 'manager', 'accountant'), updatePayroll)
+    .get(authorize('admin', 'manager', 'accountant', 'monthly_payroll'), getPayroll)
+    .put(authorize('admin', 'manager', 'accountant', 'monthly_payroll'), updatePayroll)
     .delete(authorize('admin', 'manager'), deletePayroll);
 
 module.exports = router;

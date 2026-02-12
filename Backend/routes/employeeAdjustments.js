@@ -11,8 +11,8 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect);
 
 router.route('/')
-    .get(authorize('admin', 'manager', 'accountant'), getAdjustments)
-    .post(authorize('admin', 'manager', 'accountant'), createAdjustment);
+    .get(authorize('admin', 'manager', 'accountant', 'emp_adjustment'), getAdjustments)
+    .post(authorize('admin', 'manager', 'accountant', 'emp_adjustment'), createAdjustment);
 
 router.route('/:id')
     .delete(authorize('admin', 'manager'), deleteAdjustment);
