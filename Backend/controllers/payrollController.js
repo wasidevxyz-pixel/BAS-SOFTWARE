@@ -135,20 +135,24 @@ exports.calculatePayroll = async (req, res) => {
             if (adv.transactionType === 'Pay') {
                 currentPayAmount += (adv.amount || adv.paid || 0);
             } else if (adv.transactionType === 'Received') {
-                // Subtract Received amounts (Adjustments/Recoveries) from the Current Month Advance total
-                // This ensures CMAdv shows the NET advance impact (Advances - Cash Recoveries)
                 currentPayAmount -= (adv.amount || adv.paid || 0);
             }
         });
 
-        // Get installments from the MOST RECENTLY MODIFIED record of this month
-        // Sorting by updatedAt ensures that if you change 10k to 8k, the 8k is picked up!
-        const latestAdvInMonth = [...monthlyAdvances].sort((a, b) =>
+        // 1. Try picking installments from this month's records
+        let planSource = [...monthlyAdvances].sort((a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         )[0];
 
-        const currentRecInstallment = latestAdvInMonth?.currentMonthInstallment?.installment || 0;
-        const prevRecInstallment = latestAdvInMonth?.preMonthInstallment?.installment || 0;
+        // 2. Fallback: If no record this month, look at the ABSOLUTE LATEST record ANYWHERE
+        // This ensures the user's latest installment plan persists until changed.
+        if (!planSource) {
+            planSource = await EmployeeAdvance.findOne({ employee: employeeId })
+                .sort({ date: -1, createdAt: -1 });
+        }
+
+        const currentRecInstallment = planSource?.currentMonthInstallment?.installment || 0;
+        const prevRecInstallment = planSource?.preMonthInstallment?.installment || 0;
 
         // Previous balance (Opening for this month)
         // Find the most recent advance before this month to get its balance
@@ -157,7 +161,7 @@ exports.calculatePayroll = async (req, res) => {
             date: { $lt: startDate }
         }).sort({ date: -1, createdAt: -1 });
 
-        const prevAdvBalance = lastPrevAdvance ? lastPrevAdvance.balance : (employee.opening || 0);
+        const prevAdvBalance = lastPrevAdvance ? (lastPrevAdvance.balance || 0) : (employee.opening || 0);
 
         // Sum all penalties for this month
         const penalties = await EmployeePenalty.find({

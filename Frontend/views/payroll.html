@@ -779,7 +779,11 @@
             <!-- Right Column -->
             <div class="col-md-4 flex-column-custom">
                 <div class="card card-custom">
-                    <div class="section-header header-red">Net Calculation</div>
+                    <div class="section-header header-red justify-content-between">
+                        <span>Net Calculation</span>
+                        <i class="fas fa-sync-alt" style="cursor: pointer; font-size: 0.8rem;"
+                            onclick="refreshCurrentCalculation()" title="Recalculate from Backend"></i>
+                    </div>
                     <div class="card-body-custom">
                         <div class="row row-custom align-items-center">
                             <div class="col-4"><label class="form-label-custom">GrossTotal</label></div>

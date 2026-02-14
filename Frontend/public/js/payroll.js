@@ -169,7 +169,30 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmDelete();
         }
     });
+
+    const myModal = document.getElementById('payrollListModal');
+    if (myModal) {
+        myModal.addEventListener('shown.bs.modal', function () {
+            loadPayrollList();
+        });
+    }
 });
+
+async function refreshCurrentCalculation() {
+    const employeeId = document.getElementById('employee').value;
+    const monthYear = document.getElementById('monthYear').value;
+    const branch = document.getElementById('branch').value;
+
+    if (!employeeId || !monthYear) {
+        alert('Please select an employee and month first');
+        return;
+    }
+
+    if (confirm('This will recalculate all values from the backend (Advances, Penalties, Attendance). Any unsaved manual changes might be overwritten. Proceed?')) {
+        await forceRecalculate(employeeId, monthYear, branch);
+        alert('Data recalculated successfully');
+    }
+}
 
 
 
