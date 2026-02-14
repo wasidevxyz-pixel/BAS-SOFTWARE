@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Registered List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/desktop-style.css" rel="stylesheet">
+    <link href="css/sidebar.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @media screen {
+
+            .print-grid,
+            .print-header,
+            .print-value {
+                display: none !important;
+            }
+
+            .table-container {
+                margin: 0 !important;
+            }
+        }
+
+        .header-controls {
+            background-color: #f8f9fa;
+            padding: 4px;
+            border: 1px solid #dee2e6;
+            margin: 0 !important;
+            border-bottom: none;
+        }
+
+        .table-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            overflow-x: auto;
+        }
+
+        .table {
+            margin-bottom: 0;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .table thead th {
+            background-color: #000 !important;
+            color: #fff !important;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 8px 4px !important;
+            vertical-align: middle;
+            border: 1px solid #666 !important;
+            border-right: 1px solid #bbb !important;
+        }
+
+        .table tbody td {
+            padding: 2px 4px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        /* Column Widths */
+        .col-sr {
+            width: 35px;
+        }
+
+        .col-date {
+            width: 90px;
+        }
+
+        .col-code {
+            width: 100px;
+        }
+
+        .col-name {
+            width: 180px;
+        }
+
+        .col-dept {
+            width: 120px;
+        }
+
+        .col-desig {
+            width: 120px;
+        }
+
+        .col-duty {
+            width: 80px;
+        }
+
+        .col-checkin,
+        .col-checkout,
+        .col-breakout,
+        .col-breakin {
+            width: 90px;
+        }
+
+        .col-worked,
+        .col-breakhrs,
+        .col-totaldiff,
+        .col-totalhrs {
+            width: 70px;
+        }
+
+        .col-diff-btns {
+            width: 45px;
+        }
+
+        .col-diffin,
+        .col-diffout {
+            width: 80px;
+        }
+
+        /* Screen Header Grid with Side Borders */
+        .header-grid {
+            display: grid;
+            grid-template-columns: 180px 180px 150px 1fr 180px 150px;
+            border: 2px solid #000;
+            margin-bottom: 15px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-box {
+            border-right: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-box:last-child {
+            border-right: none;
+        }
+
+        .header-label {
+            font-weight: bold;
+            font-size: 0.75rem;
+            background: #eee;
+            border-bottom: 1px solid #000;
+            padding: 2px 5px;
+            color: #333;
+            text-transform: uppercase;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .header-box span:not(.header-label) {
+            padding: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #000;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .company-section-screen {
+            text-align: center;
+            padding: 4px;
+            border-right: 1px solid #000;
+        }
+
+        .company-section-screen h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #000;
+            font-family: 'Times New Roman', serif;
+            line-height: 1;
+        }
+
+        .company-section-screen h2 {
+            margin: 0;
+            font-size: 0.95rem;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .company-section-screen p {
+            margin: 0;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .no-print {
+            display: flex;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .col-status {
+            width: 140px;
+        }
+
+        .diff-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-diff {
+            width: 26px;
+            height: 18px;
+            padding: 0;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        .input-diff-box {
+            width: 100%;
+            height: 28px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background-color: #f1f3f5;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .form-control-xs {
+            height: 24px;
+            font-size: 0.75rem;
+            padding: 0 4px;
+        }
+
+        .code-link-box {
+            background-color: var(--info-blue);
+            color: white !important;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-decoration: none !important;
+            font-weight: bold;
+            display: inline-block;
+            font-size: var(--font-xs);
+            line-height: 1.2;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid var(--info-blue);
+        }
+
+        .code-link-box:hover {
+            background-color: #0086e6;
+            /* Slightly darker than info-blue */
+            border-color: #0076cc;
+        }
+
+        .row-completed td {
+            background-color: #28a745 !important;
+            /* Darker Green (Bootstrap Success) */
+            color: #ffffff !important;
+        }
+
+        .row-partial td {
+            background-color: #e2ec7a !important;
+            /* Yellow */
+            color: black !important;
+        }
+
+        .row-absent td {
+            background-color: #ea1c0d !important;
+            /* Darker red */
+            color: #ffffff !important;
+        }
+
+        .row-overtime td {
+            background-color: #9d8df1 !important;
+            /* Purple */
+            color: white !important;
+        }
+
+        .row-warning td {
+            background-color: #fd7e14 !important;
+            /* Orange Warning */
+            color: white !important;
+        }
+
+        .row-leave td {
+            background-color: #fff3cd !important;
+            /* Yellow-Orange */
+            color: #856404 !important;
+        }
+
+        .row-completed input,
+        .row-completed select,
+        .row-partial input,
+        .row-partial select,
+        .row-absent input,
+        .row-absent select,
+        .row-overtime input,
+        .row-overtime select,
+        .row-warning input,
+        .row-warning select,
+        .row-leave input,
+        .row-leave select {
+            background-color: white !important;
+            color: black !important;
+            border: 1px solid #ced4da !important;
+        }
+
+        /* Ensure dropdown options are visible (black text) */
+        select option {
+            color: black !important;
+            background-color: white !important;
+            font-weight: normal !important;
+        }
+
+        .row-completed a,
+        .row-overtime a,
+        .row-warning a {
+            color: #ffffff !important;
+            font-weight: bold !important;
+            text-decoration: none;
+        }
+
+        /* Lighter buttons for visibility on dark rows */
+        .row-completed .btn-success,
+        .row-partial .btn-success,
+        .row-absent .btn-success,
+        .row-overtime .btn-success,
+        .row-warning .btn-success,
+        .row-leave .btn-success {
+            background-color: #51cf66 !important;
+            border-color: #51cf66 !important;
+        }
+
+        .row-completed .btn-danger,
+        .row-partial .btn-danger,
+        .row-absent .btn-danger,
+        .row-overtime .btn-danger,
+        .row-warning .btn-danger,
+        .row-leave .btn-danger {
+            background-color: #ff6b6b !important;
+            border-color: #ff6b6b !important;
+        }
+
+        .opacity-50 {
+            opacity: 0.3;
+        }
+
+        /* Professional Print Styles - Matching Portrait Ref Image */
+        @media print {
+            @page {
+                size: portrait;
+                margin: 10mm;
+                /* Standard margin for balanced look */
+            }
+
+            /* Hide elements not needed for print */
+            .page-header,
+            .header-controls,
+            #globalSearch,
+            .col-sr,
+            .col-action,
+            .col-dept,
+            .col-desig,
+            .col-duty,
+            .col-diff,
+            .col-diff-btns,
+            .col-diffin,
+            .col-diffout,
+            .col-totaldiff,
+            .btn,
+            .code-link-box {
+                display: none !important;
+            }
+
+            .container-fluid {
+                padding: 0 !important;
+            }
+
+            /* Ensure specific portrait columns are visible */
+            .col-date,
+            .col-code,
+            .col-name,
+            .col-checkin,
+            .col-checkout,
+            .col-worked,
+            .col-breakout,
+            .col-breakin,
+            .col-breakhrs,
+            .col-totaldiff,
+            .col-totalhrs,
+            .col-status {
+                display: table-cell !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 7.5pt !important;
+                font-family: 'Times New Roman', serif !important;
+                table-layout: fixed;
+            }
+
+            th,
+            td {
+                border: 1px solid #000 !important;
+                padding: 2px 1px !important;
+                text-align: center !important;
+                overflow: hidden;
+                vertical-align: middle !important;
+                line-height: 1.1;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Allow header text to wrap */
+            /* Allow header text to wrap */
+            thead th {
+                white-space: normal !important;
+                word-wrap: break-word;
+                /* Ensure force wrap */
+                overflow-wrap: break-word;
+                height: 30px;
+                vertical-align: middle !important;
+                background-color: #eee !important;
+                color: #000 !important;
+                font-weight: bold;
+                border-bottom: 2px solid #000 !important;
+                font-size: 7.5pt !important;
+                /* Force smaller font */
+            }
+
+            /* Column Width Adjustments for Portrait - Optimized for fit */
+            /* Column Width Adjustments for Portrait - Optimized for fit */
+            .col-date {
+                width: 9% !important;
+            }
+
+            .col-code {
+                width: 6% !important;
+            }
+
+            .col-name {
+                width: 18% !important;
+                text-align: left !important;
+                padding-left: 3px !important;
+            }
+
+            .col-checkin,
+            .col-checkout {
+                width: 7.5% !important;
+            }
+
+            .col-worked {
+                width: 7% !important;
+            }
+
+            .col-breakout,
+            .col-breakin {
+                width: 7.5% !important;
+            }
+
+            .col-breakhrs,
+            .col-totaldiff,
+            .col-totalhrs {
+                width: 6.5% !important;
+            }
+
+            .col-status {
+                width: 5% !important;
+            }
+
+            /* Remove the complex grid header */
+            .print-grid {
+                display: none !important;
+            }
+
+            .print-box {
+                display: none !important;
+            }
+
+            /* Simple Centered Header */
+            .company-section {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 10px;
+                font-family: 'Times New Roman', serif;
+            }
+
+            .company-section h1 {
+                font-size: 22pt;
+                margin: 0;
+                font-weight: bold;
+                line-height: 1.2;
+            }
+
+            .company-section h2 {
+                font-size: 12pt;
+                margin: 2px 0;
+                font-weight: bold;
+            }
+
+            .company-section p {
+                font-size: 10pt;
+                margin: 0;
+            }
+
+            /* Clean up inputs for print - HIDE THEM */
+            input,
+            select,
+            .form-control,
+            .form-control-xs,
+            .input-diff-box {
+                display: none !important;
+            }
+
+            /* Show Text Values */
+            .print-value {
+                display: inline !important;
+                font-weight: normal;
+                color: #000;
+            }
+
+            /* Hide Link Box in Print, let print-value show */
+            .code-link-box {
+                display: none !important;
+            }
+
+            .row-present td,
+            .row-absent td,
+            .row-leave td {
+                background-color: transparent !important;
+                color: black !important;
+            }
+
+            body,
+            html,
+            .table-container {
+                background-color: white !important;
+            }
+        }
+
+        /* Professional Mobile Enhancements */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 0.5rem 0.75rem !important;
+                background: #000 !important;
+            }
+
+            .page-header #userName,
+            .page-header .fa-chevron-down {
+                display: none;
+            }
+
+            .header-controls {
+                display: none !important;
+                /* Hide the bulky filter bar on mobile */
+            }
+
+            .container-fluid {
+                padding-bottom: 75px !important;
+            }
+
+            #globalSearch {
+                padding: 10px 15px !important;
+                font-size: 0.9rem !important;
+                border-bottom: 2px solid #dee2e6 !important;
+            }
+
+            .table-container {
+                height: calc(100vh - 160px) !important;
+                overflow: auto;
+            }
+
+            /* Bottom Action Bar */
+            .action-bar-mobile {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex !important;
+                justify-content: space-around;
+                padding: 8px 5px;
+                box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+                z-index: 1050;
+                border-top: 1px solid #e2e8f0;
+                height: 65px;
+            }
+
+            .action-btn-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 600;
+                flex: 1;
+                transition: all 0.2s;
+            }
+
+            .action-btn-mobile i {
+                font-size: 1.25rem;
+                margin-bottom: 3px;
+            }
+
+            .action-btn-mobile.btn-search i {
+                color: #10b981;
+            }
+
+            .action-btn-mobile.btn-print i {
+                color: #3b82f6;
+            }
+
+            .action-btn-mobile.btn-import i {
+                color: #ef4444;
+            }
+
+            .action-btn-mobile.btn-filter i {
+                color: #f59e0b;
+            }
+        }
+
+        /* Screen Styles - Hide Print Grid */
+        .print-grid {
+            display: none;
+        }
+
+        .print-header {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Simple Centered Print Header -->
+    <div class="company-section" style="display: none;">
+        <h1>Dwatson</h1>
+        <h2 id="pBranchHeader">Branch: -</h2>
+        <h2>Employee Attendance Sheet</h2>
+        <p id="pDateRange"></p>
+    </div>
+
+    <!-- Hidden Grid (Removed) -->
+    <div class="print-grid" style="display: none;"></div>
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            Attendance Registered List
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><a class="dropdown-item py-2 logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid p-0">
+        <div class="header-controls">
+            <!-- Filter Bar -->
+            <div class="d-flex gap-1 align-items-center flex-wrap">
+                <label class="small fw-bold px-1">From</label>
+                <input type="date" id="fromDate" class="form-control form-control-sm"
+                    style="width: 130px; font-size: 0.75rem;">
+
+                <label class="small fw-bold px-1">To</label>
+                <input type="date" id="toDate" class="form-control form-control-sm"
+                    style="width: 130px; font-size: 0.75rem;">
+
+                <select id="filterBranch" class="form-select form-select-sm" style="width: 130px; font-size: 0.75rem;">
+                    <option value="">Select Branch</option>
+                </select>
+
+                <select id="filterDept" class="form-select form-select-sm" style="width: 140px; font-size: 0.75rem;">
+                    <option value="">Select Department</option>
+                </select>
+
+                <select id="filterDesig" class="form-select form-select-sm" style="width: 140px; font-size: 0.75rem;">
+                    <option value="">Select Designation</option>
+                </select>
+
+                <select id="filterStatus" class="form-select form-select-sm" style="width: 150px; font-size: 0.75rem;">
+                    <option value="">All Attendance</option>
+                    <option value="less_1hr">Less then 1 Hrs</option>
+                    <option value="greater_17hr">Greater then 17 Hrs</option>
+                    <option value="no_checkinout">No Check In-Out</option>
+                    <option value="checkin_no_out">CheckIn but No Out</option>
+                </select>
+
+                <button class="btn btn-success btn-sm px-2" style="font-size: 0.75rem;"
+                    onclick="loadAttendanceList()"><i class="fas fa-search"></i> Search</button>
+                <button class="btn btn-info btn-sm px-2 text-white" style="font-size: 0.75rem;"
+                    onclick="handlePrint()"><i class="fas fa-print"></i>
+                    Print</button>
+                <button class="btn btn-danger btn-sm px-2" style="font-size: 0.75rem;"
+                    onclick="window.location.href='/import-attendance.html'">Import Multiple
+                    Attendance</button>
+                <button class="btn btn-warning btn-sm px-2" style="font-size: 0.75rem;">Start Timer</button>
+            </div>
+        </div>
+
+        <!-- Global Search -->
+        <div
+            style="background: white; border: 1px solid #dee2e6; border-top: none; padding: 2px 8px; margin: 0 !important;">
+            <input type="text" id="globalSearch" class="form-control form-control-sm border-0 shadow-none"
+                placeholder="SEARCH..." style="font-size: 0.85rem; font-weight: 500; text-transform: uppercase;"
+                onkeyup="handleGlobalSearch(this.value)">
+        </div>
+
+        <div class="table-container">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th class="col-sr" style="width: 30px;">SrNo</th>
+                        <th class="col-date" style="width: 70px;">Date</th>
+                        <th class="col-code" style="width: 100px;">Code</th>
+                        <th class="col-name" style="width: 140px;">Name</th>
+                        <th class="col-dept" style="width: 100px;">Department</th>
+                        <th class="col-desig" style="width: 100px;">Designation</th>
+                        <th class="col-duty" style="width: 60px;">Duty Hours</th>
+                        <th class="col-checkin" style="width: 80px;">Check_In</th>
+                        <th class="col-checkout" style="width: 80px;">Check_Out</th>
+                        <th class="col-worked" style="width: 70px;">Worked_Hrs</th>
+                        <th class="col-breakout" style="width: 80px;">Break_Out</th>
+                        <th class="col-breakin" style="width: 80px;">Break_In</th>
+                        <th class="col-breakhrs" style="width: 60px;">Break_Hrs</th>
+                        <th class="col-diff" style="width: 40px;">+ -</th>
+                        <th class="col-diffin" style="width: 70px;">Time Diff In</th>
+                        <th class="col-diffout" style="width: 70px;">Time Diff Out</th>
+                        <th class="col-totaldiff" style="width: 60px;">Tot Diff</th>
+                        <th class="col-totalhrs" style="width: 60px;">Tot Hrs</th>
+                        <th class="col-status" style="width: 80px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceRecordsBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="action-bar-mobile d-none">
+        <button type="button" class="action-btn-mobile btn-filter" data-bs-toggle="modal"
+            data-bs-target="#mobileFilterModal">
+            <i class="fas fa-filter"></i>
+            <span>Filters</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-search" onclick="loadAttendanceList()">
+            <i class="fas fa-search"></i>
+            <span>Refresh</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-print" onclick="handlePrint()">
+            <i class="fas fa-print"></i>
+            <span>Print</span>
+        </button>
+        <button type="button" class="action-btn-mobile btn-import" onclick="location.reload()">
+            <i class="fas fa-file-import"></i>
+            <span>Import</span>
+        </button>
+    </div>
+
+    <!-- Mobile Filter Modal -->
+    <div class="modal fade" id="mobileFilterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Attendance Filters</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">From Date</label>
+                            <input type="date" id="mFromDate" class="form-control"
+                                onchange="document.getElementById('fromDate').value = this.value">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">To Date</label>
+                            <input type="date" id="mToDate" class="form-control"
+                                onchange="document.getElementById('toDate').value = this.value">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Branch</label>
+                            <select id="mFilterBranch" class="form-select"
+                                onchange="document.getElementById('filterBranch').value = this.value; document.getElementById('filterBranch').dispatchEvent(new Event('change'))">
+                                <option value="">Select Branch</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Department</label>
+                            <select id="mFilterDept" class="form-select"
+                                onchange="document.getElementById('filterDept').value = this.value">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Status</label>
+                            <select id="mFilterStatus" class="form-select"
+                                onchange="document.getElementById('filterStatus').value = this.value">
+                                <option value="">All Attendance</option>
+                                <option value="less_1hr">Less then 1 Hrs</option>
+                                <option value="greater_17hr">Greater then 17 Hrs</option>
+                                <option value="no_checkinout">No Check In-Out</option>
+                                <option value="checkin_no_out">CheckIn but No Out</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary w-100"
+                        onclick="loadAttendanceList(); bootstrap.Modal.getInstance(document.getElementById('mobileFilterModal')).hide();">Apply
+                        Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sync mobile modal selects with main selects when modal opens
+        document.getElementById('mobileFilterModal').addEventListener('shown.bs.modal', function () {
+            document.getElementById('mFromDate').value = document.getElementById('fromDate').value;
+            document.getElementById('mToDate').value = document.getElementById('toDate').value;
+
+            // Populate branch/dept/desig if not already done
+            const branchSelect = document.getElementById('filterBranch');
+            const mBranchSelect = document.getElementById('mFilterBranch');
+            if (mBranchSelect.options.length <= 1) {
+                Array.from(branchSelect.options).forEach(opt => {
+                    if (opt.value) mBranchSelect.add(new Option(opt.text, opt.value));
+                });
+            }
+            mBranchSelect.value = branchSelect.value;
+
+            const deptSelect = document.getElementById('filterDept');
+            const mDeptSelect = document.getElementById('mFilterDept');
+            if (mDeptSelect.options.length <= 1) {
+                Array.from(deptSelect.options).forEach(opt => {
+                    if (opt.value) mDeptSelect.add(new Option(opt.text, opt.value));
+                });
+            }
+            mDeptSelect.value = deptSelect.value;
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/pageAccess.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/attendance.js?v=3"></script>
+</body>
+
+</html>

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sub-Department-Wise Report - Bilal Accounting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="css/desktop-style.css" rel="stylesheet">
+    <link href="css/sidebar.css" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e4c8c;
+            margin-bottom: 5px;
+        }
+
+        .page-subtitle {
+            font-size: 0.875rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #e1e5eb;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, #2c5ba9 0%, #1e4c8c 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-section {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .filters-section label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+            color: #555;
+        }
+
+        .filters-section .form-control,
+        .filters-section .form-select {
+            font-size: 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .btn-generate {
+            background: #014d35;
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .btn-generate:hover {
+            background: #138496;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .summary-cards-row {
+            padding: 20px;
+        }
+
+        .summary-card-container {
+            margin-bottom: 15px;
+        }
+
+        .summary-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-card.yellow {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .summary-card.dark {
+            background: #50555a;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            opacity: 0.95;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .data-table-section {
+            padding: 0 20px 20px 20px;
+        }
+
+        .custom-table th {
+            background: #000000 !important;
+            color: white !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 12px 15px;
+            border: 1px solid #ffffff !important;
+        }
+
+        .custom-table th:first-child {
+            border-radius: 0 !important;
+        }
+
+        .custom-table th:last-child {
+            border-radius: 0 !important;
+        }
+
+        /* Alternating Row Colors */
+        .custom-table tbody tr {
+            transition: background-color 0.2s ease, transform 0.15s ease;
+        }
+
+        .custom-table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        .custom-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #e8f4fd !important;
+            transform: scale(1.002);
+        }
+
+        .custom-table td {
+            font-size: 0.9rem;
+            padding: 14px 15px;
+            vertical-align: middle;
+            border: none;
+            border-bottom: 1px solid #e9ecef;
+            color: #2c3e50;
+        }
+
+        /* First column (Branch) styling */
+        .custom-table td:first-child {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        /* Second column (Sub-Department) styling */
+        .custom-table td:nth-child(2) {
+            font-weight: 600;
+            color: #2c5ba9;
+        }
+
+        /* Numeric columns */
+        .custom-table td.text-end {
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            font-weight: 500;
+        }
+
+        /* Net Sale column highlighting */
+        .custom-table td:nth-child(5) {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        /* Footer/Total Row Styling */
+        .total-row>td {
+            background: #d1e7dd !important;
+            /* Light Green */
+            color: #0f5132 !important;
+            /* Dark Green */
+            font-weight: 600;
+            padding: 12px 15px;
+            border: 1px solid #333 !important;
+            font-size: 0.9rem;
+        }
+
+        .total-row>td:first-child {
+            border-radius: 0;
+        }
+
+        .total-row>td:last-child {
+            border-radius: 0;
+        }
+
+        .total-row>td.text-end {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        /* Group Header Styling */
+        .group-header td {
+            text-align: center !important;
+            background: #014d35 !important;
+            background: #014d35 !important;
+            font-weight: 600;
+            color: white !important;
+            padding: 12px 15px;
+            border: 1px solid #333 !important;
+            font-size: 0.9rem;
+        }
+
+        /* Subtotal Row Styling */
+        .subtotal-row td {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+            font-weight: 800 !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        /* Empty State Enhancement */
+        .empty-state {
+            padding: 80px 40px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #adb5bd;
+            opacity: 0.6;
+        }
+
+
+        /* =====================================================
+           MOBILE STYLES (max-width: 768px)
+           ===================================================== */
+        @media (max-width: 768px) {
+
+            .custom-table,
+            .custom-table thead,
+            .custom-table tfoot th,
+            .custom-table tfoot td {
+                display: block;
+                width: 100%;
+            }
+
+            .custom-table thead {
+                display: none;
+            }
+
+            /* TBODY acts as the Card Container */
+            .custom-table tbody.dept-group {
+                display: block;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                overflow: hidden;
+                border: 1px solid #e1e5eb;
+                padding-bottom: 5px;
+            }
+
+            /* Group Header Styles inside the card */
+            .custom-table tbody tr.group-header {
+                text-align: center !important;
+                text-align: center !important;
+                display: block;
+                background-color: #f8f9fa !important;
+                border-bottom: 2px solid #e9ecef;
+            }
+
+            .custom-table tbody tr.group-header td {
+                text-align: center !important;
+                text-align: center !important;
+                background: #014d35 !important;
+                display: block;
+                padding: 12px 15px;
+                font-size: 1rem;
+                color: #2c5ba9 !important;
+                text-align: left;
+                width: 100% !important;
+            }
+
+            /* Content Rows Styles */
+            .custom-table tbody tr.dept-row {
+                display: flex;
+                flex-wrap: wrap;
+                border-bottom: 1px solid #f1f1f1;
+                padding: 10px 15px;
+                background: white;
+            }
+
+            .custom-table tbody tr.dept-row:last-child {
+                border-bottom: none;
+            }
+
+            /* Data Cells */
+            .custom-table tbody tr.dept-row td {
+                display: block;
+                width: 100%;
+                /* Default full width */
+                padding: 4px 0;
+                text-align: left !important;
+                font-size: 0.9rem;
+                border: none;
+                position: relative;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            /* Hide Branch Name in individual rows since it's in header */
+            .custom-table tbody tr.dept-row td[data-label="Branch"] {
+                display: none;
+            }
+
+            /* Sub-Dept Name - Make it prominent */
+            .custom-table tbody tr.dept-row td[data-label="Sub-Department"] {
+                width: 100%;
+                font-weight: 700;
+                margin-bottom: 5px;
+                border-bottom: 1px dashed #eee;
+                padding-bottom: 8px;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Sub-Department"]::before {
+                display: none;
+                /* No label needed */
+            }
+
+            /* Other Cells - Key Value Pairs */
+            .custom-table tbody tr.dept-row td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                font-size: 0.8rem;
+                color: #6c757d;
+                text-transform: uppercase;
+                margin-right: 10px;
+            }
+
+            /* Two columns for metrics */
+            .custom-table tbody tr.dept-row td[data-label="Discount"],
+            .custom-table tbody tr.dept-row td[data-label="Disc %"],
+            .custom-table tbody tr.dept-row td[data-label="Net Sale"],
+            .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+                width: 50%;
+                /* 2 items per row visual */
+                display: inline-flex;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Discount"],
+            .custom-table tbody tr.dept-row td[data-label="Net Sale"] {
+                padding-right: 5px;
+            }
+
+            .custom-table tbody tr.dept-row td[data-label="Disc %"],
+            .custom-table tbody tr.dept-row td[data-label="Daily Average"] {
+                padding-left: 5px;
+            }
+
+            /* Subtotal Row Styles */
+            .custom-table tbody tr.subtotal-row {
+                display: flex;
+                flex-wrap: wrap;
+                background-color: #f8d7da !important;
+                padding: 10px 15px;
+                margin-top: 5px;
+                border-top: 1px solid #90caf9;
+            }
+
+            .custom-table tbody tr.subtotal-row td {
+                display: block;
+                width: 50%;
+                font-size: 0.85rem;
+                padding: 2px 0;
+                border: none;
+                text-align: right;
+                background: transparent !important;
+            }
+
+            .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"] {
+                width: 100%;
+                text-align: left;
+                font-weight: 800 !important;
+                color: #721c24;
+                margin-bottom: 5px;
+            }
+
+            .custom-table tbody tr.subtotal-row td[data-label="Sub-Total"]::before {
+                display: none;
+            }
+
+            .custom-table tbody tr.subtotal-row td::before {
+                content: attr(data-label) ": ";
+                font-weight: 600;
+            }
+
+            /* Grand footer */
+            .custom-table tfoot {
+                margin-top: 20px;
+                background: transparent;
+            }
+
+            .custom-table tfoot tr {
+                background: #fff3cd;
+                border: 1px solid #ffeeba;
+                border-radius: 8px;
+                display: block;
+                padding: 15px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .custom-table tfoot td {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                border: none;
+                padding: 5px 0;
+                font-size: 1rem;
+            }
+
+            .custom-table tfoot td:nth-child(2)::before {
+                content: "Total ";
+            }
+
+            /* Label for total */
+        }
+
+        tr.group-header,
+        tr.group-header td,
+        tr.dept-header,
+        tr.dept-header td,
+        tr.branch-header,
+        tr.branch-header td {
+            text-align: center !important;
+            text-align: center !important;
+            background-color: #014d35 !important;
+            color: white !important;
+            font-weight: 700 !important;
+            border: 1px solid #333 !important;
+        }
+
+        /* Print Styles */
+        /* Print Styles - Professional & Full Width */
+        @media print {
+            @page {
+                size: A4;
+                margin: 5mm 5mm;
+            }
+
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Visibility Control */
+            body * {
+                visibility: hidden;
+            }
+
+            .main-container,
+            .main-container * {
+                visibility: visible;
+            }
+
+            .d-print-none {
+                display: none !important;
+            }
+
+            .main-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            .print-header {
+                visibility: visible;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+
+            /* SUMMARY CARDS - COMPACT FOR PRINT */
+            .summary-cards-row {
+                padding: 0 0 15px 0 !important;
+            }
+
+            .summary-card {
+                padding: 10px !important;
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                min-height: auto !important;
+            }
+
+            .summary-card .value {
+                font-size: 1.4rem !important;
+            }
+
+            .summary-card.yellow {
+                background-color: #ffc107 !important;
+                color: black !important;
+            }
+
+            .summary-card.dark {
+                background-color: #343a40 !important;
+                color: white !important;
+            }
+
+            /* TABLE LAYOUT - FORCE DESKTOP VIEW */
+            .data-table-section {
+                padding: 0 !important;
+            }
+
+            .table-responsive {
+                overflow: visible !important;
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .custom-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                display: table !important;
+                border: 1px solid #000;
+            }
+
+            /* Reset Mobile Overrides */
+            .custom-table tbody,
+            .custom-table thead,
+            .custom-table tfoot {
+                display: table-row-group !important;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .custom-table thead {
+                display: table-header-group !important;
+            }
+
+            .custom-table tr {
+                display: table-row !important;
+                break-inside: avoid;
+            }
+
+            .custom-table th,
+            .custom-table td {
+                display: table-cell !important;
+                width: auto !important;
+                padding: 4px 6px !important;
+                font-size: 0.75rem !important;
+                border: 1px solid #444 !important;
+                text-align: left;
+            }
+
+            /* Numeric Classes */
+            .text-end {
+                text-align: right !important;
+            }
+
+            .text-center {
+                text-align: center !important;
+            }
+
+            /* Hide Mobile Generated Labels */
+            .custom-table td::before {
+                display: none !important;
+                content: none !important;
+            }
+
+            /* --- COLORFUL HEADERS --- */
+
+            /* 1. Group Header (Branch | Dept) */
+            .custom-table tbody tr.group-header td {
+                background-color: #014d35 !important;
+                /* Original Dark Green */
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 0.9rem !important;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                padding: 8px !important;
+                text-align: center !important;
+                border: 1px solid #000 !important;
+            }
+
+            /* 2. Column Headers (The row below group header) */
+            .custom-table tr.table-dark th {
+                background-color: #000000 !important;
+                /* Standard Black */
+                color: white !important;
+                font-weight: bold;
+                text-transform: uppercase;
+                font-size: 0.7rem !important;
+                text-align: center !important;
+                border: 1px solid #ffffff !important;
+            }
+
+            /* 3. Subtotal Row */
+            tr.subtotal-row td {
+                background-color: #ffebee !important;
+                /* Light Red/Pink */
+                color: #b71c1c !important;
+                /* Dark Red Text */
+                font-weight: bold !important;
+                border-top: 2px solid #000 !important;
+            }
+
+            /* 4. Grand Total Footer */
+            tfoot tr.total-row td {
+                background-color: #ffc107 !important;
+                /* Solid Yellow */
+                color: black !important;
+                /* Black Text */
+                font-weight: 800 !important;
+                font-size: 1rem !important;
+                border-top: 2px solid #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* Row Striping */
+            tr.dept-row:nth-child(even) td {
+                background-color: #f8f9fa !important;
+            }
+
+            /* Clean up badge styling for print */
+            .badge {
+                border: none !important;
+                background: transparent !important;
+                color: black !important;
+                padding: 0 !important;
+                font-weight: normal;
+            }
+
+            /* Specific column adjustments */
+            td[data-label="Cost"] {
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Page Header -->
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <h4 class="mb-0">Shop Reports</h4>
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Header (Visible only on print) -->
+    <div class="print-header d-none d-print-block mb-4">
+        <div class="text-center">
+            <h2 class="fw-bold mb-0 text-uppercase">D.Watson</h2>
+            <h4 class="mb-2">Sub-Department Wise Sales Report</h4>
+            <p class="mb-0">
+                <strong>From:</strong> <span id="pFromDate"></span>
+                <span class="mx-3">|</span>
+                <strong>To:</strong> <span id="pToDate"></span>
+            </p>
+            <p class="small text-muted mt-1">Printed on: <span id="pPrintTime"></span></p>
+        </div>
+        <hr class="my-3" style="border-top: 2px solid #000;">
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-container">
+
+        <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+            <div>
+                <h5 class="mb-1 text-muted">Generate and view sub-department sales reports</h5>
+            </div>
+        </div>
+
+        <div class="mb-3 d-print-none">
+            <button class="btn btn-secondary" style="background-color: #2c5ba9; border: none; font-weight: 600;">
+                <i class="fas fa-sitemap me-2"></i>Sub-Department-Wise Report
+            </button>
+        </div>
+
+        <div class="report-card">
+            <div class="card-header-custom d-print-none">
+                <i class="fas fa-filter"></i> Sub-Department-Wise Report Filters
+            </div>
+
+            <div class="filters-section d-print-none">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label>Branch</label>
+                        <select id="branchSelect" class="form-select">
+                            <option value="">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Sub-Department</label>
+                        <select id="deptSelect" class="form-select">
+                            <option value="">All Sub-Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>From Date</label>
+                        <input type="date" id="fromDate" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label>To Date</label>
+                        <input type="date" id="toDate" class="form-control">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button class="btn btn-generate flex-grow-1" onclick="generateReport()">
+                            <i class="fas fa-file-alt"></i> View
+                        </button>
+                        <button class="btn btn-dark flex-grow-1" onclick="prepareAndPrint()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards-row">
+                <div class="row g-3">
+                    <div class="col-6 col-md-6">
+                        <div class="summary-card yellow">
+                            <div class="label" style="color: #212529;">Total Discount</div>
+                            <div class="value" id="totalDiscount" style="color: #212529;">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-6">
+                        <div class="summary-card dark">
+                            <div class="label">Net Sale</div>
+                            <div class="value" id="netSale">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Table -->
+            <div class="data-table-section">
+                <div> <!-- Removed table-responsive to avoid premature scrolling -->
+                    <table class="table table-bordered table-striped custom-table mb-0" style="width: 100%;">
+
+                        <tbody id="reportTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No data available. Please generate
+                                    the report.</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="reportTableFoot" style="display:none; font-weight: bold;">
+                            <tr class="total-row">
+                                <td colspan="2" class="text-end">Total:</td>
+                                <td class="text-end" id="tblDisc">0</td>
+                                <td></td>
+                                <td class="text-end" id="tblNet">0</td>
+                                <td class="text-end" id="tblCost">0</td>
+                                <td class="text-end" id="tblDaily">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/pageAccess.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/sub-dept-wise-report.js"></script>
+    <script>
+        function prepareAndPrint() {
+            document.getElementById('pFromDate').textContent = document.getElementById('fromDate').value;
+            document.getElementById('pToDate').textContent = document.getElementById('toDate').value;
+            document.getElementById('pPrintTime').textContent = new Date().toLocaleString();
+            window.print();
+        }
+    </script>
+</body>
+
+</html>

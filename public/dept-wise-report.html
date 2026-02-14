@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Department-Wise Report - Bilal Accounting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="css/desktop-style.css" rel="stylesheet">
+    <link href="css/sidebar.css" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f4f6f9;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e4c8c;
+            margin-bottom: 5px;
+        }
+
+        .page-subtitle {
+            font-size: 0.875rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #e1e5eb;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, #2c5ba9 0%, #1e4c8c 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filters-section {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .filters-section label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+            color: #555;
+        }
+
+        .filters-section .form-control,
+        .filters-section .form-select {
+            font-size: 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .btn-generate {
+            background: #014d35;
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .btn-generate:hover {
+            background: #138496;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .summary-cards-row {
+            padding: 20px;
+        }
+
+        .summary-card-container {
+            margin-bottom: 15px;
+        }
+
+        .summary-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-card.green {
+            background: #28a745;
+        }
+
+        .summary-card.yellow {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .summary-card.red {
+            background: #dc3545;
+        }
+
+        .summary-card.teal {
+            background: #014d35;
+        }
+
+        .summary-card.purple {
+            background: #6f42c1;
+        }
+
+        .summary-card.dark {
+            background: #50555a;
+            /* Matching the greyish/dark tone */
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            opacity: 0.95;
+        }
+
+        .summary-card .value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.1;
+            white-space: nowrap;
+            /* Try to keep on one line */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .data-table-section {
+            padding: 0 20px 20px 20px;
+        }
+
+        .custom-table th {
+            background: #000000 !important;
+            color: white !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 8px 10px;
+            /* Reduced padding */
+            border: 1px solid #ffffff !important;
+        }
+
+        .custom-table th:first-child {
+            border-radius: 0;
+        }
+
+        .custom-table th:last-child {
+            border-radius: 0;
+        }
+
+        /* Alternating Row Colors */
+        .custom-table tbody tr {
+            transition: background-color 0.2s ease, transform 0.15s ease;
+        }
+
+        .custom-table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        .custom-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #e8f4fd !important;
+            transform: scale(1.002);
+        }
+
+        .custom-table td {
+            font-size: 0.9rem;
+            padding: 8px 10px;
+            /* Reduced padding */
+            vertical-align: middle;
+            border: none;
+            border-bottom: 1px solid #e9ecef;
+            color: #2c3e50;
+        }
+
+        /* First column (Branch) styling */
+        .custom-table td:first-child {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        /* Second column (Department) styling */
+        .custom-table td:nth-child(2) {
+            font-weight: 600;
+            color: #2c5ba9;
+        }
+
+        /* Numeric columns */
+        .custom-table td.text-end {
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            font-weight: 500;
+        }
+
+        /* Net Sale column styling */
+        .custom-table td:nth-child(5) {
+            font-weight: 600;
+        }
+
+        /* Branch Total Row Styling */
+        .branch-total-row td {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+            font-weight: 700;
+            font-weight: 700;
+            padding: 18px 15px;
+            border: 1px solid #333 !important;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .custom-table tfoot td:first-child {
+            border-radius: 0 0 0 12px;
+        }
+
+        .custom-table tfoot td:last-child {
+            border-radius: 0 0 12px 0;
+        }
+
+        .custom-table tfoot td.text-end {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        /* Grand Total Row Styling */
+        .custom-table tfoot,
+        .custom-table tfoot td {
+            background-color: #cff4fc !important;
+            /* Light Info Blue */
+            color: #055160 !important;
+            /* Dark Blue Text */
+            border-top: 2px solid #000 !important;
+        }
+
+        /* Empty State Enhancement */
+        .empty-state {
+            padding: 80px 40px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #adb5bd;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 768px) {
+
+            /* Mobile Card Design: Group by TBODY (Branch) */
+            .custom-table {
+                display: block;
+                background: transparent;
+                border: none;
+            }
+
+            .custom-table thead {
+                display: none;
+            }
+
+            /* The TBODY acts as the "Card" */
+            tbody.branch-group {
+                display: block;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+                margin-bottom: 25px;
+                overflow: hidden;
+                border: 1px solid #e1e5eb;
+            }
+
+            /* Rows inside the card */
+            tbody.branch-group tr {
+                display: flex;
+                flex-direction: column;
+                /* Stack cells vertically */
+                border-bottom: 1px solid #f1f3f5;
+                /* Separator between Depts */
+                padding: 15px;
+                position: relative;
+            }
+
+            tbody.branch-group tr:last-child {
+                border-bottom: none;
+            }
+
+            /* CELLS */
+            .custom-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 0;
+                border: 1px solid #333 !important;
+                width: 100%;
+                text-align: right;
+                font-size: 0.9rem;
+            }
+
+            /* Labels */
+            .custom-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #7f8c8d;
+                font-size: 0.85rem;
+                text-align: left;
+                margin-right: 15px;
+            }
+
+            /* --- BRANCH HEADER STYLING --- */
+            /* We want the Branch Name to appear ONCE at the top. */
+
+            /* First row in tbody is the first department. It has the Branch Name cell. */
+            /* We style the first row's Branch cell as the Main Headeer. */
+            tbody.branch-group tr:first-child td[data-label="Branch"] {
+                background: #2c5ba9;
+                color: white;
+                font-weight: 700;
+                font-size: 1.1rem;
+                padding: 12px 15px;
+                margin: -15px -15px 15px -15px;
+                /* Pull to edges */
+                width: calc(100% + 30px);
+                justify-content: center;
+                /* Center text */
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            tbody.branch-group tr:first-child td[data-label="Branch"]::before {
+                display: none;
+            }
+
+            /* Hide "Branch" label in header */
+
+            /* For subsequent rows, HIDE the Branch cell (it's redundant) */
+            tbody.branch-group tr:not(:first-child) td[data-label="Branch"] {
+                display: none;
+            }
+
+            /* --- DEPARTMENT STYLING --- */
+            /* Department Name is the sub-header for the row */
+            .custom-table td[data-label="Department"] {
+                font-weight: 700;
+                color: #2c3e50;
+                font-size: 1rem;
+                margin-bottom: 5px;
+                border-bottom: 1px dashed #eee !important;
+                padding-bottom: 8px;
+            }
+
+            .custom-table td[data-label="Department"]::before {
+                display: none;
+            }
+
+            /* Hide "Department" label, name is enough */
+            .custom-table td[data-label="Department"] span {
+                background: transparent !important;
+                border: 1px solid #333 !important;
+                padding: 0;
+                font-weight: 700;
+                font-size: 1rem;
+            }
+
+            /* NET SALE Highlight */
+            .custom-table td[data-label="Net Sale"] {
+                color: #c0392b;
+                /* Dark Red text */
+                font-weight: 700;
+                font-size: 1.05rem;
+                background-color: #ffecec !important;
+                /* Light Red Background */
+            }
+
+            /* --- BRANCH TOTAL ROW (Inside Card) --- */
+            /* Overide Bootstrap Striping on Mobile to prevent mixed card colors */
+            .table-striped>tbody>tr:nth-of-type(odd)>* {
+                --bs-table-accent-bg: transparent !important;
+                box-shadow: none !important;
+            }
+
+            /* --- BRANCH TOTAL ROW (Inside Card) --- */
+            .branch-total-row {
+                background: #f8d7da !important;
+                /* Match Branch Header Color */
+                border-top: none !important;
+                margin-top: 5px;
+                padding-top: 10px !important;
+                color: #721c24 !important;
+            }
+
+            /* Ensure cells inside total row match the background */
+            /* Ensure cells inside total row match the background */
+            .branch-total-row td,
+            .branch-total-row td[data-label] {
+                background: #f8d7da !important;
+                color: white !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+                border: none;
+                /* Keep other borders none */
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+                font-weight: bold !important;
+            }
+
+            .branch-total-row td::before {
+                font-weight: bold !important;
+                color: #721c24 !important;
+                /* Pure White */
+                opacity: 1 !important;
+                text-transform: uppercase;
+                font-size: 0.85rem;
+            }
+
+            /* Hide the "Total Branch:" text cell on mobile if we want a cleaner look, 
+               OR style it to be full width. Let's make it a header. */
+            .branch-total-row td:first-child {
+                justify-content: center;
+                font-size: 1rem;
+                text-transform: uppercase;
+                font-weight: 800;
+                color: white !important;
+            }
+
+            /* Metrics in Total Row */
+            .branch-total-row td[data-label="Total Net Sale"] {
+                color: white !important;
+                /* White text on dark blue */
+                font-size: 1.1rem;
+                font-weight: 800;
+            }
+
+            .branch-total-row td[data-label="Total Net Sale"]::before,
+            .branch-total-row td[data-label]::before {
+                color: white !important;
+                /* Pure White label */
+                opacity: 1 !important;
+                font-weight: 800 !important;
+            }
+
+            /* Hide empty cells or non-critical columns in total if needed */
+            .branch-total-row td:empty {
+                display: none;
+            }
+
+            /* Footer Styling */
+            .custom-table tfoot {
+                display: block !important;
+                margin-top: 20px;
+            }
+
+            .custom-table tfoot tr {
+                background: #f8d7da !important;
+                border-radius: 8px;
+                display: block;
+                padding: 15px;
+                color: white;
+            }
+
+            .custom-table tfoot td {
+                display: flex;
+                justify-content: space-between;
+                color: white;
+                padding: 5px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .custom-table tfoot td::before {
+                color: #aaa;
+            }
+
+        }
+
+        /* Forced Header Styles */
+        tr.group-header,
+        tr.group-header td,
+        tr.dept-header,
+        tr.dept-header td,
+        tr.branch-header,
+        tr.branch-header td {
+            text-align: center !important;
+            text-align: center !important;
+            background-color: #014d35 !important;
+            color: white !important;
+            font-weight: 700 !important;
+            border: 1px solid #333 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Page Header -->
+    <div class="page-header px-3">
+        <div style="flex: 1; display: flex; align-items: center;">
+            <a href="/reports.html" class="btn btn-sm btn-outline-light me-3" title="Back to Reports Hub">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+            <h4 class="mb-0">Shop Reports</h4>
+        </div>
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center;">
+            <div class="dropdown">
+                <div class="d-flex align-items-center text-white" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i>
+                    <span id="userName" class="me-2">User</span>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item logout-btn" href="#"><i
+                                class="fas fa-sign-out-alt me-2 text-danger"></i>Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-container">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-1 text-muted">Generate and view sales reports</h5>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <button class="btn btn-secondary" style="background-color: #2c5ba9; border: none; font-weight: 600;">
+                <i class="fas fa-store me-2"></i>Department-Wise Report
+            </button>
+        </div>
+
+        <div class="report-card">
+            <div class="card-header-custom">
+                <i class="fas fa-filter"></i> Department-Wise Report Filters
+            </div>
+
+            <div class="filters-section">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label>Branch</label>
+                        <select id="branchSelect" class="form-select">
+                            <option value="">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Department</label>
+                        <select id="deptSelect" class="form-select">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>From Date</label>
+                        <input type="date" id="fromDate" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label>To Date</label>
+                        <input type="date" id="toDate" class="form-control">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-generate w-100" onclick="generateReport()">
+                            <i class="fas fa-file-alt me-2"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards-row">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="summary-card teal">
+                            <div class="label text-white">Branch</div>
+                            <div class="value text-white" id="summaryBranchName">All Branches</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="summary-card yellow">
+                            <div class="label text-white">Total Discount</div>
+                            <div class="value text-white" id="totalDiscount">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="summary-card green">
+                            <div class="label">Net Sale</div>
+                            <div class="value" id="netSale">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Table -->
+            <div class="data-table-section">
+                <div> <!-- Removed table-responsive to avoid premature scrolling -->
+                    <table class="table table-bordered table-striped custom-table mb-0" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Branch</th>
+                                <th>Department</th>
+                                <th class="text-end">Discount</th>
+                                <th class="text-end">Disc %</th>
+                                <th class="text-end">Net Sale</th>
+                                <th class="text-end">Daily Average</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No data available. Please generate
+                                    the report.</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="reportTableFoot" style="display:none; background-color: #f8f9fa; font-weight: bold;">
+                            <tr>
+                                <td colspan="2" class="text-end">Total:</td>
+                                <td class="text-end" id="tblDisc">0</td>
+                                <td></td>
+                                <td class="text-end" id="tblNet">0</td>
+                                <td class="text-end" id="tblDaily">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/pageAccess.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/dept-wise-report.js"></script>
+</body>
+
+</html>
