@@ -1,0 +1,556 @@
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+
+    body {
+        font-family: 'Times New Roman', Times, serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+    }
+
+    .no-print {
+        text-align: center;
+        padding: 20px;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .btn {
+        padding: 10px 25px;
+        cursor: pointer;
+        border-radius: 6px;
+        border: none;
+        background: #2e7d32;
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 0;
+            /* Zero margin for full control */
+        }
+
+        body {
+            background: white;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .page-wrapper {
+            margin: 0 !important;
+            box-shadow: none !important;
+            page-break-after: always;
+            border: none !important;
+        }
+    }
+
+    /* Page wrapper for 2 slips */
+    .page-wrapper {
+        width: 210mm;
+        height: 297mm;
+        /* Full A4 height */
+        margin: 0 auto;
+        background: white;
+        padding: 8mm 5mm;
+        /* Safe gutter for printer margins */
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .slip-outer {
+        width: 100%;
+        height: 132mm;
+        /* Consistent half-page size */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    .slip-container {
+        background-color: white;
+        width: 100%;
+        height: 128mm;
+        /* Fits inside outer */
+        margin: 0 auto;
+        border: 1.5px solid #000;
+        padding: 3px 5px;
+        position: relative;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .cutting-line {
+        width: 100%;
+        border-top: 1.2px dashed #666;
+        margin: 0.2mm 0;
+        /* Reduced from 1mm */
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 5mm;
+        /* Reduced height to save space */
+    }
+
+    .cutting-line::after {
+        content: "✂ Cut Here";
+        position: absolute;
+        background: white;
+        padding: 0 10px;
+        font-family: sans-serif;
+        font-size: 10px;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    .header-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 5px;
+        position: relative;
+    }
+
+    .header-info {
+        text-align: center;
+    }
+
+    .branch-title {
+        font-size: 1.5rem;
+        font-weight: 900;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+        font-family: 'Roboto', sans-serif;
+        color: #1a1a1a;
+    }
+
+    .slip-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-decoration: underline;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        color: #444;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1.2fr 1.8fr;
+        gap: 2px;
+        /* Reduced gap */
+        margin-bottom: 5px;
+        /* Reduced margin */
+        font-size: 0.85rem;
+        /* Slightly smaller font */
+    }
+
+    .info-label {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .info-value {
+        border-bottom: 1px solid #aaa;
+        padding-left: 2px;
+        color: #000;
+    }
+
+    .main-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border: 1.5px solid #000;
+        background: #fff;
+        flex-grow: 1;
+    }
+
+    .column {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .column-left {
+        border-right: 1.5px solid #000;
+    }
+
+    .column-header {
+        background-color: #333;
+        color: white;
+        text-align: center;
+        padding: 2px;
+        /* Reduced padding */
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        /* Slightly smaller */
+        border-bottom: 1.5px solid #000;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1.8fr 1fr;
+        border-bottom: 1px solid #eee;
+        font-size: 0.8rem;
+        min-height: 20px;
+        align-items: center;
+    }
+
+
+    .row:last-child {
+        border-bottom: none;
+    }
+
+    .label {
+        padding: 2px 10px;
+        /* Increased padding */
+        border-right: 1px solid #ddd;
+        color: #444;
+    }
+
+    .value {
+        padding: 2px 10px;
+        /* Increased padding */
+        text-align: right;
+        font-weight: bold;
+        color: #000;
+    }
+
+    .total-row {
+        display: grid;
+        grid-template-columns: 1.8fr 1fr;
+        background-color: #f8f9fa;
+        font-weight: bold;
+        border-top: 1.5px solid #000;
+        border-bottom: 1px solid #000;
+    }
+
+    .net-salary-row {
+        background-color: #000;
+        color: white;
+        text-align: center;
+        padding: 4px 10px;
+        /* Reduced padding */
+        font-size: 1.1rem;
+        /* Slightly smaller */
+        font-weight: 900;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 2px;
+        /* Reduced margin */
+    }
+
+    .signature-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        /* Changed to 2 columns */
+        margin-top: auto;
+        padding-top: 5px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.75rem;
+    }
+
+
+    .sig-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 0 10px;
+    }
+
+    .signature-font {
+        font-family: 'Dancing Script', cursive;
+        font-size: 1.6rem;
+        color: #1a237e;
+        margin-bottom: -10px;
+        display: block;
+    }
+
+    .sig-box .line {
+        border-top: 1.5px solid #000;
+        width: 100%;
+        max-width: 140px;
+        margin: 5px auto;
+    }
+
+    .sig-label {
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        color: #333;
+        letter-spacing: 1px;
+    }
+
+    /* Stamps */
+    .stamp-container {
+        position: absolute;
+        top: 55%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-15deg);
+        z-index: 100;
+        pointer-events: none;
+        opacity: 0.15;
+        width: 80%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .stamp {
+        border: 6px solid;
+        padding: 10px 30px;
+        font-size: 3rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        border-radius: 15px;
+        white-space: nowrap;
+        font-family: 'Arial Black', sans-serif;
+    }
+
+    .stamp-bank {
+        color: #1f569b;
+        border-color: #1f569b;
+    }
+
+    .stamp-paid {
+        color: #e15a4b;
+        border-color: #e15a4b;
+    }
+
+    .stamp-cash {
+        color: #2e7d32;
+        border-color: #2e7d32;
+    }
+
+    .stamp-adv {
+        color: #ed6c02;
+        border-color: #ed6c02;
+    }
+
+    @media print {
+        body {
+            background: white;
+        }
+
+        .no-print {
+            display: none;
+        }
+
+        .page-wrapper {
+            margin: 0;
+            box-shadow: none;
+            page-break-after: always;
+        }
+
+        .page-wrapper:last-child {
+            page-break-after: auto;
+        }
+    }
+</style>
+</head>
+
+<body>
+    <div class="no-print">
+        <button class="btn" onclick="window.print()">Print Slips</button>
+        <button class="btn" style="background: #37474f; margin-left: 10px;" onclick="window.close()">Close</button>
+    </div>
+
+    <div id="printContent">
+        <!-- Wrappers and Slips will be injected here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            const ids = params.get('ids');
+            const token = localStorage.getItem('token');
+
+            if (!id && !ids) {
+                alert('No Payroll data provided');
+                window.close();
+                return;
+            }
+
+            try {
+                let payrolls = [];
+                if (id) {
+                    const res = await fetch(`/api/v1/payrolls/${id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) payrolls.push(data.data);
+                } else if (ids) {
+                    const idArray = ids.split(',');
+                    for (const pid of idArray) {
+                        const res = await fetch(`/api/v1/payrolls/${pid}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (data.success) payrolls.push(data.data);
+                    }
+                }
+
+                renderPayrolls(payrolls);
+            } catch (error) {
+                console.error('Error fetching payroll:', error);
+                alert('Error loading payroll data');
+            }
+        });
+
+        function renderPayrolls(payrolls) {
+            const container = document.getElementById('printContent');
+            let currentPageWrapper = null;
+
+            payrolls.forEach((p, index) => {
+                // Every 2 items (0, 2, 4...) create a new page wrapper
+                if (index % 2 === 0) {
+                    currentPageWrapper = document.createElement('div');
+                    currentPageWrapper.className = 'page-wrapper';
+                    container.appendChild(currentPageWrapper);
+                }
+
+                // Append the slip
+                const slipHtml = createSlipHtml(p);
+                const slipDiv = document.createElement('div');
+                slipDiv.className = 'slip-outer';
+                slipDiv.innerHTML = slipHtml;
+                currentPageWrapper.appendChild(slipDiv);
+
+                // Add cutting line only if it's the first in a pair AND there's a second one expected or exists
+                if (index % 2 === 0 && index < payrolls.length - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'cutting-line';
+                    currentPageWrapper.appendChild(line);
+                }
+            });
+        }
+
+        function createSlipHtml(p) {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+            const [year, month] = (p.monthYear || '2024-01').split('-');
+            const displayDate = `${monthNames[parseInt(month) - 1]} ${year}`;
+
+            // Logical Earnings (All additions)
+            const earningsSub = (p.overTime || 0) + (p.monthlyComm || 0) + (p.warehouseComm || 0) + (p.natin || 0) + (p.otherAllow || 0) + (p.rent || 0) + (p.teaAllowance || 0) + (p.stLateAllow || 0);
+            const totalEarnings = (p.perMonth || 0) + earningsSub;
+
+            // Logical Deductions (All subtractions)
+            // Note: p.totalAdv is assumed to be the recovered/deducted amount as per frontend logic
+            const totalDeductions = (p.shortWeek || 0) + (p.totalAdv || 0) + (p.penalty || 0) + (p.wht || 0) + (p.securityDeposit || 0) + (p.ttw || 0) + (p.fund || 0) + (p.ugrm || 0);
+
+            let stampsHtml = '';
+            if (p.payFullSalaryThroughBank || (p.bankPaid > 0)) {
+                stampsHtml = `<div class="stamp stamp-bank">BANK PAID</div>`;
+            } else if (p.payAdvSalary) {
+                stampsHtml = `<div class="stamp stamp-adv">ADVANCE PAID</div>`;
+            } else if (p.cashPaid > 0) {
+                stampsHtml = `<div class="stamp stamp-cash">CASH PAID</div>`;
+            }
+
+            return `
+                <div class="slip-container">
+                    <div class="stamp-container">${stampsHtml}</div>
+                    
+                    <div class="header-section">
+                        <div class="header-info">
+                            <div class="branch-title">${p.branch || 'BAS SOFTWARE'}</div>
+                            <div class="slip-title">Salary Slip</div>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-label">Emp Code:</div>
+                        <div class="info-value">${p.code || ''}</div>
+                        <div class="info-label">Department:</div>
+                        <div class="info-value">${p.department?.name || p.department || ''}</div>
+
+                        <div class="info-label">Date:</div>
+                        <div class="info-value">${displayDate}</div>
+                        <div class="info-label">Designation:</div>
+                        <div class="info-value">${p.designation || ''}</div>
+
+                        <div class="info-label">Employee:</div>
+                        <div class="info-value">${p.employee?.name || 'N/A'}</div>
+                        <div class="info-label">Duty Hrs:</div>
+                        <div class="info-value">${p.totalHrsPerDay || 8}</div>
+                    </div>
+
+                        <div class="main-columns">
+                            <div class="column column-left">
+                                <div class="column-header">Earnings</div>
+                                <div class="row"><div class="label">Basic Salary</div><div class="value">${(p.perMonth || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Over Time</div><div class="value">${(p.overTime || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Allowance</div><div class="value">0</div></div>
+                                <div class="row"><div class="label">Fix Allowance</div><div class="value">${(p.natin || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Monthly Commission</div><div class="value">${(p.monthlyComm || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">WareHouse Comm</div><div class="value">${(p.warehouseComm || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Other Allowance</div><div class="value">${(p.otherAllow || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Breakfast & Roti</div><div class="value">${(p.rent || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">ST.Less Allowance</div><div class="value">${(p.stLateAllow || 0).toLocaleString()}</div></div>
+                                <div class="total-row"><div class="label">Gross Salary</div><div class="value">${totalEarnings.toLocaleString()}</div></div>
+                                <div class="row" style="background:#fcfcfc"><div class="label">Bank Paid</div><div class="value">${(p.bankPaid || 0).toLocaleString()}</div></div>
+                            </div>
+                            <div class="column">
+                                <div class="column-header">Deductions</div>
+                                <div class="row"><div class="label">Short Time</div><div class="value">${(p.shortWeek || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Mess</div><div class="value">0</div></div>
+                                <div class="row"><div class="label">Pre_Month_Balance</div><div class="value">${(p.pAAdv || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Current_Advance</div><div class="value">${(p.csMale || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Advance Deduction</div><div class="value">${(p.totalAdv || 0).toLocaleString()}</div></div>
+                                <div class="row" style="background:#ddd"><div class="label">Balance</div><div class="value">${((p.pAAdv || 0) + (p.csMale || 0) - (p.totalAdv || 0)).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Other Deduction/Penalty</div><div class="value">${(p.penalty || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Salary WHT</div><div class="value">${(p.wht || 0).toLocaleString()}</div></div>
+                                <div class="row"><div class="label">Security Deposit</div><div class="value">${(p.securityDeposit || 0).toLocaleString()}</div></div>
+                                <div class="total-row"><div class="label">Total Deduction</div><div class="value">${totalDeductions.toLocaleString()}</div></div>
+                                <div class="row" style="background:#fcfcfc"><div class="label">Cash_Paid</div><div class="value">${(p.cashPaid || 0).toLocaleString()}</div></div>
+                            </div>
+                        </div>
+
+
+                    <div class="net-salary-row">
+                        <span>NET Salary</span>
+                        <span>${(totalEarnings - totalDeductions).toLocaleString()}</span>
+                    </div>
+
+
+                    <div class="signature-section" style="margin-bottom: 5px;">
+                        <div class="sig-box">
+                            <div style="height: 45px; display: flex; align-items: flex-end; justify-content: center;">
+                                <span class="signature-font">Bilal Shah</span>
+                            </div>
+                            <div class="line"></div>
+                            <div class="sig-label">Prepared By</div>
+                        </div>
+
+                        <div class="sig-box">
+                            <div style="height: 45px;"></div>
+                            <div class="line"></div>
+                            <div class="sig-label">Approved By</div>
+                        </div>
+                    </div>
+
+
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+
+</html>

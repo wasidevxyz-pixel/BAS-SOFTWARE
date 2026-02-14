@@ -9,6 +9,34 @@ const execPromise = util.promisify(exec);
  * Handles MongoDB backup and restore operations using mongodump and mongorestore
  */
 
+async function resolveMongoToolPath(toolName, explicitPath) {
+    // If no path provided, assume it's in system PATH
+    if (!explicitPath) return toolName;
+
+    const extensions = process.platform === 'win32' ? ['.exe', '.cmd', ''] : [''];
+    const searchPaths = [
+        explicitPath,
+        path.join(explicitPath, 'bin')
+    ];
+
+    for (const searchPath of searchPaths) {
+        for (const ext of extensions) {
+            const fullPath = path.join(searchPath, toolName + ext);
+            try {
+                await fs.access(fullPath);
+                return fullPath;
+            } catch (e) {
+                // Continue searching
+            }
+        }
+    }
+
+    // Default to provided path + toolName (legacy behavior) even if not found, 
+    // but log a warning. The execution will likely fail, but let the error bubble up naturally.
+    console.warn(`[MONGO TOOL] Warning: ${toolName} not found in ${explicitPath} or its bin folder. Returning default path.`);
+    return path.join(explicitPath, toolName);
+}
+
 /**
  * Create a backup of the MongoDB database
  * @param {Object} config - Backup configuration
@@ -65,14 +93,13 @@ async function createBackup(config) {
         // Ensure backup directory exists
         await fs.mkdir(backupFolderPath, { recursive: true });
 
-        // Build mongodump command
-        const mongodumpCmd = mongoToolsPath
-            ? path.join(mongoToolsPath, 'mongodump')
-            : 'mongodump';
+        // Build mongodump command with resolved path
+        const mongodumpCmd = await resolveMongoToolPath('mongodump', mongoToolsPath);
 
         const command = `"${mongodumpCmd}" --uri="${mongodbUri}" --out="${fullBackupPath}"`;
 
         console.log(`[BACKUP] Starting separate backup: ${backupFolder} (Type: ${type})`);
+        console.log(`[BACKUP] Tool Path: ${mongodumpCmd}`);
         console.log(`[BACKUP] Command: ${command.replace(mongodbUri, 'HIDDEN_URI')}`);
 
         // Execute mongodump
@@ -169,10 +196,8 @@ async function restoreBackup(config) {
             console.log(`[RESTORE] Warning: No database folders found in backup. Assuming flat backup or matching name.`);
         }
 
-        // Build mongorestore command
-        const mongorestoreCmd = mongoToolsPath
-            ? path.join(mongoToolsPath, 'mongorestore')
-            : 'mongorestore';
+        // Build mongorestore command with resolved path
+        const mongorestoreCmd = await resolveMongoToolPath('mongorestore', mongoToolsPath);
 
         // Explicit Restore Strategy:
         // We point directly to the database folder inside the backup and use -d to specify the target.
@@ -190,6 +215,7 @@ async function restoreBackup(config) {
         const command = `"${mongorestoreCmd}" --uri="${mongodbUri}" --drop -d "${targetDbName}" "${pathToRestore}"`;
 
         console.log(`[RESTORE] Starting restore from: ${backupFolder}`);
+        console.log(`[RESTORE] Tool Path: ${mongorestoreCmd}`);
         console.log(`[RESTORE] Command: ${command.replace(mongodbUri, 'HIDDEN_URI')}`);
 
         // Execute mongorestore

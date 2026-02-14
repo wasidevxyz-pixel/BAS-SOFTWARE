@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Salary Detail - Bilal Accounting System</title>
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/sidebar.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e4c8c 0%, #2c5ba9 100%);
+            --accent-color: #00a65a;
+            --border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 0.85rem;
+        }
+
+        /* Two-Row Filter Panel - Coloring like Ledger Report */
+        .filter-panel {
+            background: var(--primary-gradient);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-row:last-child {
+            margin-bottom: 0;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group.small {
+            flex: 0.5;
+            min-width: 120px;
+        }
+
+        .filter-panel label {
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+            display: block;
+            opacity: 0.9;
+            color: white;
+        }
+
+        .filter-panel .form-select,
+        .filter-panel .form-control {
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            height: 38px;
+            transition: all 0.3s;
+        }
+
+        .filter-panel .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .filter-panel .form-select option {
+            background: #1e4c8c;
+            color: white;
+        }
+
+        .filter-panel .form-select:focus,
+        .filter-panel .form-control:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+            border-color: white;
+            outline: none;
+        }
+
+        /* Search Suggestions */
+        #suggestionsBox {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1100;
+            display: none;
+            margin-top: 5px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.focused {
+            background: #1e4c8c;
+            color: white;
+        }
+
+        /* Report Table Styling - Matching Advance Report */
+        .data-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #edf2f7;
+            /* Ensure it takes height like advance report if needed, but auto is fine for now */
+        }
+
+        .table-responsive {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f8fafc;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px 10px;
+        }
+
+        .data-table thead th {
+            background: #1e4c8c;
+            /* Dark Blue Header */
+            color: white;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-align: center;
+            /* Center align headers */
+            font-size: 0.75rem;
+            /* Increased Size */
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 12px 10px;
+            border-color: white;
+            /* White border for contrast */
+        }
+
+        .data-table tbody td {
+            vertical-align: middle;
+            color: #334155;
+        }
+
+        .amount-col {
+            text-align: right !important;
+            min-width: 90px;
+        }
+
+        /* Apply monospace only to data cells for alignment */
+        td.amount-col {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .dept-group-header {
+            background: #eff6ff;
+            color: #1e4c8c;
+            font-weight: 800;
+            padding: 10px 15px;
+            border-left: 5px solid #1e4c8c;
+            border-bottom: 1px solid #dbeafe;
+        }
+
+        .dept-group-header .dept-name {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dept-total-row {
+            background: #e2e8f0 !important;
+            /* Distinct Gray Background */
+            font-weight: 800;
+            color: #1e4c8c;
+            border-top: 2px solid #cbd5e1;
+        }
+
+        .grand-total-row {
+            background: #334155 !important;
+            color: white !important;
+            font-weight: 900;
+            font-size: 1rem;
+        }
+
+
+        /* Buttons */
+        .btn-view {
+            background: #28a745;
+            color: white;
+            border: 1.5px solid white;
+            padding: 0 25px;
+            height: 38px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-view:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-print {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-print:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* Print Styles */
+        /* Print Styles - Portrait Fit */
+        @media print {
+            @page {
+                size: portrait;
+                margin: 5mm;
+            }
+
+            .filter-panel,
+            #sidebar,
+            #sidebarToggle,
+            .sidebar-backdrop,
+            .btn-view,
+            .btn-reset,
+            .btn-print,
+            .page-header {
+                display: none !important;
+            }
+
+            .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+
+            .container-fluid {
+                padding: 0 !important;
+                width: 100% !important;
+            }
+
+            .data-panel {
+                box-shadow: none !important;
+                padding: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
+                /* Square corners for print */
+                width: 100% !important;
+            }
+
+            .table-responsive {
+                overflow: visible !important;
+                width: 100% !important;
+            }
+
+            .data-table {
+                width: 100% !important;
+                font-size: 0.5rem !important;
+                /* Reduced for Portrait Fit */
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 2px 3px !important;
+                /* Ultra compact */
+            }
+
+            /* Ensure Colors Print */
+            .data-table thead th {
+                background: #1e4c8c !important;
+                color: white !important;
+                font-weight: 600 !important;
+                /* Less Bold */
+                font-size: 0.45rem !important;
+                /* Smaller Header Font */
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .dept-group-header {
+                background: #eff6ff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                padding: 4px 6px !important;
+            }
+
+            .dept-group-header .dept-name {
+                font-size: 0.6rem !important;
+                /* Smaller Dept Name */
+            }
+
+            .dept-total-row {
+                background: #e2e8f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .grand-total-row {
+                background: #334155 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body {
+                background: white !important;
+                font-size: 10pt;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            .print-only {
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-content">
+        <!-- Page Header -->
+        <div class="page-header px-3 d-flex align-items-center justify-content-between"
+            style="height: 50px; background: white; border-bottom: 1px solid #e2e8f0;">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bars me-3" id="sidebarToggle" style="cursor:pointer; font-size: 1rem;"></i>
+                <h5 class="mb-0 fw-bold" style="color: #1e4c8c;">Employee Salary Detail</h5>
+            </div>
+            <div id="printHeaderDate" class="text-muted small"></div>
+        </div>
+
+        <div class="container-fluid p-3">
+            <!-- Filter Panel matching Image 3 -->
+            <div class="filter-panel shadow-sm">
+                <!-- Row 1 -->
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Branch</label>
+                        <select class="form-select" id="branchFilter">
+                            <option value="All Branches">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Select Department</label>
+                        <select class="form-select" id="deptFilter">
+                            <option value="">Select Department</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Select Designation</label>
+                        <select class="form-select" id="desigFilter">
+                            <option value="">Select Designation</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Emp Type</label>
+                        <select class="form-select" id="empTypeFilter">
+                            <option value="all">All Emp</option>
+                            <option value="commission">Commission Emp</option>
+                            <option value="bank">Bank Emp</option>
+                            <option value="cash">Cash Emp</option>
+                            <option value="zero_salary">Zero Salary Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="filter-row">
+                    <div class="filter-group small">
+                        <label>Code</label>
+                        <input type="text" class="form-control" id="codeSearch" placeholder="Code..">
+                    </div>
+                    <div class="filter-group" style="position: relative;">
+                        <label>Employee</label>
+                        <input type="text" class="form-control" id="empSearch" placeholder="Search name..">
+                        <input type="hidden" id="selectedEmpId">
+                        <div id="suggestionsBox"></div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-view" onclick="generateReport()">View Salary Detail</button>
+                        <button class="btn btn-reset" title="Reset Filters" onclick="resetFilters()">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="btn btn-print" title="Print Report" onclick="window.print()">
+                            <i class="fas fa-print"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Content -->
+            <div class="data-panel shadow-sm" id="reportContent">
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-search fa-3x mb-3 opacity-25"></i>
+                    <p>Use filters above to view employee salary details.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/pageAccess.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script>
+        // Initialize Sidebar
+        // Sidebar auto-initializes via sidebar.js
+
+        // Global State
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'x-api-key': 'BAS-AUTH-KEY-2024'
+        };
+        let allEmployees = [];
+        let focusedSuggestionIndex = -1;
+
+        // Initialize Dates
+        document.addEventListener('DOMContentLoaded', () => {
+            resetFilters();
+            loadFilters();
+            setupSearch();
+        });
+
+        function resetFilters() {
+            document.getElementById('branchFilter').value = 'All Branches';
+            document.getElementById('deptFilter').value = '';
+            document.getElementById('desigFilter').value = '';
+            document.getElementById('empTypeFilter').value = 'all';
+            document.getElementById('codeSearch').value = '';
+            document.getElementById('empSearch').value = '';
+            document.getElementById('selectedEmpId').value = '';
+            document.getElementById('reportContent').innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-search fa-3x mb-3 opacity-25"></i>
+                    <p>Use filters above to view employee salary details.</p>
+                </div>
+            `;
+        }
+
+        async function loadFilters() {
+            try {
+                // 1. Load Branches from Store (Unified Source)
+                const branchRes = await window.pageAccess.authenticatedFetch('/api/v1/stores');
+                const branchData = await branchRes.json();
+                const branchSelect = document.getElementById('branchFilter');
+                branchSelect.innerHTML = '<option value="All Branches">All Branches</option>';
+                if (branchData.success && branchData.data) {
+                    branchData.data.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.name;
+                        opt.textContent = b.name;
+                        branchSelect.appendChild(opt);
+                    });
+                }
+
+                // 2. Load Departments from Employee Registration Module
+                const deptRes = await window.pageAccess.authenticatedFetch('/api/v1/employee-departments');
+                const deptData = await deptRes.json();
+                const deptSelect = document.getElementById('deptFilter');
+                deptSelect.innerHTML = '<option value="">Select Department</option>';
+                if (deptData.success && deptData.data) {
+                    deptData.data.sort((a, b) => a.name.localeCompare(b.name)).forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d._id;
+                        opt.textContent = d.name;
+                        deptSelect.appendChild(opt);
+                    });
+                }
+
+                // 3. Load Designations from Designation Module
+                const desigRes = await window.pageAccess.authenticatedFetch('/api/v1/designations');
+                const desigData = await desigRes.json();
+                const desigSelect = document.getElementById('desigFilter');
+                desigSelect.innerHTML = '<option value="">Select Designation</option>';
+                if (desigData.success && desigData.data) {
+                    desigData.data.sort((a, b) => a.name.localeCompare(b.name)).forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d._id;
+                        opt.textContent = d.name;
+                        desigSelect.appendChild(opt);
+                    });
+                }
+
+                // 4. Load Employees for Search Suggestions only
+                const empRes = await window.pageAccess.authenticatedFetch('/api/v1/employees?limit=2000');
+                const empData = await empRes.json();
+                if (empData.success && empData.data) {
+                    allEmployees = empData.data;
+                }
+
+            } catch (err) { console.error('Error loading filters:', err); }
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('empSearch');
+            const suggestionsBox = document.getElementById('suggestionsBox');
+
+            searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase().trim();
+                if (!val) {
+                    suggestionsBox.style.display = 'none';
+                    document.getElementById('selectedEmpId').value = '';
+                    return;
+                }
+
+                const filtered = allEmployees.filter(emp =>
+                    emp.name.toLowerCase().includes(val) ||
+                    emp.code.toLowerCase().includes(val)
+                ).slice(0, 10);
+
+                if (filtered.length > 0) {
+                    suggestionsBox.innerHTML = filtered.map((emp, idx) => `
+                        <div class="suggestion-item" data-id="${emp._id}" data-idx="${idx}">
+                            <strong>${emp.code}</strong> - ${emp.name}
+                        </div>
+                    `).join('');
+                    suggestionsBox.style.display = 'block';
+                    focusedSuggestionIndex = -1;
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                const items = suggestionsBox.querySelectorAll('.suggestion-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    focusedSuggestionIndex = Math.min(focusedSuggestionIndex + 1, items.length - 1);
+                    updateFocusedSuggestion(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    focusedSuggestionIndex = Math.max(focusedSuggestionIndex - 1, 0);
+                    updateFocusedSuggestion(items);
+                } else if (e.key === 'Enter' && focusedSuggestionIndex >= 0) {
+                    e.preventDefault();
+                    items[focusedSuggestionIndex].click();
+                }
+            });
+
+            suggestionsBox.addEventListener('click', (e) => {
+                const item = e.target.closest('.suggestion-item');
+                if (item) {
+                    const id = item.getAttribute('data-id');
+                    const text = item.textContent.trim();
+                    searchInput.value = text.split('-')[1].trim();
+                    document.getElementById('selectedEmpId').value = id;
+                    suggestionsBox.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target)) suggestionsBox.style.display = 'none';
+            });
+        }
+
+        function updateFocusedSuggestion(items) {
+            items.forEach((item, idx) => {
+                item.classList.toggle('focused', idx === focusedSuggestionIndex);
+                if (idx === focusedSuggestionIndex) item.scrollIntoView({ block: 'nearest' });
+            });
+        }
+
+        async function generateReport() {
+            const content = document.getElementById('reportContent');
+            content.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Generating report...</p></div>';
+
+            try {
+                const params = new URLSearchParams({
+                    branch: document.getElementById('branchFilter').value,
+                    department: document.getElementById('deptFilter').value,
+                    designation: document.getElementById('desigFilter').value,
+                    type: document.getElementById('empTypeFilter').value,
+                    employeeId: document.getElementById('selectedEmpId').value,
+                    code: document.getElementById('codeSearch').value
+                });
+
+                const res = await window.pageAccess.authenticatedFetch(`/api/v1/employee-salary-detail/report?${params}`);
+                const data = await res.json();
+
+                if (!data.success || Object.keys(data.data).length === 0) {
+                    content.innerHTML = '<div class="alert alert-info">No data found for the selected filters.</div>';
+                    return;
+                }
+
+                renderReport(data.data);
+            } catch (err) {
+                console.error(err);
+                content.innerHTML = '<div class="alert alert-danger">Error: ' + err.message + '</div>';
+            }
+        }
+
+        function renderReport(groupedData) {
+            const content = document.getElementById('reportContent');
+            let html = `
+                <div class="print-only">
+                    <h2 style="color: #1e4c8c; margin-bottom: 5px;">Employee Salary Detail</h2>
+                    <p class="text-muted small">Generated on: ${new Date().toLocaleString()}</p>
+                    <hr>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Code</th>
+                                <th>Employee Name</th>
+                                <th style="width: 120px;">Incr. Date</th>
+                                <th class="amount-col">Basic Salary</th>
+                                <th class="amount-col">Fix Allowance</th>
+                                <th class="amount-col">ST LESS Allowance</th>
+                                <th class="amount-col">Other Allowance</th>
+                                <th class="amount-col">Net Salary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let grandTotalBasic = 0;
+            let grandTotalFix = 0;
+            let grandTotalST = 0;
+            let grandTotalOther = 0;
+            let grandTotalNet = 0;
+
+            for (const [dept, deptData] of Object.entries(groupedData)) {
+                let deptFix = 0, deptST = 0, deptOther = 0;
+
+                html += `
+                    <tr>
+                        <td colspan="9" class="dept-group-header">
+                            <span class="dept-name"><i class="fas fa-building me-2"></i>${dept}</span>
+                        </td>
+                    </tr>
+                `;
+
+                deptData.employees.forEach(emp => {
+                    const fix = (emp.fixAllowance || 0);
+                    const st = (emp.stLoss || 0);
+                    const other = (emp.otherAllowance || 0);
+
+                    // User Requested Formula: Basic + All Allowances
+                    // Assuming ST is an allowance here based on "all allowance" request, despite "LESS" name
+                    const calculatedNet = emp.basicSalary + fix + st + other;
+
+                    deptFix += fix;
+                    deptST += st;
+                    deptOther += other;
+                    // Recalculate dept calculated total
+
+                    // We need to track the sum of calculated nets for the subtotal
+                    // deptData.totalNet came from backend, we should use a local running total for accuracy with new formula
+                    if (!deptData.calculatedNetTotal) deptData.calculatedNetTotal = 0;
+                    deptData.calculatedNetTotal += calculatedNet;
+
+                    html += `
+                        <tr>
+                            <td>${emp.code}</td>
+                            <td class="fw-medium">${emp.name}</td>
+                            <td>${emp.incrDate ? new Date(emp.incrDate).toLocaleDateString('en-GB') : 'N/A'}</td>
+                            <td class="amount-col">${emp.basicSalary.toLocaleString()}</td>
+                            <td class="amount-col">${fix.toLocaleString()}</td>
+                            <td class="amount-col">${st.toLocaleString()}</td>
+                            <td class="amount-col">${other.toLocaleString()}</td>
+                            <td class="amount-col fw-bold">${calculatedNet.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                    <tr class="dept-total-row">
+                        <td colspan="3" class="text-end">SUBTOTAL (${dept})</td>
+                        <td class="amount-col">${deptData.totalBasic.toLocaleString()}</td>
+                        <td class="amount-col">${deptFix.toLocaleString()}</td>
+                        <td class="amount-col">${deptST.toLocaleString()}</td>
+                        <td class="amount-col">${deptOther.toLocaleString()}</td>
+                        <td class="amount-col">${deptData.calculatedNetTotal.toLocaleString()}</td>
+                    </tr>
+                `;
+
+                grandTotalBasic += deptData.totalBasic;
+                grandTotalFix += deptFix;
+                grandTotalST += deptST;
+                grandTotalOther += deptOther;
+                grandTotalNet += deptData.calculatedNetTotal;
+            }
+
+            html += `
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #1e4c8c; color: white;">
+                                <td colspan="3" class="text-end fw-bold">GRAND TOTAL</td>
+                                <td class="amount-col fw-bold">${grandTotalBasic.toLocaleString()}</td>
+                                <td class="amount-col fw-bold">${grandTotalFix.toLocaleString()}</td>
+                                <td class="amount-col fw-bold">${grandTotalST.toLocaleString()}</td>
+                                <td class="amount-col fw-bold">${grandTotalOther.toLocaleString()}</td>
+                                <td class="amount-col fw-bold">${grandTotalNet.toLocaleString()}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+
+            content.innerHTML = html;
+        }
+    </script>
+</body>
+
+</html>
