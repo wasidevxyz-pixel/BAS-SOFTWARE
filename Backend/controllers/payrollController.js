@@ -139,29 +139,39 @@ exports.calculatePayroll = async (req, res) => {
             }
         });
 
-        // 1. Try picking installments from this month's records
-        let planSource = [...monthlyAdvances].sort((a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        )[0];
+        // 1. Identify the Installment Plan
+        // Search for the latest record that HAS a non-zero installment configured
+        let planSource = await EmployeeAdvance.findOne({
+            employee: employeeId,
+            $or: [
+                { 'preMonthInstallment.installment': { $gt: 0 } },
+                { 'currentMonthInstallment.installment': { $gt: 0 } }
+            ]
+        }).sort({ date: -1, createdAt: -1 });
 
-        // 2. Fallback: If no record this month, look at the ABSOLUTE LATEST record ANYWHERE
-        // This ensures the user's latest installment plan persists until changed.
+        // Fallback: If no plan found, use the absolute latest record for defaults
         if (!planSource) {
             planSource = await EmployeeAdvance.findOne({ employee: employeeId })
                 .sort({ date: -1, createdAt: -1 });
         }
 
-        const currentRecInstallment = planSource?.currentMonthInstallment?.installment || 0;
-        const prevRecInstallment = planSource?.preMonthInstallment?.installment || 0;
-
-        // Previous balance (Opening for this month)
-        // Find the most recent advance before this month to get its balance
+        // 2. Previous Month Balance (Opening for this month)
         const lastPrevAdvance = await EmployeeAdvance.findOne({
             employee: employeeId,
             date: { $lt: startDate }
         }).sort({ date: -1, createdAt: -1 });
-
         const prevAdvBalance = lastPrevAdvance ? (lastPrevAdvance.balance || 0) : (employee.opening || 0);
+
+        // 3. Applying the Plan with Balance Capping
+        // Previous Month Recovery
+        let prevRecInstallment = planSource?.preMonthInstallment?.installment || 0;
+        if (prevRecInstallment > prevAdvBalance) prevRecInstallment = prevAdvBalance;
+        if (prevAdvBalance <= 0) prevRecInstallment = 0;
+
+        // Current Month Recovery
+        let currentRecInstallment = planSource?.currentMonthInstallment?.installment || 0;
+        if (currentRecInstallment > currentPayAmount) currentRecInstallment = currentPayAmount;
+        if (currentPayAmount <= 0) currentRecInstallment = 0;
 
         // Sum all penalties for this month
         const penalties = await EmployeePenalty.find({
