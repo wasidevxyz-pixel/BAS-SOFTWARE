@@ -54,8 +54,8 @@ async function createBackup(config) {
 
         if (type === 'auto') {
             // For auto backups, use a date-based name to prevent duplicates (One per day)
-            // Using UTC date ensures consistency across server restarts/timezones
-            const datePart = new Date().toISOString().split('T')[0];
+            // Using local date (en-CA format: YYYY-MM-DD) ensures the folder name matches the user's perception of "today"
+            const datePart = new Date().toLocaleDateString('en-CA');
             backupFolder = `backup-auto-${datePart}`;
 
             // Check if this daily backup already exists
