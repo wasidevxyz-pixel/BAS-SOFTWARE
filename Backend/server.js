@@ -628,7 +628,6 @@ app.get('/customer-demand.html', (req, res) => {
 
 // New Pages
 app.get('/branch-departments.html', (req, res) => {
-<<<<<<< HEAD
   res.sendFile(path.join(__dirname, '../Frontend/views', 'branch-departments.html'));
 });
 app.get('/daily-cash.html', (req, res) => {
@@ -660,39 +659,6 @@ app.get('/print-zakat-report.html', (req, res) => {
 });
 app.get('/income-statement.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'income-statement.html'));
-=======
-  res.sendFile(path.join(__dirname, '../public', 'branch-departments.html'));
-});
-app.get('/daily-cash.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'daily-cash.html'));
-});
-app.get('/cash-counter.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'cash-counter.html'));
-});
-app.get('/closing-sheet.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'closing-sheet.html'));
-});
-app.get('/supplier-wh-tax.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'supplier-wh-tax.html'));
-});
-app.get('/supplier-tax-report.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'supplier-tax-report.html'));
-});
-app.get('/exemption-invoices.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'exemption-invoices.html'));
-});
-app.get('/exemption-invoices-report.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'exemption-invoices-report.html'));
-});
-app.get('/zakat.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'zakat.html'));
-});
-app.get('/print-zakat-report.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'print-zakat-report.html'));
-});
-app.get('/income-statement.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'income-statement.html'));
->>>>>>> 42d18421dd5cdb22aaeca29ec074217c83d636f0
 });
 
 
@@ -700,24 +666,15 @@ app.get('/income-statement.html', (req, res) => {
 
 // Payroll HTML Pages
 app.get('/employee-registration.html', (req, res) => {
-<<<<<<< HEAD
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-registration.html'));
 });
 
 app.get('/employee-list.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend/views', 'employee-list.html'));
-=======
-  res.sendFile(path.join(__dirname, '../public', 'employee-registration.html'));
-});
-
-app.get('/employee-list.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'employee-list.html'));
->>>>>>> 42d18421dd5cdb22aaeca29ec074217c83d636f0
 });
 
 
 app.get('/payroll.html', (req, res) => {
-<<<<<<< HEAD
   res.sendFile(path.join(__dirname, '../Frontend/views', 'payroll.html'));
 });
 
