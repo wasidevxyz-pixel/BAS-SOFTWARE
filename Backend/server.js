@@ -109,6 +109,7 @@ const employeeLedgerRoutes = require('./routes/employeeLedgerRoutes');
 const biometricRoutes = require('./routes/biometric');
 const employeeSalaryDetailRoutes = require('./routes/employeeSalaryDetailRoutes');
 const bankPaidSalaryReportRoutes = require('./routes/bankPaidSalaryReportRoutes');
+const systemLogsRoutes = require('./routes/systemLogs');
 
 
 
@@ -123,15 +124,9 @@ const app = express();
 // WASI Health Monitor (Before other middleware to capture all requests)
 app.use(wasiApiHealthMonitor);
 
-// Global Request Logger
-app.use((req, res, next) => {
-  console.log('\n========================================');
-  console.log(`📥 ${req.method} ${req.originalUrl}`);
-  console.log(`Time: ${new Date().toISOString()}`);
-  console.log(`Content-Type: ${req.headers['content-type']}`);
-  console.log('========================================\n');
-  next();
-});
+// Professional Request Logger (Stored in DB)
+const { requestLogger, logClientError } = require('./middleware/logger');
+app.use(requestLogger);
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
@@ -462,6 +457,8 @@ app.use('/api/v1/sub-branches', subBranchRoutes);
 app.use('/api/v1/attendance/biometric', biometricRoutes);
 app.use('/api/v1/employee-salary-detail', employeeSalaryDetailRoutes);
 app.use('/api/v1/salary-reports', bankPaidSalaryReportRoutes);
+app.use('/api/v1/system-logs', systemLogsRoutes);
+app.post('/api/v1/log-client-error', logClientError);
 
 
 
@@ -663,6 +660,10 @@ app.get('/income-statement.html', (req, res) => {
 
 
 // ... [skipping routes requires] ...
+
+app.get('/system-logs.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/views', 'system-logs.html'));
+});
 
 // Payroll HTML Pages
 app.get('/employee-registration.html', (req, res) => {

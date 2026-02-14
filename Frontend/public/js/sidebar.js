@@ -248,6 +248,7 @@ class SidebarNavigation {
                 children: [
                     { label: 'User Management', link: '/users.html', permission: 'users' },
                     { label: 'Group Rights', link: '/groups.html', permission: 'groups' },
+                    { label: 'System Logs', link: '/system-logs.html', permission: 'system_logs' },
                     { label: 'Stores', link: '/stores.html', permission: 'stores' },
                     { label: 'Parties', link: '/parties.html', permission: 'parties' },
                     { label: 'Commission Item', link: '/commission-item.html', permission: 'commission_item' },

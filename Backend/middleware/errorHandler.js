@@ -5,13 +5,22 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error with more details
+  // Log error to console
   console.error('=== ERROR CAUGHT ===');
   console.error('Error Name:', err.name);
   console.error('Error Message:', err.message);
-  console.error('Error Stack:', err.stack);
-  console.error('Full Error:', err);
   console.error('===================');
+
+  // Log error to SystemLog DB
+  const SystemLog = require('../models/SystemLog');
+  SystemLog.log('error', err.message || 'Server Error', 'system', {
+    stack: err.stack,
+    name: err.name,
+    url: req.originalUrl,
+    method: req.method,
+    userId: req.user ? req.user.id : null,
+    ip: req.ip
+  }).catch(logErr => console.error('Failed to log error to DB:', logErr.message));
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
