@@ -170,6 +170,68 @@ exports.getEmployeeAdvance = async (req, res) => {
 
 const { recalculateEmployeeLedger } = require('./employeeLedgerController');
 
+// @desc    Helper to recalculate all running balances for an employee's advances
+exports.recalculateAdvanceBalances = async (employeeId) => {
+    try {
+        const Employee = require('../models/Employee');
+        const EmployeeAdvance = require('../models/EmployeeAdvance');
+
+        const emp = await Employee.findById(employeeId);
+        if (!emp) return;
+
+        // 1. Get all advances sorted exactly like the ledger (temporal order)
+        const advances = await EmployeeAdvance.find({ employee: employeeId })
+            .sort({ date: 1, createdAt: 1 });
+
+        // Group by month to calculate month-specific balances (matching frontend expectations)
+        const monthlyGroups = {};
+        advances.forEach(adv => {
+            const d = new Date(adv.date);
+            const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+            if (!monthlyGroups[key]) monthlyGroups[key] = [];
+            monthlyGroups[key].push(adv);
+        });
+
+        // Sort month keys
+        const sortedMonths = Object.keys(monthlyGroups).sort();
+
+        let runningBalance = parseFloat(emp.opening || 0);
+
+        for (const monthKey of sortedMonths) {
+            const monthAdvs = monthlyGroups[monthKey];
+            const monthPreBal = runningBalance;
+
+            // Calculate total net change for this month
+            let monthNetChange = 0;
+            monthAdvs.forEach(adv => {
+                const amt = parseFloat(adv.paid || 0);
+                monthNetChange += (adv.transactionType === 'Pay' ? amt : -amt);
+            });
+
+            // Update all records in this month to have the SAME closing balance
+            // and the correct preMonth/currentMonth breakdown
+            for (const adv of monthAdvs) {
+                const amt = parseFloat(adv.paid || 0);
+                const currentMonthBal = monthNetChange - (adv.transactionType === 'Pay' ? amt : -amt);
+                const total = monthPreBal + currentMonthBal;
+                const balance = monthPreBal + monthNetChange;
+
+                await EmployeeAdvance.findByIdAndUpdate(adv._id, {
+                    preMonthBal: monthPreBal,
+                    currentMonthBal: currentMonthBal,
+                    total: total,
+                    balance: balance
+                });
+            }
+
+            // Update running balance for next month's starting point
+            runningBalance += monthNetChange;
+        }
+    } catch (err) {
+        console.error('Error in recalculateAdvanceBalances:', err);
+    }
+};
+
 // @desc    Create employee advance
 // @route   POST /api/v1/employee-advances
 exports.createEmployeeAdvance = async (req, res) => {
@@ -180,6 +242,7 @@ exports.createEmployeeAdvance = async (req, res) => {
         // Sync Ledger
         if (advance.employee) {
             await recalculateEmployeeLedger(advance.employee);
+            await exports.recalculateAdvanceBalances(advance.employee);
         }
 
         res.status(201).json({ success: true, data: advance });
@@ -204,6 +267,7 @@ exports.updateEmployeeAdvance = async (req, res) => {
         // Sync Ledger
         if (advance.employee) {
             await recalculateEmployeeLedger(advance.employee);
+            await exports.recalculateAdvanceBalances(advance.employee);
         }
 
         res.status(200).json({ success: true, data: advance });
@@ -224,6 +288,7 @@ exports.deleteEmployeeAdvance = async (req, res) => {
         // Sync Ledger
         if (advance.employee) {
             await recalculateEmployeeLedger(advance.employee);
+            await exports.recalculateAdvanceBalances(advance.employee);
         }
 
         res.status(200).json({ success: true, data: {} });

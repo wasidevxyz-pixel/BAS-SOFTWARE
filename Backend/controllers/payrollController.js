@@ -6,6 +6,7 @@ const EmployeePenalty = require('../models/EmployeePenalty');
 const HolyDay = require('../models/HolyDay');
 const Store = require('../models/Store');
 const EmployeeCommission = require('../models/EmployeeCommission');
+const { recalculateAdvanceBalances } = require('./employeeAdvanceController');
 
 // @desc    Get all payrolls
 // @route   GET /api/v1/payrolls
@@ -450,6 +451,7 @@ exports.createPayroll = async (req, res) => {
         // Using await to ensure it completes before response
         if (payroll.employee) {
             await recalculateEmployeeLedger(payroll.employee);
+            await recalculateAdvanceBalances(payroll.employee);
         }
 
         res.status(201).json({
@@ -506,6 +508,7 @@ exports.updatePayroll = async (req, res) => {
         // 2. Sync Ledger
         if (payroll.employee) {
             await recalculateEmployeeLedger(payroll.employee);
+            await recalculateAdvanceBalances(payroll.employee);
         }
 
         res.status(200).json({ success: true, data: payroll });
@@ -531,6 +534,7 @@ exports.deletePayroll = async (req, res) => {
         // 2. Sync Ledger
         if (payroll.employee) {
             await recalculateEmployeeLedger(payroll.employee);
+            await recalculateAdvanceBalances(payroll.employee);
         }
 
         res.status(200).json({ success: true, data: {} });

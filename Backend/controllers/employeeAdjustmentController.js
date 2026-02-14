@@ -1,4 +1,5 @@
 const EmployeeAdjustment = require('../models/EmployeeAdjustment');
+const { recalculateAdvanceBalances } = require('./employeeAdvanceController');
 
 // @desc    Get adjustments
 // @route   GET /api/v1/employee-adjustments
@@ -70,6 +71,7 @@ exports.createAdjustment = async (req, res) => {
         // 2. Sync Ledger
         if (adjustment.employee) {
             await recalculateEmployeeLedger(adjustment.employee);
+            await recalculateAdvanceBalances(adjustment.employee);
         }
 
         res.status(201).json({ success: true, data: adjustment });
@@ -101,6 +103,7 @@ exports.deleteAdjustment = async (req, res) => {
         // 2. Sync Ledger
         if (adjustment.employee) {
             await recalculateEmployeeLedger(adjustment.employee);
+            await recalculateAdvanceBalances(adjustment.employee);
         }
 
         res.status(200).json({ success: true, data: {} });
